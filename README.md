@@ -137,6 +137,8 @@ pytest
 ## License
 
 This project is licensed under the GNU AGPLv3.
+See [LICENSE](LICENSE) and [COMMERCIAL-LICENSE.txt](COMMERCIAL-LICENSE.txt) for details.
+
 
 ---
 
