@@ -10,7 +10,7 @@ and output.
 """
 
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import ValidationError, validates
+from marshmallow import ValidationError, validates, RAISE
 
 from app.models.company import Company
 from app.logger import logger
@@ -50,6 +50,7 @@ class CompanySchema(SQLAlchemyAutoSchema):
         load_instance = True
         include_fk = True
         dump_only = ('id', 'created_at', 'updated_at')
+        unknown = RAISE
 
     @validates('name')
     def validate_name(self, value, **kwargs):

@@ -5,9 +5,25 @@ info:
   description: API for managing users, companies, organizations, positions, subcontractors, and customers
 
 servers:
-  - url: https://api.example.com/identity
+  - url: http://localhost:5000
+    description: Local development server
 
 paths:
+  /version:
+    get:
+      tags: [Version]
+      summary: Get API version
+      responses:
+        '200':
+          description: API version information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                    example: "1.0.0"
   /users:
     post:
       tags: [User]

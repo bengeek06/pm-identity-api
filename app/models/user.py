@@ -73,6 +73,8 @@ class User(db.Model):
         default=db.func.current_timestamp(),
         onupdate=db.func.current_timestamp()
     )
+    
+    company = db.relationship('Company', back_populates='users', lazy=True)
 
     def __repr__(self):
         return (
