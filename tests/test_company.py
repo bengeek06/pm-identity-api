@@ -413,6 +413,167 @@ def test_patch_company_sqlalchemy_error(client, session, monkeypatch):
     response = client.patch(f"/companies/{company.id}", json=payload)
     assert response.status_code == 500
 
+def test_patch_company_name_unique(client, session):
+    """
+    Test PATCH /companies/<company_id> with a name that already exists.
+    Should return 400 with a uniqueness validation error.
+    """
+    company1 = Company(name="UniqueName")
+    company2 = Company(name="OtherName")
+    session.add_all([company1, company2])
+    session.commit()
+
+    payload = {"name": "UniqueName"}
+    response = client.patch(f"/companies/{company2.id}", json=payload)
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "errors" in data
+    assert "name" in data["errors"]
+    assert "unique" in str(data["errors"]["name"][0]).lower()
+
+def test_patch_company_name_empty(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"name": ""})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "name" in data["errors"]
+    assert "must be between" in data["errors"]["name"][0].lower()
+
+def test_patch_company_description_too_long(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"description": "x" * 201})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "description" in data["errors"]
+    assert "than maximum length" in data["errors"]["description"][0].lower()
+
+def test_patch_company_logo_url_invalid(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"logo_url": "ftp://invalid"})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "logo_url" in data["errors"]
+    assert "not a valid url" in data["errors"]["logo_url"][0].lower()
+
+def test_patch_company_logo_url_too_long(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"logo_url": "http://" + "a"*250 + ".com"})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "logo_url" in data["errors"]
+    msg = data["errors"]["logo_url"][0].lower()
+    assert "longer than maximum length" in msg or "not a valid url" in msg
+
+def test_patch_company_website_invalid(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"website": "invalid"})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "website" in data["errors"]
+    assert "not a valid url" in data["errors"]["website"][0].lower()
+
+def test_patch_company_website_too_long(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"website": "http://" + "a"*250 + ".com"})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "website" in data["errors"]
+    msg = data["errors"]["website"][0].lower()
+    assert "longer than maximum length" in msg or "not a valid url" in msg
+
+def test_patch_company_phone_number_not_digits(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"phone_number": "abc"})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "phone_number" in data["errors"]
+    assert "must contain only digits" in data["errors"]["phone_number"][0].lower()
+
+def test_patch_company_phone_number_too_long(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"phone_number": "1"*21})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "phone_number" in data["errors"]
+    assert "longer than maximum length" in data["errors"]["phone_number"][0].lower()
+
+def test_patch_company_email_invalid(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"email": "notanemail"})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "email" in data["errors"]
+    assert "not a valid email address" in data["errors"]["email"][0].lower()
+
+def test_patch_company_email_too_long(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"email": "a@" + "b"*250 + ".com"})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "email" in data["errors"]
+    msg = data["errors"]["email"][0].lower()
+    assert "longer than maximum length" in msg or "not a valid email address" in msg
+
+def test_patch_company_address_too_long(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"address": "a"*256})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "address" in data["errors"]
+    assert "longer than maximum length" in data["errors"]["address"][0].lower()
+
+def test_patch_company_postal_code_too_long(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"postal_code": "1"*21})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "postal_code" in data["errors"]
+    assert "longer than maximum length" in data["errors"]["postal_code"][0].lower()
+
+def test_patch_company_city_too_long(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"city": "a"*101})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "city" in data["errors"]
+    assert "longer than maximum length" in data["errors"]["city"][0].lower()
+
+def test_patch_company_country_too_long(client, session):
+    company = Company(name="ValidName")
+    session.add(company)
+    session.commit()
+    response = client.patch(f"/companies/{company.id}", json={"country": "a"*101})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "country" in data["errors"]
+    assert "longer than maximum length" in data["errors"]["country"][0].lower()
+
 ######################################################
 # Test cases for DELETE /companies/<company_id>
 ######################################################
@@ -484,10 +645,11 @@ def test_get_all_sqlalchemy_error(client, monkeypatch):
     Test Company.get_all() handles SQLAlchemyError gracefully.
     Should return an empty list and log the error.
     """
+    _ = client
     def raise_sqlalchemy_error(*args, **kwargs):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
-
-    monkeypatch.setattr(Company.query, "all", raise_sqlalchemy_error)
+    # Patch sur la classe du query
+    monkeypatch.setattr(type(Company.query), "all", raise_sqlalchemy_error)
     result = Company.get_all()
     assert result == []
 
@@ -496,10 +658,11 @@ def test_get_by_id_sqlalchemy_error(client, monkeypatch):
     Test Company.get_by_id() handles SQLAlchemyError gracefully.
     Should return None and log the error.
     """
+    _ = client
     def raise_sqlalchemy_error(*args, **kwargs):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
-
-    monkeypatch.setattr(Company.query, "get", raise_sqlalchemy_error)
+    # Patch sur la classe du query
+    monkeypatch.setattr(type(Company.query), "get", raise_sqlalchemy_error)
     result = Company.get_by_id("some-id")
     assert result is None
 
@@ -508,10 +671,14 @@ def test_get_by_name_sqlalchemy_error(client, monkeypatch):
     Test Company.get_by_name() handles SQLAlchemyError gracefully.
     Should return None and log the error.
     """
+    _ = client
     def raise_sqlalchemy_error(*args, **kwargs):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
-
-    monkeypatch.setattr(Company.query, "filter_by", lambda *a, **k: type("Q", (), {"first": raise_sqlalchemy_error})())
+    # On crée une instance factice avec une méthode first qui lève l'exception
+    class FakeQuery:
+        def first(self_inner):
+            raise_sqlalchemy_error()
+    monkeypatch.setattr(type(Company.query), "filter_by", lambda *a, **k: FakeQuery())
     result = Company.get_by_name("some-name")
     assert result is None
 

@@ -1,50 +1,44 @@
 """
-Module: company_schema
+Schema definition for the Company model using Marshmallow.
 
-This module defines the Marshmallow schema for serializing, deserializing,
-and validating Company model instances in the Identity Service API.
-
-The CompanySchema class provides field validation and metadata for the Company
-model, ensuring data integrity and proper formatting when handling API input
-and output.
+This module provides the CompanySchema class, which serializes and validates
+Company objects for API input/output. It enforces field types, length constraints,
+formats (email, URL, digits), and ensures the uniqueness of the company name.
 """
 
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import ValidationError, validates, RAISE
-
+from marshmallow import fields, validate, RAISE, validates, ValidationError
 from app.models.company import Company
-from app.logger import logger
-
 
 class CompanySchema(SQLAlchemyAutoSchema):
     """
-    Serialization and validation schema for the Company model.
+    Marshmallow schema for the Company model.
 
-    Attributes:
-        id (int): Unique identifier for the Company entity.
-        name (str): Name of the Company entity.
-        description (str): Description of the Company entity.
-        logo_url (str): Optional URL to the company's logo.
-        website (str): Optional website URL of the company.
-        phone_number (str): Optional phone number of the company.
-        email (str): Optional email address of the company.
-        address (str): Optional address of the company.
-        postal_code (str): Optional postal code of the company.
-        city (str): Optional city where the company is located.
-        country (str): Optional country where the company is located.
-        users (list): Relationship to User objects belonging to the company.
-        organizations_units (list): Relationship to OrganizationUnit objects
-                belonging to the company.
+    This schema serializes and validates Company objects, enforcing field types,
+    length constraints, and format (email, URL, digits). It also ensures the
+    uniqueness of the company name via a custom validator.
+
+    Fields:
+        name (str): Required. 1-100 characters.
+        description (str): Optional. Max 200 characters.
+        logo_url (str): Optional. Must be a valid URL, max 255 characters.
+        website (str): Optional. Must be a valid URL, max 255 characters.
+        phone_number (str): Optional. Digits only, max 20 characters.
+        email (str): Optional. Must be a valid email, max 255 characters.
+        address (str): Optional. Max 255 characters.
+        postal_code (str): Optional. Max 20 characters.
+        city (str): Optional. Max 100 characters.
+        country (str): Optional. Max 100 characters.
     """
     class Meta:
         """
-        Meta options for the Company schema.
+        Meta options for CompanySchema.
 
-        Attributes:
-            model: The SQLAlchemy model associated with this schema.
-            load_instance: Whether to load model instances.
-            include_fk: Whether to include foreign keys.
-            dump_only: Fields that are only used for serialization.
+        - model: The SQLAlchemy model to serialize.
+        - load_instance: Deserialize to model instances.
+        - include_fk: Include foreign keys.
+        - dump_only: Fields to exclude from deserialization.
+        - unknown: Raise error on unknown fields.
         """
         model = Company
         load_instance = True
@@ -52,250 +46,63 @@ class CompanySchema(SQLAlchemyAutoSchema):
         dump_only = ('id', 'created_at', 'updated_at')
         unknown = RAISE
 
+    name = fields.String(
+        required=True,
+        validate=[
+            validate.Length(min=1, max=100),
+        ]
+    )
+    description = fields.String(
+        validate=validate.Length(max=200)
+    )
+    logo_url = fields.URL(
+        allow_none=True,
+        validate=validate.Length(max=255)
+    )
+    website = fields.URL(
+        allow_none=True,
+        validate=validate.Length(max=255)
+    )
+    phone_number = fields.String(
+        allow_none=True,
+        validate=[
+            validate.Length(max=20),
+            validate.Regexp(r"^\d*$", error="Phone number must contain only digits.")
+        ]
+    )
+    email = fields.Email(
+        allow_none=True,
+        validate=validate.Length(max=255)
+    )
+    address = fields.String(
+        allow_none=True,
+        validate=validate.Length(max=255)
+    )
+    postal_code = fields.String(
+        allow_none=True,
+        validate=validate.Length(max=20)
+    )
+    city = fields.String(
+        allow_none=True,
+        validate=validate.Length(max=100)
+    )
+    country = fields.String(
+        allow_none=True,
+        validate=validate.Length(max=100)
+    )
+
     @validates('name')
     def validate_name(self, value, **kwargs):
         """
-        Validate that the name is not empty and is unique.
+        Ensure the company name is unique.
 
         Args:
             value (str): The name to validate.
 
         Raises:
-            ValidationError: If the name is empty or already exists.
-
-        Returns:
-            str: The validated name.
+            ValidationError: If a company with the same name already exists.
         """
         _ = kwargs
-
-        if not value:
-            logger.error("Validation error: Name cannot be empty.")
-            raise ValidationError("Name cannot be empty.")
-        company = Company.get_by_name(value)
+        company = Company.query.filter_by(name=value).first()
         if company:
-            logger.error(f"Validation error: Name '{value}' must be unique.")
-            raise ValidationError("Name must be unique.")
-        return value
-
-    @validates('description')
-    def validate_description(self, value, **kwargs):
-        """
-        Validate that the description does not exceed 200 characters.
-
-        Args:
-            value (str): The description to validate.
-
-        Raises:
-            ValidationError: If the description exceeds 200 characters.
-
-        Returns:
-            str: The validated description.
-        """
-        _ = kwargs
-
-        if len(value) > 200:
-            logger.error(
-                "Validation error: Description cannot exceed 200 characters."
-            )
-            raise ValidationError("Description cannot exceed 200 characters.")
-        return value
-
-    @validates('logo_url')
-    def validate_logo_url(self, value, **kwargs):
-        """
-        Validate that the logo URL is a valid URL format.
-
-        Args:
-            value (str): The logo URL to validate.
-
-        Raises:
-            ValidationError: If the logo URL is not a valid URL.
-
-        Returns:
-            str: The validated logo URL.
-        """
-        _ = kwargs
-
-        if value and not value.startswith(('http://', 'https://')):
-            logger.error("Validation error: Logo URL must be a valid URL.")
-            raise ValidationError("Logo URL must be a valid URL.")
-        if value and len(value) > 255:
-            logger.error(
-                "Validation error: Logo URL cannot exceed 255 characters."
-            )
-            raise ValidationError("Logo URL cannot exceed 255 characters.")
-        return value
-
-    @validates('website')
-    def validate_website(self, value, **kwargs):
-        """
-        Validate that the website URL is a valid URL format.
-
-        Args:
-            value (str): The website URL to validate.
-
-        Raises:
-            ValidationError: If the website URL is not a valid URL.
-
-        Returns:
-            str: The validated website URL.
-        """
-        _ = kwargs
-
-        if value and not value.startswith(('http://', 'https://')):
-            logger.error("Validation error: Website must be a valid URL.")
-            raise ValidationError("Website must be a valid URL.")
-        if value and len(value) > 255:
-            logger.error(
-                "Validation error: Website cannot exceed 255 characters."
-            )
-            raise ValidationError("Website cannot exceed 255 characters.")
-        return value
-
-    @validates('phone_number')
-    def validate_phone_number(self, value, **kwargs):
-        """
-        Validate that the phone number is in a valid format.
-
-        Args:
-            value (str): The phone number to validate.
-
-        Raises:
-            ValidationError: If the phone number is not valid.
-
-        Returns:
-            str: The validated phone number.
-        """
-        _ = kwargs
-
-        if value and not value.isdigit():
-            logger.error(
-                "Validation error: Phone number must contain only digits."
-            )
-            raise ValidationError("Phone number must contain only digits.")
-        if value and len(value) > 20:
-            logger.error(
-                "Validation error: Phone number cannot exceed 20 characters."
-            )
-            raise ValidationError("Phone number cannot exceed 20 characters.")
-        return value
-
-    @validates('email')
-    def validate_email(self, value, **kwargs):
-        """
-        Validate that the email is in a valid format.
-
-        Args:
-            value (str): The email to validate.
-
-        Raises:
-            ValidationError: If the email is not valid.
-
-        Returns:
-            str: The validated email.
-        """
-        _ = kwargs
-
-        if value and '@' not in value:
-            logger.error(
-                "Validation error: Email must be a valid email address."
-                )
-            raise ValidationError("Email must be a valid email address.")
-        if value and len(value) > 255:
-            logger.error(
-                "Validation error: Email cannot exceed 255 characters."
-                )
-            raise ValidationError("Email cannot exceed 255 characters.")
-        return value
-
-    @validates('address')
-    def validate_address(self, value, **kwargs):
-        """
-        Validate that the address does not exceed 255 characters.
-
-        Args:
-            value (str): The address to validate.
-
-        Raises:
-            ValidationError: If the address exceeds 255 characters.
-
-        Returns:
-            str: The validated address.
-        """
-        _ = kwargs
-
-        if value and len(value) > 255:
-            logger.error(
-                "Validation error: Address cannot exceed 255 characters."
-            )
-            raise ValidationError("Address cannot exceed 255 characters.")
-        return value
-
-    @validates('postal_code')
-    def validate_postal_code(self, value, **kwargs):
-        """
-        Validate that the postal code does not exceed 20 characters.
-
-        Args:
-            value (str): The postal code to validate.
-
-        Raises:
-            ValidationError: If the postal code exceeds 20 characters.
-
-        Returns:
-            str: The validated postal code.
-        """
-        _ = kwargs
-
-        if value and len(value) > 20:
-            logger.error(
-                "Validation error: Postal code cannot exceed 20 characters."
-            )
-            raise ValidationError("Postal code cannot exceed 20 characters.")
-        return value
-
-    @validates('city')
-    def validate_city(self, value, **kwargs):
-        """
-        Validate that the city does not exceed 100 characters.
-
-        Args:
-            value (str): The city to validate.
-
-        Raises:
-            ValidationError: If the city exceeds 100 characters.
-
-        Returns:
-            str: The validated city.
-        """
-        _ = kwargs
-
-        if value and len(value) > 100:
-            logger.error(
-                "Validation error: City cannot exceed 100 characters."
-            )
-            raise ValidationError("City cannot exceed 100 characters.")
-        return value
-
-    @validates('country')
-    def validate_country(self, value, **kwargs):
-        """
-        Validate that the country does not exceed 100 characters.
-
-        Args:
-            value (str): The country to validate.
-
-        Raises:
-            ValidationError: If the country exceeds 100 characters.
-
-        Returns:
-            str: The validated country.
-        """
-        _ = kwargs
-
-        if value and len(value) > 100:
-            logger.error(
-                "Validation error: Country cannot exceed 100 characters."
-            )
-            raise ValidationError("Country cannot exceed 100 characters.")
-        return value
+            raise ValidationError("Company name must be unique.")
