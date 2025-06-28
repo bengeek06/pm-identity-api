@@ -146,86 +146,38 @@ class OrganizationUnit(db.Model):
             return []
 
     @classmethod
-    def create(cls, name, company_id, description=None, parent_id=None,
-               path=None, level=None):
+    def get_children(cls, parent_id):
         """
-        Create a new organization unit.
+        Retrieve all child organization units of a given parent unit.
 
         Args:
-            name (str): The name of the organization unit.
-            company_id (str): The ID of the associated company.
-            description (str, optional): Description of the organization unit.
-            parent_id (str, optional): ID of the parent organization unit.
-            path (str, optional): Hierarchical path of the organization unit.
-            level (int, optional): Level in the organization hierarchy.
+            parent_id (str): The ID of the parent organization unit.
 
         Returns:
-            OrganizationUnit: The newly created OrganizationUnit object.
-        """
-        organization_unit = cls(
-            name=name,
-            company_id=company_id,
-            description=description,
-            parent_id=parent_id,
-            path=path,
-            level=level
-        )
-
-        try:
-            db.session.add(organization_unit)
-            db.session.commit()
-            return organization_unit
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error(f"Error creating organization unit: {e}")
-            return None
-
-    def update(self, name=None, description=None, parent_id=None,
-               path=None, level=None):
-        """
-        Update an existing organization unit.
-
-        Args:
-            name (str, optional): New name for the organization unit.
-            description (str, optional): New description for the unit.
-            parent_id (str, optional): New parent ID for the unit.
-            path (str, optional): New hierarchical path for the unit.
-            level (int, optional): New level in the hierarchy.
-
-        Returns:
-            bool: True if update was successful, False otherwise.
-        """
-        if name:
-            self.name = name
-        if description:
-            self.description = description
-        if parent_id:
-            self.parent_id = parent_id
-        if path:
-            self.path = path
-        if level is not None:
-            self.level = level
-
-        try:
-            db.session.commit()
-            return True
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error(f"Error updating organization unit: {e}")
-            return False
-
-    def delete(self):
-        """
-        Delete the organization unit from the database.
-
-        Returns:
-            bool: True if deletion was successful, False otherwise.
+            list: List of OrganizationUnit objects that are children of the
+                  specified parent.
         """
         try:
-            db.session.delete(self)
-            db.session.commit()
-            return True
+            return cls.query.filter_by(parent_id=parent_id).all()
         except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error(f"Error deleting organization unit: {e}")
-            return False
+            logger.error(
+                "Error retrieving children for parent ID %s: %s", parent_id, e
+            )
+            return []
+
+    def update_path_and_level(self):
+        """
+        Update the 'path' and 'level' fields based on the parent_id.
+        Should be called after setting/changing parent_id and before commit.
+        """
+        if self.parent_id:
+            parent = OrganizationUnit.get_by_id(self.parent_id)
+            if parent:
+                self.path = f"{parent.path}/{self.id}" if parent.path else f"{parent.id}/{self.id}"
+                self.level = (parent.level or 0) + 1
+            else:
+                self.path = str(self.id)
+                self.level = 0
+        else:
+            self.path = str(self.id)
+            self.level = 0

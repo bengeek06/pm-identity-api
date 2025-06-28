@@ -61,7 +61,6 @@ class CustomerListResource(Resource):
             db.session.commit()
             return customer_schema.dump(new_customer), 201
         except ValidationError as err:
-            db.session.rollback()
             logger.error("Validation error: %s", err.messages)
             return {"error": err.messages}, 400
         except IntegrityError as err:
