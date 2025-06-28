@@ -43,9 +43,13 @@ class CompanyListResource(Resource):
         """
         logger.info("Retrieving all companies")
 
-        companies = Company.get_all()
-        company_schema = CompanySchema(session=db.session, many=True)
-        return company_schema.dump(companies), 200
+        try:
+            companies = Company.get_all()
+            company_schema = CompanySchema(session=db.session, many=True)
+            return company_schema.dump(companies), 200
+        except SQLAlchemyError as e:
+            logger.error("Database error: %s", str(e))
+            return {"message": "Database error"}, 500
 
     def post(self):
         """

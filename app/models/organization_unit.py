@@ -67,8 +67,14 @@ class OrganizationUnit(db.Model):
         default=db.func.current_timestamp(),
         onupdate=db.func.current_timestamp()
     )
-    
+
     company = db.relationship('Company', back_populates='organizations_units', lazy=True)
+    positions = db.relationship(
+        'Position',
+        back_populates='organization_unit',
+        cascade='all, delete-orphan',
+        lazy=True
+    )
 
     def __repr__(self):
         return (

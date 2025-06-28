@@ -15,7 +15,7 @@ from app.resources.import_from import ImportCSVResource, ImportJSONResource
 from app.resources.company import CompanyListResource, CompanyResource
 from app.resources.customer import CustomerListResource, CustomerResource
 from app.resources.organization_unit import OrganizationUnitListResource, OrganizationUnitResource, OrganizationUnitChildrenResource
-
+from app.resources.position import PositionListResource, PositionResource, OrganizationUnitPositionsResource
 
 def register_routes(app):
     """
@@ -45,5 +45,8 @@ def register_routes(app):
     api.add_resource(OrganizationUnitListResource, '/organization_units')
     api.add_resource(OrganizationUnitResource, '/organization_units/<string:unit_id>')
     api.add_resource(OrganizationUnitChildrenResource, '/organization_units/<string:unit_id>/children')
+    api.add_resource(PositionListResource, '/positions')
+    api.add_resource(PositionResource, '/positions/<string:position_id>')
+    api.add_resource(OrganizationUnitPositionsResource, '/organization_units/<string:unit_id>/positions')
 
     logger.info("Routes registered successfully.")

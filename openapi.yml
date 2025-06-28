@@ -418,6 +418,66 @@ paths:
                   error:
                     type: string
 
+  /organization_units/{unit_id}/positions:
+    get:
+      tags: [Position]
+      summary: List positions for an organization unit
+      parameters:
+        - in: path
+          name: unit_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of positions for the organization unit
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+        '404':
+          description: Organization unit not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    post:
+      tags: [Position]
+      summary: Create a new position for an organization unit
+      parameters:
+        - in: path
+          name: unit_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionCreate'
+      responses:
+        '201':
+          description: Position created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+        '404':
+          description: Organization unit not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
   /positions:
     post:
       tags: [Position]

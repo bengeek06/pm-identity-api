@@ -43,6 +43,11 @@ class Position(db.Model):
         db.String(36),
         db.ForeignKey('company.id'),
         nullable=False)
+    organization_unit_id = db.Column(
+        db.String(36),
+        db.ForeignKey('organization_unit.id'),
+        nullable=False
+    )
     description = db.Column(db.String(255), nullable=True)
     level = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
@@ -50,6 +55,12 @@ class Position(db.Model):
         db.DateTime,
         default=db.func.current_timestamp(),
         onupdate=db.func.current_timestamp()
+    )
+
+    organization_unit = db.relationship(
+        'OrganizationUnit',
+        back_populates='positions',
+        lazy=True
     )
 
     def __repr__(self):
@@ -126,74 +137,18 @@ class Position(db.Model):
             return None
 
     @classmethod
-    def create(cls, title, company_id, description=None, level=None):
+    def get_by_organization_unit_id(cls, organization_unit_id):
         """
-        Create a new position in the database.
+        Retrieve all positions associated with a specific organization unit.
 
         Args:
-            title (str): Title of the position (required).
-            company_id (str): ID of the associated company (required).
-            description (str, optional): Description of the position.
-            level (int, optional): Level or rank of the position.
+            organization_unit_id (str): Unique identifier of the organization unit.
 
         Returns:
-            Position: The created Position object.
+            list: List of Position objects associated with the organization unit.
         """
         try:
-            position = cls(
-                title=title,
-                company_id=company_id,
-                description=description,
-                level=level
-            )
-            db.session.add(position)
-            db.session.commit()
-            return position
+            return cls.query.filter_by(organization_unit_id=organization_unit_id).all()
         except SQLAlchemyError as e:
-            logger.error(f"Error creating position: {e}")
-            db.session.rollback()
-            return None
-
-    def update(self, title=None, description=None, level=None):
-        """
-        Update the attributes of an existing position.
-
-        Args:
-            title (str, optional): New title for the position.
-            description (str, optional): New description for the position.
-            level (int, optional): New level for the position.
-
-        Returns:
-            Position: The updated Position object.
-        """
-        if title:
-            self.title = title
-        if description:
-            self.description = description
-        if level is not None:
-            self.level = level
-        
-        try:
-            db.session.commit()
-            return self
-        except SQLAlchemyError as e:
-            logger.error(f"Error updating position {self.id}: {e}")
-            db.session.rollback()
-            return None
-
-    def delete(self):
-        """
-        Delete the position from the database.
-
-        Returns:
-            bool: True if deletion was successful, False otherwise.
-        """
-        try:
-            db.session.delete(self)
-            db.session.commit()
-            return True
-        except SQLAlchemyError as e:
-            logger.error(f"Error deleting position {self.id}: {e}")
-            db.session.rollback()
-            return False
-    
+            logger.error(f"Error retrieving positions for organization unit {organization_unit_id}: {e}")
+            return []

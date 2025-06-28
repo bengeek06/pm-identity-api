@@ -10,11 +10,9 @@ and output.
 """
 
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import ValidationError, validates
+from marshmallow import fields, validate
 
 from app.models.position import Position
-from app.models.company import Company
-from app.logger import logger
 
 
 class PositionSchema(SQLAlchemyAutoSchema):
@@ -25,7 +23,8 @@ class PositionSchema(SQLAlchemyAutoSchema):
         id (int): Unique identifier for the Position entity.
         title (str): Title of the position.
         description (str): Description of the position.
-        company_id (int): Foreign key to the associated company.
+        company_id (str): Foreign key to the associated company.
+        unit_id (str): Foreign key to the associated unit.
         level (int): Level of the position.
     """
     class Meta:
@@ -43,104 +42,32 @@ class PositionSchema(SQLAlchemyAutoSchema):
         include_fk = True
         dump_only = ('id', 'created_at', 'updated_at')
 
+    title = fields.String(
+        required=True,
+        validate=validate.Length(min=1, error="Title cannot be empty.")
+    )
 
-    @validates('title')
-    def validate_title(self, value, **kwargs):
-        """
-        Validate that the title is not empty and is unique.
+    description = fields.String(
+        validate=validate.Length(max=200, error="Description cannot exceed 200 characters.")
+    )
 
-        Args:
-            value (str): The title to validate.
+    company_id = fields.String(
+        required=True,
+        validate=validate.Regexp(
+            r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$',
+            error="Parent ID must be a valid UUID."
+        )
+    )
 
-        Raises:
-            ValidationError: If the title is empty or already exists.
+    organization_unit_id = fields.String(
+    required=True,
+    validate=validate.Regexp(
+        r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$',
+        error="Organization Unit ID must be a valid UUID."
+    )
+)
 
-        Returns:
-            str: The validated title.
-        """
-        _ = kwargs
-
-        if not value:
-            logger.error("Validation error: Title cannot be empty.")
-            raise ValidationError("Title cannot be empty.")
-        position = Position.get_by_title(value)
-        if position:
-            logger.error(
-               "Validation error: Position with title '{value}' already exists."
-            )
-            raise ValidationError(
-                f"Position with title '{value}' already exists."
-            )
-        return value
-
-    @validates('company_id')
-    def validate_company_id(self, value, **kwargs):
-        """
-        Validate that the company_id is not empty and corresponds to an
-        existing company.
-
-        Args:
-            value (int): The company_id to validate.
-
-        Raises:
-            ValidationError: If the company_id is empty or does not exist.
-
-        Returns:
-            int: The validated company_id.
-        """
-        _ = kwargs
-
-        if not value:
-            logger.error("Validation error: Company ID cannot be empty.")
-            raise ValidationError("Company ID cannot be empty.")
-        company = Company().get_by_id(value)
-        if not company:
-            logger.error(
-                f"Validation error: Company with ID {value} does not exist."
-            )
-            raise ValidationError(f"Company with ID {value} does not exist.")
-        return value
-
-    @validates('description')
-    def validate_description(self, value, **kwargs):
-        """
-        Validate that the description does not exceed 200 characters.
-
-        Args:
-            value (str): The description to validate.
-
-        Raises:
-            ValidationError: If the description exceeds 200 characters.
-
-        Returns:
-            str: The validated description.
-        """
-        _ = kwargs
-
-        if value and len(value) > 200:
-            logger.error(
-                "Validation error: Description cannot exceed 200 characters."
-            )
-            raise ValidationError("Description cannot exceed 200 characters.")
-        return value
-
-    @validates('level')
-    def validate_level(self, value, **kwargs):
-        """
-        Validate that the level is a positive integer.
-
-        Args:
-            value (int): The level to validate.
-
-        Raises:
-            ValidationError: If the level is not a positive integer.
-
-        Returns:
-            int: The validated level.
-        """
-        _ = kwargs
-
-        if value is not None and (not isinstance(value, int) or value < 0):
-            logger.error("Validation error: Level must be a positive integer.")
-            raise ValidationError("Level must be a positive integer.")
-        return value
+    level = fields.Integer(
+        required=False,
+        validate=validate.Range(min=0, error="Level must be a positive integer.")
+    )
