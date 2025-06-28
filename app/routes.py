@@ -17,6 +17,13 @@ from app.resources.customer import CustomerListResource, CustomerResource
 from app.resources.organization_unit import OrganizationUnitListResource, OrganizationUnitResource, OrganizationUnitChildrenResource
 from app.resources.position import PositionListResource, PositionResource, OrganizationUnitPositionsResource
 from app.resources.subcontractor import SubcontractorListResource, SubcontractorResource
+from app.resources.user import (
+    UserListResource,
+    UserResource,
+    UserCompanyResource,
+    UserPositionResource,
+    VerifyPasswordResource
+)
 
 
 def register_routes(app):
@@ -52,5 +59,10 @@ def register_routes(app):
     api.add_resource(OrganizationUnitPositionsResource, '/organization_units/<string:unit_id>/positions')
     api.add_resource(SubcontractorListResource, '/subcontractors')
     api.add_resource(SubcontractorResource, '/subcontractors/<string:subcontractor_id>')
+    api.add_resource(UserListResource, '/users')
+    api.add_resource(UserResource, '/users/<string:user_id>')
+    api.add_resource(UserCompanyResource, '/company/<string:company_id>/users')
+    api.add_resource(UserPositionResource, '/position/<string:position_id>/users')
+    api.add_resource(VerifyPasswordResource, '/verify_password')
 
     logger.info("Routes registered successfully.")

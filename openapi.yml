@@ -267,7 +267,7 @@ paths:
 
   /companies/{company_id}/users:
     get:
-      tags: [Company]
+      tags: [User]
       summary: List users in a company
       parameters:
         - in: path
@@ -284,6 +284,67 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/User'
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    post:
+      tags: [User]
+      summary: Create a new user in a company
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    delete:
+      tags: [User]
+      summary: Delete all users in a company
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: All users deleted
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
 
   /organizations:
     post:
@@ -581,6 +642,26 @@ paths:
       responses:
         '204':
           description: Position deleted
+
+  /positions/{position_id}/users:
+    get:
+      tags: [User]
+      summary: List users by position
+      parameters:
+        - in: path
+          name: position_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of users with this position
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
 
   /subcontractors:
     post:

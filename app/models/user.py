@@ -10,6 +10,7 @@ The User model represents an individual user account within a company.
 
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.security import check_password_hash
 from app.models import db
 from app.logger import logger
 
@@ -73,7 +74,7 @@ class User(db.Model):
         default=db.func.current_timestamp(),
         onupdate=db.func.current_timestamp()
     )
-    
+
     company = db.relationship('Company', back_populates='users', lazy=True)
 
     def __repr__(self):
@@ -94,7 +95,7 @@ class User(db.Model):
         try:
             return cls.query.all()
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving users: {e}")
+            logger.error("Error retrieving users: %s", str(e))
             return []
 
     @classmethod
@@ -111,7 +112,7 @@ class User(db.Model):
         try:
             return cls.query.get(user_id)
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving user by ID {user_id}: {e}")
+            logger.error("Error retrieving user by ID %s: %s", user_id, str(e))
             return None
 
     @classmethod
@@ -128,7 +129,7 @@ class User(db.Model):
         try:
             return cls.query.filter_by(email=email).first()
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving user by email {email}: {e}")
+            logger.error("Error retrieving user by email %s: %s", email, str(e))
             return None
 
     @classmethod
@@ -146,7 +147,7 @@ class User(db.Model):
             return cls.query.filter_by(company_id=company_id).all()
         except SQLAlchemyError as e:
             logger.error(
-                f"Error retrieving users for company {company_id}: {e}"
+                "Error retrieving users for company %s: %s", company_id, str(e)
             )
             return []
 
@@ -165,7 +166,7 @@ class User(db.Model):
             return cls.query.filter_by(position_id=position_id).all()
         except SQLAlchemyError as e:
             logger.error(
-                f"Error retrieving users for position {position_id}: {e}"
+                "Error retrieving users for position %s: %s", position_id, str(e)
             )
             return []
 
@@ -190,81 +191,18 @@ class User(db.Model):
             return query.all()
         except SQLAlchemyError as e:
             logger.error(
-                f"Error retrieving users by name: {e}"
+                "Error retrieving users by name: %s", str(e)
             )
             return []
 
-    @classmethod
-    def create(cls, email, hashed_password, company_id,
-               first_name=None, last_name=None, phone_number=None,
-               avatar_url=None):
+    def verify_password(self, password):
         """
-        Create a new user record in the database.
+        Verify the user's password.
 
         Args:
-            email (str): Email address of the user.
-            hashed_password (str): Hashed password for authentication.
-            company_id (str): ID of the associated company.
-            first_name (str): Optional first name of the user.
-            last_name (str): Optional last name of the user.
-            phone_number (str): Optional phone number of the user.
-            avatar_url (str): Optional URL to the user's avatar.
+            password (str): The password to verify.
 
         Returns:
-            User: The created User object.
+            bool: True if the password matches, False otherwise.
         """
-        try:
-            user = cls(
-                email=email,
-                hashed_password=hashed_password,
-                first_name=first_name,
-                last_name=last_name,
-                phone_number=phone_number,
-                avatar_url=avatar_url,
-                company_id=company_id
-            )
-            db.session.add(user)
-            db.session.commit()
-            return user
-        except SQLAlchemyError as e:
-            logger.error(f"Error creating user: {e}")
-            db.session.rollback()
-            return None
-
-    def update(self, **kwargs):
-        """
-        Update the user's attributes.
-
-        Args:
-            **kwargs: Arbitrary keyword arguments representing the attributes
-                      to update (e.g., first_name, last_name, phone_number).
-
-        Returns:
-            User: The updated User object.
-        """
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-        try:
-            db.session.commit()
-            return self
-        except SQLAlchemyError as e:
-            logger.error(f"Error updating user {self.id}: {e}")
-            db.session.rollback()
-            return None
-
-    def delete(self):
-        """
-        Delete the user record from the database.
-
-        Returns:
-            bool: True if deletion was successful, False otherwise.
-        """
-        try:
-            db.session.delete(self)
-            db.session.commit()
-            return True
-        except SQLAlchemyError as e:
-            logger.error(f"Error deleting user {self.id}: {e}")
-            db.session.rollback()
-            return False
+        return check_password_hash(self.hashed_password, password)
