@@ -13,6 +13,7 @@ from app.resources.config import ConfigResource
 from app.resources.export_to import ExportCSVResource
 from app.resources.import_from import ImportCSVResource, ImportJSONResource
 from app.resources.company import CompanyListResource, CompanyResource
+from app.resources.customer import CustomerListResource, CustomerResource
 
 
 def register_routes(app):
@@ -38,5 +39,7 @@ def register_routes(app):
     api.add_resource(ConfigResource, '/config')
     api.add_resource(CompanyListResource, '/companies')
     api.add_resource(CompanyResource, '/companies/<string:company_id>')
+    api.add_resource(CustomerListResource, '/customers')
+    api.add_resource(CustomerResource, '/customers/<string:customer_id>')
 
     logger.info("Routes registered successfully.")

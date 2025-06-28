@@ -178,7 +178,6 @@ class CompanyResource(Resource):
         company_schema = CompanySchema(session=db.session, partial=True)
 
         try:
-            #company_data = company_schema.load(json_data)
             company = Company.get_by_id(company_id)
             if not company:
                 logger.warning("Company with ID %s not found", company_id)

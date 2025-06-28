@@ -10,11 +10,9 @@ and output.
 """
 
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import ValidationError, validates
+from marshmallow import fields, validate, RAISE
 
 from app.models.customer import Customer
-from app.models.company import Company
-from app.logger import logger
 
 class CustomerSchema(SQLAlchemyAutoSchema):
     """
@@ -37,151 +35,45 @@ class CustomerSchema(SQLAlchemyAutoSchema):
             load_instance: Whether to load model instances.
             include_fk: Whether to include foreign keys.
             dump_only: Fields that are only used for serialization.
+            unknown: Raise error on unknown fields.
         """
         model = Customer
         load_instance = True
         include_fk = True
         dump_only = ('id', 'created_at', 'updated_at')
+        unknown = RAISE
 
-    @validates('name')
-    def validate_name(self, value, **kwargs):
-        """
-        Validate that the name is not empty and is unique.
+    name = fields.String(
+        required=True,
+        validate=validate.Length(min=1, max=100)
+    )
 
-        Args:
-            value (str): The name to validate.
+    company_id = fields.Integer(
+        required=True,
+        validate=validate.Range(min=1),
+    )
 
-        Raises:
-            ValidationError: If the name is empty or already exists.
+    email = fields.Email(
+        allow_none=True,
+        validate=validate.Length(max=100)
+    )
 
-        Returns:
-            str: The validated name.
-        """
-        _ = kwargs
+    contact_person = fields.String(
+        allow_none=True,
+        validate=validate.Length(max=100)
+    )
 
-        if not value:
-            logger.error("Validation error: Name cannot be empty.")
-            raise ValidationError("Name cannot be empty.")
+    phone_number = fields.String(
+        allow_none=True,
+        validate=[
+            validate.Length(max=50),
+            validate.Regexp(
+                r"^\d*$", error="Phone number must contain only digits.")
+        ]
+    )
 
-        customer = Customer.get_by_name(value)
-        if customer:
-            logger.error("Validation error: Name must be unique.")
-            raise ValidationError("Name must be unique.")
+    address = fields.String(
+        allow_none=True,
+        validate=validate.Length(max=255)
+    )
 
-        return value
-
-    @validates('company_id')
-    def validate_company_id(self, value, **kwargs):
-        """
-        Validate that the company_id is not empty.
-
-        Args:
-            value (str): The company_id to validate.
-
-        Raises:
-            ValidationError: If the company_id is empty.
-
-        Returns:
-            str: The validated company_id.
-        """
-        _ = kwargs
-
-        if not value:
-            logger.error("Validation error: Company ID cannot be empty.")
-            raise ValidationError("Company ID cannot be empty.")
-        company = Company.query.get(value)
-        if not company:
-            logger.error(
-                f"Validation error: Company ID {value} does not exist."
-            )
-            raise ValidationError("Company does not exist.")
-
-        return value
-
-    @validates('email')
-    def validate_email(self, value, **kwargs):
-        """
-        Validate that the email is not empty and is unique.
-
-        Args:
-            value (str): The email to validate.
-
-        Raises:
-            ValidationError: If the email is empty or already exists.
-
-        Returns:
-            str: The validated email.
-        """
-        _ = kwargs
-
-        if not value:
-            raise ValidationError("Email cannot be empty.")
-
-        customer = Customer.get_by_email(value)
-        if customer:
-            raise ValidationError("Email must be unique.")
-
-        return value
-
-    @validates('contact_person')
-    def validate_contact_person(self, value, **kwargs):
-        """
-        Validate that the contact person does not exceed 100 characters.
-
-        Args:
-            value (str): The contact person to validate.
-
-        Raises:
-            ValidationError: If the contact person exceeds 100 characters.
-
-        Returns:
-            str: The validated contact person.
-        """
-        _ = kwargs
-
-        if value and len(value) > 100:
-            raise ValidationError("Contact person cannot exceed 100 characters.")
-
-        return value
-
-    @validates('phone_number')
-    def validate_phone_number(self, value, **kwargs):
-        """
-        Validate that the phone number does not exceed 50 characters.
-
-        Args:
-            value (str): The phone number to validate.
-
-        Raises:
-            ValidationError: If the phone number exceeds 50 characters.
-
-        Returns:
-            str: The validated phone number.
-        """
-        _ = kwargs
-
-        if value and len(value) > 50:
-            raise ValidationError("Phone number cannot exceed 50 characters.")
-
-        return value
-
-    @validates('address')
-    def validate_address(self, value, **kwargs):
-        """
-        Validate that the address does not exceed 255 characters.
-
-        Args:
-            value (str): The address to validate.
-
-        Raises:
-            ValidationError: If the address exceeds 255 characters.
-
-        Returns:
-            str: The validated address.
-        """
-        _ = kwargs
-
-        if value and len(value) > 255:
-            raise ValidationError("Address cannot exceed 255 characters.")
-
-        return value

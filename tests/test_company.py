@@ -676,7 +676,7 @@ def test_get_by_name_sqlalchemy_error(client, monkeypatch):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
     # On crée une instance factice avec une méthode first qui lève l'exception
     class FakeQuery:
-        def first(self_inner):
+        def first(self):
             raise_sqlalchemy_error()
     monkeypatch.setattr(type(Company.query), "filter_by", lambda *a, **k: FakeQuery())
     result = Company.get_by_name("some-name")

@@ -67,7 +67,8 @@ class CompanySchema(SQLAlchemyAutoSchema):
         allow_none=True,
         validate=[
             validate.Length(max=20),
-            validate.Regexp(r"^\d*$", error="Phone number must contain only digits.")
+            validate.Regexp(
+                r"^\d*$", error="Phone number must contain only digits.")
         ]
     )
     email = fields.Email(
