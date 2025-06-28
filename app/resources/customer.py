@@ -1,6 +1,14 @@
 """
 Module: customer
+
+This module defines the Flask-RESTful resources for managing Customer entities
+in the Identity Service API.
+
+It provides endpoints for listing, creating, retrieving, updating, partially
+updating, and deleting customers. The resources use Marshmallow schemas for
+validation and serialization, and handle database errors gracefully.
 """
+
 from flask import request
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -11,6 +19,7 @@ from app.logger import logger
 
 from app.models.customer import Customer
 from app.schemas.customer_schema import CustomerSchema
+
 
 class CustomerListResource(Resource):
     """
@@ -30,7 +39,7 @@ class CustomerListResource(Resource):
 
         Returns:
             tuple: A tuple containing a list of serialized customers and the
-            HTTP status code 200.
+                   HTTP status code 200.
         """
         logger.info("Retrieving all customers")
 
@@ -72,6 +81,7 @@ class CustomerListResource(Resource):
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
+
 class CustomerResource(Resource):
     """
     Resource for managing a single customer.
@@ -82,6 +92,9 @@ class CustomerResource(Resource):
 
         put(customer_id):
             Update an existing customer by ID.
+
+        patch(customer_id):
+            Partially update an existing customer by ID.
 
         delete(customer_id):
             Delete a customer by ID.
@@ -132,7 +145,8 @@ class CustomerResource(Resource):
                 logger.warning("Customer with ID %s not found", customer_id)
                 return {"error": "Customer not found"}, 404
 
-            updated_customer = customer_schema.load(json_data, instance=customer)
+            updated_customer = customer_schema.load(
+                json_data, instance=customer)
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:
@@ -171,7 +185,8 @@ class CustomerResource(Resource):
                 logger.warning("Customer with ID %s not found", customer_id)
                 return {"error": "Customer not found"}, 404
 
-            updated_customer = customer_schema.load(json_data, instance=customer, partial=True)
+            updated_customer = customer_schema.load(
+                json_data, instance=customer, partial=True)
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:
@@ -211,7 +226,9 @@ class CustomerResource(Resource):
         except IntegrityError as err:
             db.session.rollback()
             logger.error("Integrity error: %s", str(err))
-            return {"error": "Integrity error, possibly due to foreign key constraints."}, 400
+            return (
+             {"error": "Integrity error, possibly due to FK constraints."}, 400
+            )
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error("Database error: %s", str(err))

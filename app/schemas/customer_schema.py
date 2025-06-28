@@ -1,12 +1,13 @@
 """
-Module: customer_schema
+customer_schema.py
+------------------
 
 This module defines the Marshmallow schema for serializing, deserializing,
 and validating Customer model instances in the Identity Service API.
 
-The CustomerSchema class provides field validation and metadata for the Customer
-model, ensuring data integrity and proper formatting when handling API input
-and output.
+The CustomerSchema class provides field validation and metadata for the
+Customer model, ensuring data integrity and proper formatting when handling API
+input and output.
 """
 
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
@@ -14,22 +15,27 @@ from marshmallow import fields, validate, RAISE
 
 from app.models.customer import Customer
 
+
 class CustomerSchema(SQLAlchemyAutoSchema):
     """
-    Serialization and validation schema for the Customer model.
+    Marshmallow schema for the Customer model.
 
-    Attributes:
-        id (int): Unique identifier for the Customer entity.
-        name (str): Name of the Customer entity.
-        company_id (int): Foreign key to the associated Company entity.
-        email (str): Email address of the Customer entity.
-        contact_person (str): Optional contact person for the customer.
-        phone_number (str): Optional phone number of the customer.
-        address (str): Optional address of the customer.
+    This schema serializes and validates Customer objects, enforcing field
+    types, length constraints, and format (email, digits). It also ensures
+    proper deserialization and serialization for API input/output.
+
+    Fields:
+        name (str): Required. 1-100 characters.
+        company_id (int): Required. Must be a positive integer.
+        email (str): Optional. Must be a valid email, max 100 characters.
+        contact_person (str): Optional. Max 100 characters.
+        phone_number (str): Optional. Digits only, max 50 characters.
+        address (str): Optional. Max 255 characters.
     """
     class Meta:
         """
         Meta options for the Customer schema.
+
         Attributes:
             model: The SQLAlchemy model associated with this schema.
             load_instance: Whether to load model instances.
@@ -76,4 +82,3 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         allow_none=True,
         validate=validate.Length(max=255)
     )
-

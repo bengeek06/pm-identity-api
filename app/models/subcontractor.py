@@ -14,6 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.models import db
 from app.logger import logger
 
+
 class Subcontractor(db.Model):
     """
     SQLAlchemy model for the 'subcontractor' table.
@@ -61,8 +62,14 @@ class Subcontractor(db.Model):
     )
 
     def __repr__(self):
+        """
+        Return a string representation of the Subcontractor instance.
+
+        Returns:
+            str: String representation of the subcontractor.
+        """
         return (
-            f"<Position {self.name}>"
+            f"<Subcontractor {self.name}>"
             f" (ID: {self.id}, Company ID: {self.company_id})"
         )
 
@@ -72,12 +79,12 @@ class Subcontractor(db.Model):
         Retrieve all subcontractors from the database.
 
         Returns:
-            list: List of Position objects.
+            list[Subcontractor]: List of Subcontractor objects.
         """
         try:
             return cls.query.all()
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving subcontractors: {e}")
+            logger.error("Error retrieving subcontractors: %s", e)
             return []
 
     @classmethod
@@ -89,13 +96,15 @@ class Subcontractor(db.Model):
             subcontractor_id (str): The ID of the subcontractor.
 
         Returns:
-            Subcontractor: The Subcontractor object if found, None otherwise.
+            Subcontractor or None: The Subcontractor object if found,
+                                   None otherwise.
         """
         try:
             return cls.query.filter_by(id=subcontractor_id).first()
         except SQLAlchemyError as e:
             logger.error(
-                f"Error retrieving subcontractor by ID {subcontractor_id}: {e}"
+                "Error retrieving subcontractor by ID %s: %s",
+                subcontractor_id, e
             )
             return None
 
@@ -108,13 +117,15 @@ class Subcontractor(db.Model):
             company_id (str): Unique identifier of the company.
 
         Returns:
-            list: List of Subcontractor objects associated with the company.
+            list[Subcontractor]: List of Subcontractor objects associated
+                                 with the company.
         """
         try:
             return cls.query.filter_by(company_id=company_id).all()
         except SQLAlchemyError as e:
             logger.error(
-              f"Error retrieving subcontractors by company ID {company_id}: {e}"
+                "Error retrieving subcontractors by company ID %s: %s",
+                company_id, e
             )
             return []
 
@@ -127,12 +138,14 @@ class Subcontractor(db.Model):
             name (str): The name of the subcontractor.
 
         Returns:
-            Subcontractor: The Subcontractor object if found, None otherwise.
+            Subcontractor or None: The Subcontractor object if found,
+                                   None otherwise.
         """
         try:
             return cls.query.filter_by(name=name).first()
         except SQLAlchemyError as e:
             logger.error(
-                f"Error retrieving subcontractor by name {name}: {e}"
+                "Error retrieving subcontractor by name %s: %s",
+                name, e
             )
             return None

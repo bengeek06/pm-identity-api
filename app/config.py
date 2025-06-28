@@ -20,13 +20,23 @@ import os
 
 
 class Config:
-    """Base configuration common to all environments."""
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev')
+    """
+    Base configuration common to all environments.
+
+    Attributes:
+        SQLALCHEMY_TRACK_MODIFICATIONS (bool): Disable SQLAlchemy event system.
+    """
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
 class DevelopmentConfig(Config):
-    """Configuration for the development environment."""
+    """
+    Configuration for the development environment.
+
+    Attributes:
+        DEBUG (bool): Enable debug mode.
+        SQLALCHEMY_DATABASE_URI (str): Database URI for development.
+    """
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     if not SQLALCHEMY_DATABASE_URI:
@@ -34,7 +44,13 @@ class DevelopmentConfig(Config):
 
 
 class TestingConfig(Config):
-    """Configuration for the testing environment."""
+    """
+    Configuration for the testing environment.
+
+    Attributes:
+        TESTING (bool): Enable testing mode.
+        SQLALCHEMY_DATABASE_URI (str): Database URI for testing.
+    """
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     if not SQLALCHEMY_DATABASE_URI:
@@ -42,7 +58,13 @@ class TestingConfig(Config):
 
 
 class StagingConfig(Config):
-    """Configuration for the staging environment."""
+    """
+    Configuration for the staging environment.
+
+    Attributes:
+        DEBUG (bool): Enable debug mode.
+        SQLALCHEMY_DATABASE_URI (str): Database URI for staging.
+    """
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     if not SQLALCHEMY_DATABASE_URI:
@@ -50,7 +72,13 @@ class StagingConfig(Config):
 
 
 class ProductionConfig(Config):
-    """Configuration for the production environment."""
+    """
+    Configuration for the production environment.
+
+    Attributes:
+        DEBUG (bool): Disable debug mode.
+        SQLALCHEMY_DATABASE_URI (str): Database URI for production.
+    """
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     if not SQLALCHEMY_DATABASE_URI:

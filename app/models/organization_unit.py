@@ -67,8 +67,11 @@ class OrganizationUnit(db.Model):
         default=db.func.current_timestamp(),
         onupdate=db.func.current_timestamp()
     )
-
-    company = db.relationship('Company', back_populates='organizations_units', lazy=True)
+    company = db.relationship(
+        'Company',
+        back_populates='organizations_units',
+        lazy=True
+    )
     positions = db.relationship(
         'Position',
         back_populates='organization_unit',
@@ -139,7 +142,7 @@ class OrganizationUnit(db.Model):
 
         Args:
             company_id (str): The ID of the company.
-            
+
         Returns:
             list: List of OrganizationUnit objects associated with the company.
         """
@@ -179,7 +182,7 @@ class OrganizationUnit(db.Model):
         if self.parent_id:
             parent = OrganizationUnit.get_by_id(self.parent_id)
             if parent:
-                self.path = f"{parent.path}/{self.id}" if parent.path else f"{parent.id}/{self.id}"
+                self.path = f"{parent.path or parent.id}/{self.id}"
                 self.level = (parent.level or 0) + 1
             else:
                 self.path = str(self.id)

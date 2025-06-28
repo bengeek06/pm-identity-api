@@ -39,7 +39,7 @@ class CompanyListResource(Resource):
 
         Returns:
             tuple: A tuple containing a list of serialized companies and the
-            HTTP status code 200.
+                   HTTP status code 200.
         """
         logger.info("Retrieving all companies")
 
@@ -85,6 +85,7 @@ class CompanyListResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+
 class CompanyResource(Resource):
     """
     Resource for managing a single company.
@@ -96,6 +97,9 @@ class CompanyResource(Resource):
         put(company_id):
             Update an existing company with the provided data.
 
+        patch(company_id):
+            Partially update an existing company with the provided data.
+
         delete(company_id):
             Delete a specific company by its ID.
     """
@@ -105,8 +109,8 @@ class CompanyResource(Resource):
         Retrieve a specific company by its ID.
 
         Args:
-            company_id (int): The ID of the company to retrieve.
-            
+            company_id (str): The ID of the company to retrieve.
+
         Returns:
             tuple: The serialized company and HTTP status code 200 on success.
             tuple: Error message and HTTP status code 404 if not found.
@@ -129,10 +133,11 @@ class CompanyResource(Resource):
             JSON payload with at least the 'name' field.
 
         Args:
-            company_id (int): The ID of the company to update.
+            company_id (str): The ID of the company to update.
 
         Returns:
-            tuple: The serialized updated company and HTTP status code 200 on success.
+            tuple: The serialized updated company and HTTP status code 200 on
+                   success.
             tuple: Error message and HTTP status code 400 or 404 on failure.
         """
         logger.info("Updating company with ID: %s", company_id)
@@ -170,10 +175,11 @@ class CompanyResource(Resource):
             JSON payload with fields to update.
 
         Args:
-            company_id (int): The ID of the company to update.
+            company_id (str): The ID of the company to update.
 
         Returns:
-            tuple: The serialized updated company and HTTP status code 200 on success.
+            tuple: The serialized updated company and HTTP status code 200 on
+                   success.
             tuple: Error message and HTTP status code 400 or 404 on failure.
         """
         logger.info("Partially updating company with ID: %s", company_id)
@@ -208,10 +214,10 @@ class CompanyResource(Resource):
         Delete a specific company by its ID.
 
         Args:
-            company_id (int): The ID of the company to delete.
-            
+            company_id (str): The ID of the company to delete.
+
         Returns:
-            tuple: HTTP status code 204 on success.
+            tuple: Empty dict and HTTP status code 204 on success.
             tuple: Error message and HTTP status code 404 if not found.
         """
         logger.info("Deleting company with ID: %s", company_id)

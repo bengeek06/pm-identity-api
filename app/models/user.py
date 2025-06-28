@@ -78,6 +78,12 @@ class User(db.Model):
     company = db.relationship('Company', back_populates='users', lazy=True)
 
     def __repr__(self):
+        """
+        Return a string representation of the User instance.
+
+        Returns:
+            str: String representation of the user.
+        """
         return (
             f"<User {self.email}>"
             f" (ID: {self.id}, First Name: {self.first_name}, "
@@ -90,7 +96,8 @@ class User(db.Model):
         Retrieve all users from the database.
 
         Returns:
-            list: List of all User objects.
+            list[User]: List of all User objects, or an empty list if an
+                        error occurs.
         """
         try:
             return cls.query.all()
@@ -107,7 +114,7 @@ class User(db.Model):
             user_id (str): The ID of the user.
 
         Returns:
-            User: The User object if found, None otherwise.
+            User or None: The User object if found, None otherwise.
         """
         try:
             return cls.query.get(user_id)
@@ -124,12 +131,14 @@ class User(db.Model):
             email (str): The email address of the user.
 
         Returns:
-            User: The User object if found, None otherwise.
+            User or None: The User object if found, None otherwise.
         """
         try:
             return cls.query.filter_by(email=email).first()
         except SQLAlchemyError as e:
-            logger.error("Error retrieving user by email %s: %s", email, str(e))
+            logger.error(
+                "Error retrieving user by email %s: %s", email, str(e)
+            )
             return None
 
     @classmethod
@@ -141,7 +150,8 @@ class User(db.Model):
             company_id (str): Unique identifier of the company.
 
         Returns:
-            list: List of User objects associated with the company.
+            list[User]: List of User objects associated with the company,
+                        or an empty list if an error occurs.
         """
         try:
             return cls.query.filter_by(company_id=company_id).all()
@@ -160,13 +170,15 @@ class User(db.Model):
             position_id (str): Unique identifier of the position.
 
         Returns:
-            list: List of User objects associated with the position.
+            list[User]: List of User objects associated with the position,
+                        or an empty list if an error occurs.
         """
         try:
             return cls.query.filter_by(position_id=position_id).all()
         except SQLAlchemyError as e:
             logger.error(
-                "Error retrieving users for position %s: %s", position_id, str(e)
+                "Error retrieving users for position %s: %s",
+                position_id, str(e)
             )
             return []
 
@@ -176,11 +188,12 @@ class User(db.Model):
         Retrieve users by their first and/or last name.
 
         Args:
-            first_name (str): Optional first name of the user.
-            last_name (str): Optional last name of the user.
+            first_name (str, optional): First name of the user.
+            last_name (str, optional): Last name of the user.
 
         Returns:
-            list: List of User objects matching the criteria.
+            list[User]: List of User objects matching the criteria,
+                        or an empty list if an error occurs.
         """
         try:
             query = cls.query
@@ -197,12 +210,12 @@ class User(db.Model):
 
     def verify_password(self, password):
         """
-        Verify the user's password.
+        Verify the user's password against the stored hash.
 
         Args:
             password (str): The password to verify.
 
         Returns:
-            bool: True if the password matches, False otherwise.
+            bool: True if password matches the stored hash, False otherwise.
         """
         return check_password_hash(self.hashed_password, password)

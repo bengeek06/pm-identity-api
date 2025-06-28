@@ -5,7 +5,8 @@ This module defines the Customer model for the Identity Service API.
 It provides the SQLAlchemy ORM mapping for the 'customer' table, including
 attributes, relationships, and utility methods for CRUD operations.
 
-The Customer model represents a client or customer entity associated with a company.
+The Customer model represents a client or customer entity associated with a
+company.
 """
 
 import uuid
@@ -57,6 +58,12 @@ class Customer(db.Model):
     )
 
     def __repr__(self):
+        """
+        Return a string representation of the Customer instance.
+
+        Returns:
+            str: String representation of the customer.
+        """
         return (
             f"<Customer {self.name}>"
             f" (ID: {self.id}, Email: {self.email}), "
@@ -69,7 +76,7 @@ class Customer(db.Model):
         Retrieve all records from the Customer table.
 
         Returns:
-            list: List of all Customer objects.
+            list[Customer]: List of all Customer objects.
         """
         try:
             return cls.query.all()
@@ -86,7 +93,7 @@ class Customer(db.Model):
             customer_id (str): The ID of the customer.
 
         Returns:
-            Customer: The Customer object if found, else None.
+            Customer or None: The Customer object if found, else None.
         """
         try:
             return cls.query.filter_by(id=customer_id).first()
@@ -103,9 +110,10 @@ class Customer(db.Model):
 
         Args:
             company_id (str): The ID of the company.
-            
+
         Returns:
-            list: List of Customer objects associated with the company.
+            list[Customer]: List of Customer objects associated with the
+                            company.
         """
         try:
             return cls.query.filter_by(company_id=company_id).all()
@@ -124,7 +132,7 @@ class Customer(db.Model):
             name (str): The name of the customer.
 
         Returns:
-            Customer: The Customer object if found, else None.
+            Customer or None: The Customer object if found, else None.
         """
         try:
             return cls.query.filter_by(name=name).first()

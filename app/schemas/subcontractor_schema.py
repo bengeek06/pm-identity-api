@@ -1,5 +1,6 @@
 """
-Module: subcontractor_schema
+subcontractor_schema.py
+-----------------------
 
 This module defines the Marshmallow schema for serializing, deserializing,
 and validating Subcontractor model instances in the Identity Service API.
@@ -18,13 +19,17 @@ from app.models.subcontractor import Subcontractor
 
 class SubcontractorSchema(SQLAlchemyAutoSchema):
     """
-    Serialization and validation schema for the Subcontractor model.
+    Marshmallow schema for the Subcontractor model.
 
-    Attributes:
-        id (int): Unique identifier for the Subcontractor entity.
+    This schema serializes and validates Subcontractor objects, enforcing field
+    types, length constraints, and format (UUID, email, digits, etc.). It also
+    ensures proper deserialization and serialization for API input/output.
+
+    Fields:
+        id (str): Unique identifier for the Subcontractor entity.
         name (str): Name of the subcontractor.
         description (str): Description of the subcontractor.
-        company_id (int): Foreign key to the associated company.
+        company_id (str): Foreign key to the associated company (UUID).
         contact_person (str): Optional contact person for the subcontractor.
         phone_number (str): Optional phone number of the subcontractor.
         email (str): Optional email address of the subcontractor.
@@ -47,25 +52,38 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
 
     name = fields.String(
         required=True,
-        validate=validate.Length(min=1, max=100, error="Name must be between 1 and 100 characters."),
+        validate=validate.Length(
+            min=1, max=100,
+            error="Name must be between 1 and 100 characters."
+        ),
     )
 
     description = fields.String(
         required=False,
-        validate=validate.Length(max=200, error="Description cannot exceed 200 characters."),
+        validate=validate.Length(
+            max=200,
+            error="Description cannot exceed 200 characters."
+        ),
     )
 
     company_id = fields.String(
         required=True,
         validate=validate.Regexp(
-            r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$',
-            error="Organization Unit ID must be a valid UUID."
+            r'^[a-fA-F0-9]{8}-'
+            r'[a-fA-F0-9]{4}-'
+            r'[a-fA-F0-9]{4}-'
+            r'[a-fA-F0-9]{4}-'
+            r'[a-fA-F0-9]{12}$',
+            error="Company ID must be a valid UUID."
         )
     )
 
     contact_person = fields.String(
         required=False,
-        validate=validate.Length(max=100, error="Contact person cannot exceed 100 characters."),
+        validate=validate.Length(
+            max=100,
+            error="Contact person cannot exceed 100 characters."
+        ),
     )
 
     phone_number = fields.String(
@@ -79,12 +97,18 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
 
     email = fields.Email(
         required=False,
-        validate=validate.Length(max=100, error="Email cannot exceed 100 characters."),
+        validate=validate.Length(
+            max=100,
+            error="Email cannot exceed 100 characters."
+        ),
     )
 
     address = fields.String(
         required=False,
-        validate=validate.Length(max=200, error="Address cannot exceed 200 characters."),
+        validate=validate.Length(
+            max=200,
+            error="Address cannot exceed 200 characters."
+        ),
     )
 
     @validates('name')
@@ -106,7 +130,8 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         subcontractor = Subcontractor.get_by_name(value)
         if subcontractor:
             logger.error(
-                f"Validation error: Subcontractor with name '{value}' already exists."
+              "Validation error: Subcontractor with name '%s' already exists.",
+              value
             )
             raise ValidationError("Name must be unique.")
         return value

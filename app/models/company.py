@@ -8,6 +8,7 @@ attributes, relationships, and utility methods for CRUD operations.
 The Company model represents an organization or business entity within the
 system.
 """
+
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
 from app.models import db
@@ -37,9 +38,10 @@ class Company(db.Model):
         country (str): Optional country where the company is located.
         created_at (datetime): Timestamp when the company was created.
         updated_at (datetime): Timestamp when the company was last updated.
-        users (list): Relationship to User objects belonging to the company.
-        organizations_units (list): Relationship to OrganizationUnit objects
-                belonging to the company.
+        users (list[User]): Relationship to User objects belonging to the
+                            company.
+        organizations_units (list[OrganizationUnit]): Relationship to
+                    OrganizationUnit objects belonging to the company.
     """
     __tablename__ = 'company'
 
@@ -80,6 +82,12 @@ class Company(db.Model):
     )
 
     def __repr__(self):
+        """
+        Return a string representation of the Company instance.
+
+        Returns:
+            str: String representation of the company.
+        """
         return (
             f"<Company {self.name}>"
             f" (ID: {self.id}, Description: {self.description})"
@@ -91,7 +99,7 @@ class Company(db.Model):
         Retrieve all records from the Company table.
 
         Returns:
-            list: List of all Company objects.
+            list[Company]: List of all Company objects.
         """
         try:
             return cls.query.all()
@@ -108,8 +116,8 @@ class Company(db.Model):
             company_id (str): ID of the Company entity to retrieve.
 
         Returns:
-            Company: The Company object with the given ID, or None if not
-            found.
+            Company or None: The Company object with the given ID, or None
+                             if not found.
         """
         try:
             return cls.query.get(company_id)
@@ -128,8 +136,8 @@ class Company(db.Model):
             name (str): Name of the Company entity to retrieve.
 
         Returns:
-            Company: The Company object with the given name, or None if not
-            found.
+            Company or None: The Company object with the given name, or None
+                             if not found.
         """
         try:
             return cls.query.filter_by(name=name).first()

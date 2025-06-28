@@ -1,22 +1,27 @@
 """
+company_schema.py
+-----------------
+
 Schema definition for the Company model using Marshmallow.
 
 This module provides the CompanySchema class, which serializes and validates
-Company objects for API input/output. It enforces field types, length constraints,
-formats (email, URL, digits), and ensures the uniqueness of the company name.
+Company objects for API input/output. It enforces field types, length
+constraints, formats (email, URL, digits), and ensures the uniqueness of the
+company name.
 """
 
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow import fields, validate, RAISE, validates, ValidationError
 from app.models.company import Company
 
+
 class CompanySchema(SQLAlchemyAutoSchema):
     """
     Marshmallow schema for the Company model.
 
-    This schema serializes and validates Company objects, enforcing field types,
-    length constraints, and format (email, URL, digits). It also ensures the
-    uniqueness of the company name via a custom validator.
+    This schema serializes and validates Company objects, enforcing field
+    types, length constraints, and format (email, URL, digits). It also ensures
+    the uniqueness of the company name via a custom validator.
 
     Fields:
         name (str): Required. 1-100 characters.
@@ -34,11 +39,12 @@ class CompanySchema(SQLAlchemyAutoSchema):
         """
         Meta options for CompanySchema.
 
-        - model: The SQLAlchemy model to serialize.
-        - load_instance: Deserialize to model instances.
-        - include_fk: Include foreign keys.
-        - dump_only: Fields to exclude from deserialization.
-        - unknown: Raise error on unknown fields.
+        Attributes:
+            model: The SQLAlchemy model to serialize.
+            load_instance: Deserialize to model instances.
+            include_fk: Include foreign keys.
+            dump_only: Fields to exclude from deserialization.
+            unknown: Raise error on unknown fields.
         """
         model = Company
         load_instance = True

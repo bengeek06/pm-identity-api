@@ -14,18 +14,21 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.models import db
 from app.logger import logger
 
+
 class Position(db.Model):
     """
     SQLAlchemy model for the 'position' table.
 
     Represents a position entity in the Identity Service API, including
-    its attributes (title, description, etc.), its relationship to a company,
-    and utility methods for database operations.
+    its attributes (title, description, etc.), its relationship to a company
+    and organization unit, and utility methods for database operations.
 
     Attributes:
         id (str): Unique identifier (UUID) for the position.
         title (str): Title or name of the position (required).
         company_id (str): Foreign key referencing the associated company.
+        organization_unit_id (str): Foreign key referencing the organization
+                                    unit.
         description (str): Optional description of the position.
         level (int): Optional level or rank of the position.
         created_at (datetime): Timestamp when the position was created.
@@ -64,6 +67,12 @@ class Position(db.Model):
     )
 
     def __repr__(self):
+        """
+        Return a string representation of the Position instance.
+
+        Returns:
+            str: String representation of the position.
+        """
         return (
             f"<Position {self.title}>"
             f" (ID: {self.id}, Company ID: {self.company_id})"
@@ -75,7 +84,7 @@ class Position(db.Model):
         Retrieve all positions from the database.
 
         Returns:
-            list: List of Position objects.
+            list[Position]: List of Position objects.
         """
         try:
             return cls.query.all()
@@ -92,7 +101,7 @@ class Position(db.Model):
             position_id (str): Unique identifier of the position.
 
         Returns:
-            Position: Position object if found, None otherwise.
+            Position or None: Position object if found, None otherwise.
         """
         try:
             return cls.query.filter_by(id=position_id).first()
@@ -109,7 +118,8 @@ class Position(db.Model):
             company_id (str): Unique identifier of the company.
 
         Returns:
-            list: List of Position objects associated with the company.
+            list[Position]: List of Position objects associated with the
+                            company.
         """
         try:
             return cls.query.filter_by(company_id=company_id).all()
@@ -128,7 +138,7 @@ class Position(db.Model):
             title (str): Title of the position.
 
         Returns:
-            Position: Position object if found, None otherwise.
+            Position or None: Position object if found, None otherwise.
         """
         try:
             return cls.query.filter_by(title=title).first()
@@ -142,13 +152,19 @@ class Position(db.Model):
         Retrieve all positions associated with a specific organization unit.
 
         Args:
-            organization_unit_id (str): Unique identifier of the organization unit.
+            organization_unit_id (str): Unique identifier of the organization
+                                        unit.
 
         Returns:
-            list: List of Position objects associated with the organization unit.
+            list[Position]: List of Position objects associated with the
+                            organization unit.
         """
         try:
-            return cls.query.filter_by(organization_unit_id=organization_unit_id).all()
+            return cls.query.filter_by(
+                organization_unit_id=organization_unit_id).all()
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving positions for organization unit {organization_unit_id}: {e}")
+            logger.error(
+                "Error retrieving positions for organization unit %s: %s",
+                organization_unit_id, e
+            )
             return []

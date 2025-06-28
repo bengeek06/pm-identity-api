@@ -1,12 +1,13 @@
 """
-Module: position_schema
+position_schema.py
+------------------
 
 This module defines the Marshmallow schema for serializing, deserializing,
 and validating Position model instances in the Identity Service API.
 
-The PositionSchema class provides field validation and metadata for the Position
-model, ensuring data integrity and proper formatting when handling API input
-and output.
+The PositionSchema class provides field validation and metadata for the
+Position model, ensuring data integrity and proper formatting when handling API
+input and output.
 """
 
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
@@ -17,14 +18,18 @@ from app.models.position import Position
 
 class PositionSchema(SQLAlchemyAutoSchema):
     """
-    Serialization and validation schema for the Position model.
+    Marshmallow schema for the Position model.
 
-    Attributes:
-        id (int): Unique identifier for the Position entity.
+    This schema serializes and validates Position objects, enforcing field
+    types, length constraints, and format (UUID, string length, etc.). It also
+    ensures proper deserialization and serialization for API input/output.
+
+    Fields:
+        id (str): Unique identifier for the Position entity.
         title (str): Title of the position.
         description (str): Description of the position.
-        company_id (str): Foreign key to the associated company.
-        unit_id (str): Foreign key to the associated unit.
+        company_id (str): Foreign key to the associated company (UUID).
+        organization_unit_id (str): Foreign key to the associated unit (UUID).
         level (int): Level of the position.
     """
     class Meta:
@@ -48,26 +53,36 @@ class PositionSchema(SQLAlchemyAutoSchema):
     )
 
     description = fields.String(
-        validate=validate.Length(max=200, error="Description cannot exceed 200 characters.")
+        validate=validate.Length(
+            max=200, error="Description cannot exceed 200 characters.")
     )
 
     company_id = fields.String(
         required=True,
         validate=validate.Regexp(
-            r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$',
-            error="Parent ID must be a valid UUID."
+            r'^[a-fA-F0-9]{8}-'
+            r'[a-fA-F0-9]{4}-'
+            r'[a-fA-F0-9]{4}-'
+            r'[a-fA-F0-9]{4}-'
+            r'[a-fA-F0-9]{12}$',
+            error="Company ID must be a valid UUID."
         )
     )
 
     organization_unit_id = fields.String(
-    required=True,
-    validate=validate.Regexp(
-        r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$',
-        error="Organization Unit ID must be a valid UUID."
+        required=True,
+        validate=validate.Regexp(
+            r'^[a-fA-F0-9]{8}-'
+            r'[a-fA-F0-9]{4}-'
+            r'[a-fA-F0-9]{4}-'
+            r'[a-fA-F0-9]{4}-'
+            r'[a-fA-F0-9]{12}$',
+            error="Organization Unit ID must be a valid UUID."
+        )
     )
-)
 
     level = fields.Integer(
         required=False,
-        validate=validate.Range(min=0, error="Level must be a positive integer.")
+        validate=validate.Range(
+            min=0, error="Level must be a positive integer.")
     )

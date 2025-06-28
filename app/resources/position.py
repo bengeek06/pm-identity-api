@@ -1,6 +1,15 @@
 """
 module: position
+
+This module defines the Flask-RESTful resources for managing Position entities
+in the Identity Service API.
+
+It provides endpoints for listing, creating, retrieving, updating, partially
+updating, and deleting positions, as well as listing and creating positions
+within a specific organization unit. The resources use Marshmallow schemas for
+validation and serialization, and handle database errors gracefully.
 """
+
 from flask import request
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -12,13 +21,25 @@ from app.models.position import Position
 from app.schemas.position_schema import PositionSchema
 from app.models.organization_unit import OrganizationUnit
 
+
 class PositionListResource(Resource):
     """
-    Resource for handling position list operations.
+    Resource for managing the collection of positions.
+
+    Methods:
+        get():
+            Retrieve all positions from the database.
+
+        post():
+            Create a new position with the provided data.
     """
     def get(self):
         """
-        Get all positions.
+        Retrieve all positions.
+
+        Returns:
+            tuple: A tuple containing a list of serialized positions and the
+                   HTTP status code 200.
         """
         try:
             positions = Position.query.all()
@@ -31,6 +52,14 @@ class PositionListResource(Resource):
     def post(self):
         """
         Create a new position.
+
+        Expects:
+            JSON payload with at least the 'title' and 'company_id' fields.
+
+        Returns:
+            tuple: The serialized created position and HTTP status code 201
+                   on success.
+            tuple: Error message and HTTP status code 400 or 500 on failure.
         """
         logger.info("Creating a new position")
 
@@ -54,13 +83,34 @@ class PositionListResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+
 class PositionResource(Resource):
     """
-    Resource for handling individual position operations.
+    Resource for managing a single position.
+
+    Methods:
+        get(position_id):
+            Retrieve a position by ID.
+
+        put(position_id):
+            Update an existing position by ID.
+
+        patch(position_id):
+            Partially update an existing position by ID.
+
+        delete(position_id):
+            Delete a position by ID.
     """
     def get(self, position_id):
         """
-        Get a position by ID.
+        Retrieve a position by ID.
+
+        Args:
+            position_id (str): The ID of the position to retrieve.
+
+        Returns:
+            tuple: The serialized position and HTTP status code 200 on success.
+                   HTTP status code 404 if the position is not found.
         """
         logger.info("Retrieving position with ID: %s", position_id)
 
@@ -83,7 +133,8 @@ class PositionResource(Resource):
             position_id (str): The ID of the position to update.
 
         Returns:
-            tuple: The serialized updated position and HTTP status code 200 on success.
+            tuple: The serialized updated position and HTTP status code 200
+                   on success.
             tuple: Error message and HTTP status code 400 or 404 on failure.
         """
         logger.info("Updating position with ID: %s", position_id)
@@ -123,7 +174,8 @@ class PositionResource(Resource):
             position_id (str): The ID of the position to update.
 
         Returns:
-            tuple: The serialized updated position and HTTP status code 200 on success.
+            tuple: The serialized updated position and HTTP status code 200
+                   on success.
             tuple: Error message and HTTP status code 400 or 404 on failure.
         """
         logger.info("Partially updating position with ID: %s", position_id)
@@ -177,19 +229,45 @@ class PositionResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+
 class OrganizationUnitPositionsResource(Resource):
-    """Resource for handling positions within a specific organization unit."""
+    """
+    Resource for managing positions within a specific organization unit.
+
+    Methods:
+        get(unit_id):
+            List all positions for a given organization unit.
+
+        post(unit_id):
+            Create a new position for a given organization unit.
+    """
     def get(self, unit_id):
         """
         List all positions for a given organization unit.
+
+        Args:
+            unit_id (str): The ID of the organization unit.
+
+        Returns:
+            tuple: List of serialized positions and HTTP status code 200.
         """
-        positions = Position.query.filter_by(organization_unit_id=unit_id).all()
+        positions = Position.get_by_organization_unit_id(
+            organization_unit_id=unit_id
+        )
         schema = PositionSchema(many=True)
         return schema.dump(positions), 200
 
     def post(self, unit_id):
         """
         Create a new position for a given organization unit.
+
+        Args:
+            unit_id (str): The ID of the organization unit.
+
+        Returns:
+            tuple: The serialized created position and HTTP status code 201
+                   on success.
+            tuple: Error message and HTTP status code 400 or 404 on failure.
         """
         # Vérifie que l'unité existe
         if not OrganizationUnit.get_by_id(unit_id):
