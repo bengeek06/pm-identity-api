@@ -10,11 +10,10 @@ handling API input and output.
 """
 
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import ValidationError, validates
+from marshmallow import ValidationError, validate, fields, validates
 
-from app.models.subcontractor import Subcontractor
-from app.models.company import Company
 from app.logger import logger
+from app.models.subcontractor import Subcontractor
 
 
 class SubcontractorSchema(SQLAlchemyAutoSchema):
@@ -46,6 +45,48 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         include_fk = True
         dump_only = ('id', 'created_at', 'updated_at')
 
+    name = fields.String(
+        required=True,
+        validate=validate.Length(min=1, max=100, error="Name must be between 1 and 100 characters."),
+    )
+
+    description = fields.String(
+        required=False,
+        validate=validate.Length(max=200, error="Description cannot exceed 200 characters."),
+    )
+
+    company_id = fields.String(
+        required=True,
+        validate=validate.Regexp(
+            r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$',
+            error="Organization Unit ID must be a valid UUID."
+        )
+    )
+
+    contact_person = fields.String(
+        required=False,
+        validate=validate.Length(max=100, error="Contact person cannot exceed 100 characters."),
+    )
+
+    phone_number = fields.String(
+        allow_none=True,
+        validate=[
+            validate.Length(max=50),
+            validate.Regexp(
+                r"^\d*$", error="Phone number must contain only digits.")
+        ]
+    )
+
+    email = fields.Email(
+        required=False,
+        validate=validate.Length(max=100, error="Email cannot exceed 100 characters."),
+    )
+
+    address = fields.String(
+        required=False,
+        validate=validate.Length(max=200, error="Address cannot exceed 200 characters."),
+    )
+
     @validates('name')
     def validate_name(self, value, **kwargs):
         """
@@ -55,139 +96,17 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
             value (str): The name to validate.
 
         Raises:
-            ValidationError: If the name is empty or already exists.
+            ValidationError: If the name already exists.
 
         Returns:
             str: The validated name.
         """
         _ = kwargs
 
-        if not value:
-            logger.error("Validation error: Name cannot be empty.")
-            raise ValidationError("Name cannot be empty.")
         subcontractor = Subcontractor.get_by_name(value)
         if subcontractor:
             logger.error(
                 f"Validation error: Subcontractor with name '{value}' already exists."
             )
             raise ValidationError("Name must be unique.")
-        return value
-
-    @validates('company_id')
-    def validate_company_id(self, value, **kwargs):
-        """
-        Validate that the company_id is not empty and exists in the Company model.
-
-        Args:
-            value (int): The company_id to validate.
-
-        Raises:
-            ValidationError: If the company_id is empty or does not exist.
-
-        Returns:
-            int: The validated company_id.
-        """
-        _ = kwargs
-
-        if not value:
-            logger.error("Validation error: Company ID cannot be empty.")
-            raise ValidationError("Company ID cannot be empty.")
-
-        company = Company.get_by_id(value)
-        if not company:
-            logger.error(f"Validation error: Company with ID {value} does not exist.")
-            raise ValidationError("Company ID does not exist.")
-
-        return value
-
-    @validates('description')
-    def validate_description(self, value, **kwargs):
-        """
-        Validate that the description does not exceed 200 characters.
-
-        Args:
-            value (str): The description to validate.
-
-        Raises:
-            ValidationError: If the description exceeds 200 characters.
-
-        Returns:
-            str: The validated description.
-        """
-        _ = kwargs
-
-        if len(value) > 200:
-            logger.error("Validation error: Description cannot exceed 200 characters.")
-            raise ValidationError("Description cannot exceed 200 characters.")
-        return value
-
-    @validates('email')
-    def validate_email(self, value, **kwargs):
-        """
-        Validate that the email is not empty and is unique.
-
-        Args:
-            value (str): The email to validate.
-
-        Raises:
-            ValidationError: If the email is empty or already exists.
-
-        Returns:
-            str: The validated email.
-        """
-        _ = kwargs
-
-        if not value:
-            logger.error("Validation error: Email cannot be empty.")
-            raise ValidationError("Email cannot be empty.")
-
-        subcontractor = Subcontractor.get_by_email(value)
-        if subcontractor:
-            logger.error(f"Validation error: Email '{value}' already exists.")
-            raise ValidationError("Email must be unique.")
-
-        return value
-
-    @validates('phone_number')
-    def validate_phone_number(self, value, **kwargs):
-        """
-        Validate that the phone number does not exceed 15 characters.
-
-        Args:
-            value (str): The phone number to validate.
-
-        Raises:
-            ValidationError: If the phone number exceeds 15 characters.
-
-        Returns:
-            str: The validated phone number.
-        """
-        _ = kwargs
-
-        if value and len(value) > 15:
-            logger.error("Validation error: Phone number cannot exceed 15 characters.")
-            raise ValidationError("Phone number cannot exceed 15 characters.")
-
-        return value
-
-    @validates('address')
-    def validate_address(self, value, **kwargs):
-        """
-        Validate that the address does not exceed 200 characters.
-
-        Args:
-            value (str): The address to validate.
-
-        Raises:
-            ValidationError: If the address exceeds 200 characters.
-
-        Returns:
-            str: The validated address.
-        """
-        _ = kwargs
-
-        if value and len(value) > 200:
-            logger.error("Validation error: Address cannot exceed 200 characters.")
-            raise ValidationError("Address cannot exceed 200 characters.")
-
         return value

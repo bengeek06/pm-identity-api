@@ -16,6 +16,8 @@ from app.resources.company import CompanyListResource, CompanyResource
 from app.resources.customer import CustomerListResource, CustomerResource
 from app.resources.organization_unit import OrganizationUnitListResource, OrganizationUnitResource, OrganizationUnitChildrenResource
 from app.resources.position import PositionListResource, PositionResource, OrganizationUnitPositionsResource
+from app.resources.subcontractor import SubcontractorListResource, SubcontractorResource
+
 
 def register_routes(app):
     """
@@ -48,5 +50,7 @@ def register_routes(app):
     api.add_resource(PositionListResource, '/positions')
     api.add_resource(PositionResource, '/positions/<string:position_id>')
     api.add_resource(OrganizationUnitPositionsResource, '/organization_units/<string:unit_id>/positions')
+    api.add_resource(SubcontractorListResource, '/subcontractors')
+    api.add_resource(SubcontractorResource, '/subcontractors/<string:subcontractor_id>')
 
     logger.info("Routes registered successfully.")

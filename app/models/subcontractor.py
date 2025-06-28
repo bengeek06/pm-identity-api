@@ -35,7 +35,7 @@ class Subcontractor(db.Model):
         updated_at (datetime): Timestamp when the subcontractor was last
                                updated.
     """
-    __tablename__ = 'position'
+    __tablename__ = 'subcontractor'
 
     id = db.Column(
         db.String(36),
@@ -136,97 +136,3 @@ class Subcontractor(db.Model):
                 f"Error retrieving subcontractor by name {name}: {e}"
             )
             return None
-
-    @classmethod
-    def create(cls, name, company_id, description=None,
-               contact_person=None, phone_number=None, email=None,
-               address=None):
-        """
-        Create a new subcontractor record.
-
-        Args:
-            name (str): Name of the subcontractor.
-            company_id (str): ID of the associated company.
-            description (str, optional): Description of the subcontractor.
-            contact_person (str, optional): Contact person for the
-                                            subcontractor.
-            phone_number (str, optional): Phone number of the subcontractor.
-            email (str, optional): Email address of the subcontractor.
-            address (str, optional): Address of the subcontractor.
-
-        Returns:
-            Subcontractor: The created Subcontractor object.
-        """
-        try:
-            subcontractor = cls(
-                name=name,
-                company_id=company_id,
-                description=description,
-                contact_person=contact_person,
-                phone_number=phone_number,
-                email=email,
-                address=address
-            )
-            db.session.add(subcontractor)
-            db.session.commit()
-            return subcontractor
-        except SQLAlchemyError as e:
-            logger.error(f"Error creating subcontractor: {e}")
-            db.session.rollback()
-            return None
-
-    def update(self, name=None, description=None,
-               contact_person=None, phone_number=None, email=None,
-               address=None):
-        """
-        Update an existing subcontractor record.
-
-        Args:
-            name (str, optional): New name of the subcontractor.
-            description (str, optional): New description of the subcontractor.
-            contact_person (str, optional): New contact person for the
-                                            subcontractor.
-            phone_number (str, optional): New phone number of the
-                                          subcontractor.
-            email (str, optional): New email address of the subcontractor.
-            address (str, optional): New address of the subcontractor.
-
-        Returns:
-            bool: True if update was successful, False otherwise.
-        """
-        if name:
-            self.name = name
-        if description:
-            self.description = description
-        if contact_person:
-            self.contact_person = contact_person
-        if phone_number:
-            self.phone_number = phone_number
-        if email:
-            self.email = email
-        if address:
-            self.address = address
-
-        try:
-            db.session.commit()
-            return True
-        except SQLAlchemyError as e:
-            logger.error(f"Error updating subcontractor: {e}")
-            db.session.rollback()
-            return False
-
-    def delete(self):
-        """
-        Delete the subcontractor record from the database.
-
-        Returns:
-            bool: True if deletion was successful, False otherwise.
-        """
-        try:
-            db.session.delete(self)
-            db.session.commit()
-            return True
-        except SQLAlchemyError as e:
-            logger.error(f"Error deleting subcontractor {self.id}: {e}")
-            db.session.rollback()
-            return False
