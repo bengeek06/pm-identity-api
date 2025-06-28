@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Identity Service API
-  version: 1.0.0
+  version: 0.0.1
   description: API for managing users, companies, organizations, positions, subcontractors, and customers
 
 servers:
