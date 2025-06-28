@@ -1,6 +1,6 @@
 """
-__init__.py
------------
+app/__init__.py
+---------------
 
 Main entry point for initializing the Flask application.
 
@@ -26,7 +26,7 @@ from .models import db
 from .logger import logger
 from .routes import register_routes
 
-# Initialisation des extensions Flask
+# Initialize Flask extensions
 migrate = Migrate()
 ma = Marshmallow()
 
@@ -53,7 +53,12 @@ def register_error_handlers(app):
     """
     @app.errorhandler(401)
     def unauthorized(_):
-        """Handler for 401 (unauthorized) errors."""
+        """
+        Handler for 401 (unauthorized) errors.
+
+        Returns:
+            tuple: JSON response and HTTP status code 401.
+        """
         logger.warning(
             "Unauthorized access attempt detected.",
             path=request.path,
@@ -70,7 +75,12 @@ def register_error_handlers(app):
 
     @app.errorhandler(403)
     def forbidden(_):
-        """Handler for 403 (forbidden) errors."""
+        """
+        Handler for 403 (forbidden) errors.
+
+        Returns:
+            tuple: JSON response and HTTP status code 403.
+        """
         logger.warning(
             "Forbidden access attempt detected.",
             path=request.path,
@@ -87,7 +97,12 @@ def register_error_handlers(app):
 
     @app.errorhandler(404)
     def not_found(_):
-        """Handler for 404 (resource not found) errors."""
+        """
+        Handler for 404 (resource not found) errors.
+
+        Returns:
+            tuple: JSON response and HTTP status code 404.
+        """
         logger.warning(
             "Resource not found.",
             path=request.path,
@@ -104,7 +119,12 @@ def register_error_handlers(app):
 
     @app.errorhandler(400)
     def bad_request(_):
-        """Handler for 400 (bad request) errors."""
+        """
+        Handler for 400 (bad request) errors.
+
+        Returns:
+            tuple: JSON response and HTTP status code 400.
+        """
         logger.warning(
             "Bad request received.",
             path=request.path,
@@ -121,6 +141,15 @@ def register_error_handlers(app):
 
     @app.errorhandler(500)
     def internal_error(e):
+        """
+        Handler for 500 (internal server error) errors.
+
+        Args:
+            e (Exception): The exception that was raised.
+
+        Returns:
+            tuple: JSON response and HTTP status code 500.
+        """
         logger.error(
             "Internal server error",
             exc_info=True,

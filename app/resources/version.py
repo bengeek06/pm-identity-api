@@ -7,7 +7,7 @@ through a REST endpoint.
 """
 from flask_restful import Resource
 
-API_VERSION = "1.0.0"
+API_VERSION = "0.0.1"
 
 
 class VersionResource(Resource):
@@ -27,4 +27,4 @@ class VersionResource(Resource):
             dict: A dictionary containing the API version and HTTP status
             code 200.
         """
-        return {"version": API_VERSION}, 200
+        return { "version": API_VERSION }, 200

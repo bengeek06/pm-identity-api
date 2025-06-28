@@ -1,20 +1,21 @@
 openapi: 3.0.3
 info:
-  title: Dummy API
-  version: '1.0'
-  description: API for managing dummy items.
+  title: Identity Service API
+  version: 0.0.1
+  description: API for managing users, companies, organizations, positions, subcontractors, and customers
 
 servers:
-  - url: http://localhost:5000/
+  - url: http://localhost:5000
+    description: Local development server
 
 paths:
   /version:
     get:
-      tags: ["Meta"]
+      tags: [Version]
       summary: Get API version
       responses:
         '200':
-          description: Current API version
+          description: API version information
           content:
             application/json:
               schema:
@@ -23,317 +24,1148 @@ paths:
                   version:
                     type: string
                     example: "1.0.0"
-  /config:
-    get:
-      tags: ["Meta"]
-      summary: Get application configuration
+  /users:
+    post:
+      tags: [User]
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
       responses:
-        '200':
-          description: Current application configuration
+        '201':
+          description: User created
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  FLASK_ENV:
-                    type: string
-                    example: "development"
-                  DEBUG:
-                    type: string
-                    example: "True"
-                  DATABASE_URI:
-                    type: string
-                    example: "sqlite:///:memory:"
-
-  /dummies:
+                $ref: '#/components/schemas/User'
     get:
-      tags: ["Dummies"]
-      summary: List all dummy items
+      tags: [User]
+      summary: List users
       responses:
         '200':
-          description: List of dummy items
+          description: List of users
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Dummy'
-    post:
-      tags: ["Dummies"]
-      summary: Create a new dummy item
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DummyCreate'
-      responses:
-        '201':
-          description: Dummy item created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Dummy'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '500':
-          description: Database error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                  $ref: '#/components/schemas/User'
 
-  /dummies/{dummy_id}:
-    parameters:
-      - name: dummy_id
-        in: path
-        required: true
-        schema:
-          type: integer
+  /users/{user_id}:
     get:
-      tags: ["Dummies"]
-      summary: Get a dummy item by ID
+      tags: [User]
+      summary: Get user by ID
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
       responses:
         '200':
-          description: Dummy item found
+          description: User retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Dummy'
-        '404':
-          description: Dummy not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/User'
     put:
-      tags: ["Dummies"]
-      summary: Replace a dummy item by ID
+      tags: [User]
+      summary: Update user by ID
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DummyCreate'
+              $ref: '#/components/schemas/UserCreate'
       responses:
         '200':
-          description: Dummy item updated
+          description: User updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Dummy'
-        '400':
-          description: Validation or integrity error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '404':
-          description: Dummy not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Database error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/User'
     patch:
-      tags: ["Dummies"]
-      summary: Partially update a dummy item by ID
+      tags: [User]
+      summary: Partially update user by ID
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DummyUpdate'
+              $ref: '#/components/schemas/UserCreate'
       responses:
         '200':
-          description: Dummy item updated
+          description: User partially updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Dummy'
-        '400':
-          description: Validation or integrity error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '404':
-          description: Dummy not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Database error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/User'
     delete:
-      tags: ["Dummies"]
-      summary: Delete a dummy item by ID
+      tags: [User]
+      summary: Delete user by ID
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
       responses:
         '204':
-          description: Dummy deleted successfully
-        '404':
-          description: Dummy not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Database error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: User deleted
 
-  /export/csv:
+  /users/verify_password:
+    post:
+      tags: [User]
+      summary: Verify a user's password by email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Password verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  user_id:
+                    type: string
+                    nullable: true
+                  company_id:
+                    type: string
+                    nullable: true
+
+  /companies:
+    post:
+      tags: [Company]
+      summary: Create a new company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyCreate'
+      responses:
+        '201':
+          description: Company created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
     get:
-      tags: ["Export"]
-      summary: Export all dummy items as CSV
+      tags: [Company]
+      summary: List companies
       responses:
         '200':
-          description: CSV file containing all dummy items
+          description: List of companies
           content:
-            text/csv:
+            application/json:
               schema:
-                type: string
-                format: binary
+                type: array
+                items:
+                  $ref: '#/components/schemas/Company'
 
-  /import/csv:
-    post:
-      tags: ["Import"]
-      summary: Import dummy items from a CSV file
+  /companies/{company_id}:
+    get:
+      tags: [Company]
+      summary: Get company by ID
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Company retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+    put:
+      tags: [Company]
+      summary: Update company by ID
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
+              $ref: '#/components/schemas/CompanyCreate'
       responses:
         '200':
-          description: Import successful
+          description: Company updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+    patch:
+      tags: [Company]
+      summary: Partially update company by ID
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyCreate'
+      responses:
+        '200':
+          description: Company partially updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+    delete:
+      tags: [Company]
+      summary: Delete company by ID
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Company deleted
+
+  /companies/{company_id}/users:
+    get:
+      tags: [User]
+      summary: List users in a company
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of users in the company
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '404':
+          description: Company not found
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  message:
+                  error:
                     type: string
-        '207':
-          description: Partial success with errors
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '400':
-          description: Import failed or validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-
-  /import/json:
     post:
-      tags: ['Import']
-      summary: Import dummy items from a JSON file
+      tags: [User]
+      summary: Create a new user in a company
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
+              $ref: '#/components/schemas/UserCreate'
       responses:
-        '200':
-          description: Import successful
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Company not found
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  message:
+                  error:
                     type: string
-        '207':
-          description: Partial success with errors
+    delete:
+      tags: [User]
+      summary: Delete all users in a company
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: All users deleted
+        '404':
+          description: Company not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
-        '400':
-          description: Import failed or validation error
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /organizations:
+    post:
+      tags: [Organization]
+      summary: Create an organization unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUnitCreate'
+      responses:
+        '201':
+          description: Organization unit created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
+                $ref: '#/components/schemas/OrganizationUnit'
+    get:
+      tags: [Organization]
+      summary: List organization units
+      responses:
+        '200':
+          description: List of organization units
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationUnit'
+
+  /organizations/{organization_id}:
+    get:
+      tags: [Organization]
+      summary: Get organization unit by ID
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Organization unit retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationUnit'
+    put:
+      tags: [Organization]
+      summary: Update organization unit by ID
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUnitCreate'
+      responses:
+        '200':
+          description: Organization unit updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationUnit'
+    patch:
+      tags: [Organization]
+      summary: Partially update organization unit by ID
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUnitCreate'
+      responses:
+        '200':
+          description: Organization unit partially updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationUnit'
+    delete:
+      tags: [Organization]
+      summary: Delete organization unit by ID
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Organization unit deleted
+
+  /organization_units/{unit_id}/children:
+    get:
+      tags: [Organization]
+      summary: List children of an organization unit
+      parameters:
+        - in: path
+          name: unit_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of children units
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationUnit'
+        '404':
+          description: Organization unit not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /organization_units/{unit_id}/positions:
+    get:
+      tags: [Position]
+      summary: List positions for an organization unit
+      parameters:
+        - in: path
+          name: unit_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of positions for the organization unit
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+        '404':
+          description: Organization unit not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    post:
+      tags: [Position]
+      summary: Create a new position for an organization unit
+      parameters:
+        - in: path
+          name: unit_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionCreate'
+      responses:
+        '201':
+          description: Position created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+        '404':
+          description: Organization unit not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /positions:
+    post:
+      tags: [Position]
+      summary: Create a new position
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionCreate'
+      responses:
+        '201':
+          description: Position created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+    get:
+      tags: [Position]
+      summary: List positions
+      responses:
+        '200':
+          description: List of positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+
+  /positions/{position_id}:
+    get:
+      tags: [Position]
+      summary: Get position by ID
+      parameters:
+        - in: path
+          name: position_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Position retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+    put:
+      tags: [Position]
+      summary: Update position by ID
+      parameters:
+        - in: path
+          name: position_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionCreate'
+      responses:
+        '200':
+          description: Position updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+    patch:
+      tags: [Position]
+      summary: Partially update position by ID
+      parameters:
+        - in: path
+          name: position_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionCreate'
+      responses:
+        '200':
+          description: Position partially updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+    delete:
+      tags: [Position]
+      summary: Delete position by ID
+      parameters:
+        - in: path
+          name: position_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Position deleted
+
+  /positions/{position_id}/users:
+    get:
+      tags: [User]
+      summary: List users by position
+      parameters:
+        - in: path
+          name: position_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of users with this position
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+  /subcontractors:
+    post:
+      tags: [Subcontractor]
+      summary: Create a new subcontractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcontractorCreate'
+      responses:
+        '201':
+          description: Subcontractor created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subcontractor'
+    get:
+      tags: [Subcontractor]
+      summary: List subcontractors
+      responses:
+        '200':
+          description: List of subcontractors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subcontractor'
+
+  /subcontractors/{subcontractor_id}:
+    get:
+      tags: [Subcontractor]
+      summary: Get subcontractor by ID
+      parameters:
+        - in: path
+          name: subcontractor_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subcontractor retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subcontractor'
+    put:
+      tags: [Subcontractor]
+      summary: Update subcontractor by ID
+      parameters:
+        - in: path
+          name: subcontractor_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcontractorCreate'
+      responses:
+        '200':
+          description: Subcontractor updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subcontractor'
+    patch:
+      tags: [Subcontractor]
+      summary: Partially update subcontractor by ID
+      parameters:
+        - in: path
+          name: subcontractor_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcontractorCreate'
+      responses:
+        '200':
+          description: Subcontractor partially updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subcontractor'
+    delete:
+      tags: [Subcontractor]
+      summary: Delete subcontractor by ID
+      parameters:
+        - in: path
+          name: subcontractor_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Subcontractor deleted
+
+  /customers:
+    post:
+      tags: [Customer]
+      summary: Create a new customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreate'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+    get:
+      tags: [Customer]
+      summary: List customers
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+
+  /customers/{customer_id}:
+    get:
+      tags: [Customer]
+      summary: Get customer by ID
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customer retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+    put:
+      tags: [Customer]
+      summary: Update customer by ID
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreate'
+      responses:
+        '200':
+          description: Customer updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+    patch:
+      tags: [Customer]
+      summary: Partially update customer by ID
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreate'
+      responses:
+        '200':
+          description: Customer partially updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+    delete:
+      tags: [Customer]
+      summary: Delete customer by ID
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Customer deleted
 
 components:
   schemas:
-    Dummy:
+    UserCreate:
+      type: object
+      required:
+        - email
+        - hashed_password
+        - company_id
+      properties:
+        email:
+          type: string
+        hashed_password:
+          type: string
+        company_id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone_number:
+          type: string
+        avatar_url:
+          type: string
+        language:
+          type: string
+        is_active:
+          type: boolean
+        is_verified:
+          type: boolean
+        role_id:
+          type: string
+        position_id:
+          type: string
+
+    User:
       type: object
       properties:
-        id:
-          type: integer
-          example: 1
-        name:
+        user_id:
           type: string
-          example: "Test Dummy"
-        description:
+        company_id:
           type: string
-          example: "A test dummy"
-    DummyCreate:
+        email:
+          type: string
+        hashed_password:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone_number:
+          type: string
+        avatar_url:
+          type: string
+        language:
+          type: string
+        is_active:
+          type: boolean
+        is_verified:
+          type: boolean
+        role_id:
+          type: string
+        position_id:
+          type: string
+        last_login_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CompanyCreate:
       type: object
       required:
         - name
       properties:
         name:
           type: string
-          example: "Test Dummy"
         description:
           type: string
-          example: "A test dummy"
-    DummyUpdate:
+        address:
+          type: string
+        phone_number:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        logo_url:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        postal_code:
+          type: string
+
+    Company:
       type: object
+      properties:
+        company_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        phone_number:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        logo_url:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        postal_code:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    OrganizationUnitCreate:
+      type: object
+      required:
+        - name
+        - company_id
       properties:
         name:
           type: string
-          example: "Updated Dummy"
         description:
           type: string
-          example: "Updated description"
-    Error:
+        company_id:
+          type: string
+        parent_id:
+          type: string
+        path:
+          type: string
+        level:
+          type: integer
+
+    OrganizationUnit:
       type: object
       properties:
-        message:
+        organization_id:
           type: string
-          example: "Dummy not found"
-        error:
+        company_id:
           type: string
-          example: "Integrity error"
-    ValidationError:
+        name:
+          type: string
+        description:
+          type: string
+        parent_id:
+          type: string
+        path:
+          type: string
+        level:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PositionCreate:
+      type: object
+      required:
+        - title
+        - company_id
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        company_id:
+          type: string
+        level:
+          type: string
+
+    Position:
       type: object
       properties:
-        message:
+        position_id:
           type: string
-          example: "Validation error"
-        errors:
-          type: object
-          additionalProperties: true
-          example: {"name": ["Name must be unique."]}
+        company_id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        level:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SubcontractorCreate:
+      type: object
+      required:
+        - name
+        - company_id
+      properties:
+        name:
+          type: string
+        company_id:
+          type: string
+        description:
+          type: string
+        contact_person:
+          type: string
+        phone_number:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+
+    Subcontractor:
+      type: object
+      properties:
+        subcontractor_id:
+          type: string
+        company_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        contact_person:
+          type: string
+        phone_number:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CustomerCreate:
+      type: object
+      required:
+        - name
+        - company_id
+      properties:
+        name:
+          type: string
+        company_id:
+          type: string
+        contact_person:
+          type: string
+        phone_number:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+
+    Customer:
+      type: object
+      properties:
+        customer_id:
+          type: string
+        company_id:
+          type: string
+        name:
+          type: string
+        contact_person:
+          type: string
+        phone_number:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

@@ -3,10 +3,16 @@ logger.py
 ---------
 
 This module configures the application logger using structlog and colorlog.
-It sets up a colored log formatter for improved readability in the console
-during development and testing, and switches to JSON logging in staging
-and production environments. Provides a logger instance for use throughout
-the application.
+
+- In development and testing environments, it sets up a colored log formatter
+  for improved readability in the console.
+- In staging and production environments, it switches to JSON logging for
+  better integration with log aggregation tools.
+- Provides a `logger` instance for use throughout the application.
+
+Usage:
+    from app.logger import logger
+    logger.info("Your log message", extra_field="value")
 """
 
 import os
