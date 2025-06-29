@@ -21,6 +21,7 @@ import os
 from flask import Flask, request, g
 from flask_migrate import Migrate
 from flask_marshmallow import Marshmallow
+from flask_cors import CORS
 
 from .models import db
 from .logger import logger
@@ -184,6 +185,12 @@ def create_app(config_class):
     logger.info("Creating app in %s environment.", env)
     app = Flask(__name__)
     app.config.from_object(config_class)
+    if env == 'development' or env == 'staging':
+        CORS(
+            app,
+            supports_credentials=True,
+            resources={r"/*": {"origins": "*"}}
+            )
 
     register_extensions(app)
     register_error_handlers(app)
