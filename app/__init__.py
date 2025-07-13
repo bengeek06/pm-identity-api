@@ -185,7 +185,7 @@ def create_app(config_class):
     logger.info("Creating app in %s environment.", env)
     app = Flask(__name__)
     app.config.from_object(config_class)
-    if env == 'development' or env == 'staging':
+    if env in ('development', 'staging'):
         CORS(
             app,
             supports_credentials=True,
