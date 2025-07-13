@@ -37,7 +37,12 @@ handler.setFormatter(colorlog.ColoredFormatter(
         'CRITICAL': 'bold_red',
     }
 ))
-logging.basicConfig(level=logging.INFO, handlers=[handler])
+
+# Set log level from LOG_LEVEL env var, default to INFO
+log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+if log_level not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+    log_level = "INFO"
+logging.basicConfig(level=getattr(logging, log_level), handlers=[handler])
 
 # Choose renderer based on environment
 if env in ("development", "testing"):
