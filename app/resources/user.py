@@ -158,7 +158,12 @@ class UserResource(Resource):
         logger.info("Updating user with ID %s", user_id)
 
         json_data = request.get_json()
-        user_schema = UserSchema(session=db.session)
+        user = User.get_by_id(user_id)
+        if not user:
+            logger.warning("User with ID %s not found", user_id)
+            return {"message": "User not found"}, 404
+
+        user_schema = UserSchema(session=db.session, context={'user': user})
 
         if "password" in json_data:
             json_data["hashed_password"] = generate_password_hash(
@@ -167,11 +172,6 @@ class UserResource(Resource):
             del json_data["password"]
 
         try:
-            user = User.get_by_id(user_id)
-            if not user:
-                logger.warning("User with ID %s not found", user_id)
-                return {"message": "User not found"}, 404
-
             updated_user = user_schema.load(json_data, instance=user)
             db.session.commit()
             return user_schema.dump(updated_user), 200
@@ -206,7 +206,12 @@ class UserResource(Resource):
         logger.info("Partially updating user with ID %s", user_id)
 
         json_data = request.get_json()
-        user_schema = UserSchema(session=db.session, partial=True)
+        user = User.get_by_id(user_id)
+        if not user:
+            logger.warning("User with ID %s not found", user_id)
+            return {"message": "User not found"}, 404
+
+        user_schema = UserSchema(session=db.session, partial=True, context={'user': user})
 
         if "password" in json_data:
             json_data["hashed_password"] = generate_password_hash(
@@ -215,11 +220,6 @@ class UserResource(Resource):
             del json_data["password"]
 
         try:
-            user = User.get_by_id(user_id)
-            if not user:
-                logger.warning("User with ID %s not found", user_id)
-                return {"message": "User not found"}, 404
-
             updated_user = user_schema.load(
                 json_data, instance=user, partial=True)
             db.session.commit()

@@ -21,27 +21,31 @@ class UserSchema(SQLAlchemyAutoSchema):
     """
     Marshmallow schema for the User model.
 
-    This schema serializes and validates User objects, enforcing field types,
-    length constraints, and format (email, UUID, etc.). It also ensures
-    proper deserialization and serialization for API input/output.
+    This schema serializes and validates User objects, enforces field types,
+    length constraints, and format (email, UUID, etc.), and ensures proper
+    deserialization/serialization for API input/output.
 
-    Fields:
-        id (str): Unique identifier for the User entity.
+    Attributes:
+        id (UUID): Unique identifier for the User entity.
         email (str): Email address of the user (required, unique).
-        hashed_password (str): Hashed password for authentication.
-        first_name (str): First name of the user (required).
-        last_name (str): Last name of the user (required).
-        phone_number (str): Optional phone number of the user.
-        avatar_url (str): Optional URL to the user's avatar.
+        hashed_password (str): Hashed password for authentication (load only).
+        first_name (str, optional): First name of the user.
+        last_name (str, optional): Last name of the user.
+        phone_number (str, optional): Phone number of the user.
+        avatar_url (str, optional): URL to the user's avatar.
         is_active (bool): Whether the user account is active.
         is_verified (bool): Whether the user's email is verified.
-        last_login_at (datetime): Timestamp of the user's last login.
-        company_id (str): Foreign key referencing the associated company
-                          (UUID).
-        position_id (str): Foreign key referencing the user's position (UUID).
+        last_login_at (datetime, optional): Timestamp of the user's last login.
+        company_id (str): Foreign key referencing the associated company (UUID).
+        position_id (str, optional): Foreign key referencing the user's position (UUID).
         created_at (datetime): Timestamp when the user was created.
         updated_at (datetime): Timestamp when the user was last updated.
     """
+    # Permet le passage explicite du contexte lors de l'instanciation
+    def __init__(self, *args, **kwargs):
+        self.context = kwargs.pop('context', {})
+        super().__init__(*args, **kwargs)
+
     class Meta:
         """
         Meta options for the User schema.
@@ -61,10 +65,11 @@ class UserSchema(SQLAlchemyAutoSchema):
     email = fields.Email(required=True, validate=validate.Length(max=100))
     hashed_password = fields.String(
         required=True,
-        validate=validate.Length(max=255)
+        validate=validate.Length(max=255),
+        load_only=True
     )
-    first_name = fields.String(required=True, validate=validate.Length(max=50))
-    last_name = fields.String(required=True, validate=validate.Length(max=50))
+    first_name = fields.String(validate=validate.Length(max=50))
+    last_name = fields.String(validate=validate.Length(max=50))
     phone_number = fields.String(
         validate=validate.Length(max=50),
         allow_none=True
@@ -104,13 +109,13 @@ class UserSchema(SQLAlchemyAutoSchema):
     @validates('email')
     def validate_email(self, value, **kwargs):
         """
-        Validate that the email is unique.
+        Validate that the email is unique, except for the current user (on update).
 
         Args:
             value (str): The email to validate.
 
         Raises:
-            ValidationError: If the email already exists.
+            ValidationError: If the email already exists for another user.
 
         Returns:
             str: The validated email.
@@ -118,7 +123,8 @@ class UserSchema(SQLAlchemyAutoSchema):
         _ = kwargs
 
         user = User.get_by_email(value)
-        if user:
+        current_user = self.context.get('user') if hasattr(self, 'context') else None
+        if user and (not current_user or user.id != getattr(current_user, 'id', None)):
             logger.error(
                 "Validation error: User with email '%s' already exists.",
                 value

@@ -35,6 +35,11 @@ class CompanySchema(SQLAlchemyAutoSchema):
         city (str): Optional. Max 100 characters.
         country (str): Optional. Max 100 characters.
     """
+    # Permet le passage explicite du contexte lors de l'instanciation
+    def __init__(self, *args, **kwargs):
+        self.context = kwargs.pop('context', {})
+        super().__init__(*args, **kwargs)
+
     class Meta:
         """
         Meta options for CompanySchema.
@@ -101,15 +106,16 @@ class CompanySchema(SQLAlchemyAutoSchema):
     @validates('name')
     def validate_name(self, value, **kwargs):
         """
-        Ensure the company name is unique.
+        Ensure the company name is unique, sauf pour la société courante (update).
 
         Args:
             value (str): The name to validate.
 
         Raises:
-            ValidationError: If a company with the same name already exists.
+            ValidationError: If a company with the same name already exists for another company.
         """
         _ = kwargs
         company = Company.query.filter_by(name=value).first()
-        if company:
+        current_company = self.context.get('company') if hasattr(self, 'context') else None
+        if company and (not current_company or company.id != getattr(current_company, 'id', None)):
             raise ValidationError("Company name must be unique.")
