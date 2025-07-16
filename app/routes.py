@@ -79,9 +79,9 @@ def register_routes(app):
     )
     api.add_resource(UserListResource, '/users')
     api.add_resource(UserResource, '/users/<string:user_id>')
-    api.add_resource(UserCompanyResource, '/company/<string:company_id>/users')
+    api.add_resource(UserCompanyResource, '/companies/<string:company_id>/users')
     api.add_resource(
-        UserPositionResource, '/position/<string:position_id>/users'
+        UserPositionResource, '/positions/<string:position_id>/users'
     )
     api.add_resource(VerifyPasswordResource, '/verify_password')
 

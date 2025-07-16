@@ -7,6 +7,8 @@ info:
 servers:
   - url: http://localhost:5000
     description: Local development server
+  - url: http://localhost:5001
+    description: Staging development server
 
 paths:
   /version:
@@ -128,7 +130,7 @@ paths:
         '204':
           description: User deleted
 
-  /users/verify_password:
+  /verify_password:
     post:
       tags: [User]
       summary: Verify a user's password by email
@@ -346,7 +348,7 @@ paths:
                   error:
                     type: string
 
-  /organizations:
+  /organization_units:
     post:
       tags: [Organization]
       summary: Create an organization unit
@@ -376,7 +378,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/OrganizationUnit'
 
-  /organizations/{organization_id}:
+  /organization_units/{organization_id}:
     get:
       tags: [Organization]
       summary: Get organization unit by ID
@@ -877,12 +879,12 @@ components:
       type: object
       required:
         - email
-        - hashed_password
+        - password
         - company_id
       properties:
         email:
           type: string
-        hashed_password:
+        password:
           type: string
         company_id:
           type: string
@@ -893,8 +895,6 @@ components:
         phone_number:
           type: string
         avatar_url:
-          type: string
-        language:
           type: string
         is_active:
           type: boolean
@@ -908,13 +908,11 @@ components:
     User:
       type: object
       properties:
-        user_id:
+        id:
           type: string
         company_id:
           type: string
         email:
-          type: string
-        hashed_password:
           type: string
         first_name:
           type: string
@@ -923,8 +921,6 @@ components:
         phone_number:
           type: string
         avatar_url:
-          type: string
-        language:
           type: string
         is_active:
           type: boolean
@@ -1049,13 +1045,13 @@ components:
       type: object
       required:
         - title
-        - company_id
+        - organization_unit_id
       properties:
         title:
           type: string
         description:
           type: string
-        company_id:
+        organization_unit_id:
           type: string
         level:
           type: string
@@ -1066,6 +1062,8 @@ components:
         position_id:
           type: string
         company_id:
+          type: string # Lecture seule, toujours présent en réponse
+        organization_unit_id:
           type: string
         title:
           type: string
@@ -1090,8 +1088,6 @@ components:
           type: string
         company_id:
           type: string
-        description:
-          type: string
         contact_person:
           type: string
         phone_number:
@@ -1109,8 +1105,6 @@ components:
         company_id:
           type: string
         name:
-          type: string
-        description:
           type: string
         contact_person:
           type: string

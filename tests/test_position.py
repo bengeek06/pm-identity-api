@@ -74,7 +74,6 @@ def test_post_position_success(client, session):
     session.commit()
     payload = {
         "title": "Engineer",
-        "company_id": company_id,
         "organization_unit_id": unit.id
     }
     response = client.post('/positions', json=payload)
@@ -250,9 +249,7 @@ def test_post_position_for_unit_success(client, session):
     session.add(unit)
     session.commit()
     payload = {
-        "title": "Analyst",
-        "company_id": company_id
-        # organization_unit_id should be set by the endpoint from <id>
+        "title": "Analyst"
     }
     response = client.post(f'/organization_units/{unit.id}/positions', json=payload)
     assert response.status_code == 201, response.get_json()
@@ -330,7 +327,6 @@ def test_put_position_success(client, session):
 
     payload = {
         "title": "NewTitle",
-        "company_id": company_id,
         "organization_unit_id": unit2.id
     }
     response = client.put(f'/positions/{pos.id}', json=payload)

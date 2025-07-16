@@ -391,7 +391,7 @@ def test_delete_user_not_found(client, session):
 
 def test_get_users_by_company(client, session):
     """
-    Test GET /company/<company_id>/users returns only users for the given company.
+    Test GET /companies/<company_id>/users returns only users for the given company.
     """
     company1 = Company(name="CompA")
     company2 = Company(name="CompB")
@@ -402,7 +402,7 @@ def test_get_users_by_company(client, session):
     session.add_all([user1, user2])
     session.commit()
 
-    response = client.get(f'/company/{company1.id}/users')
+    response = client.get(f'/companies/{company1.id}/users')
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
@@ -415,7 +415,7 @@ def test_get_users_by_company(client, session):
 
 def test_post_user_for_company_success(client, session):
     """
-    Test POST /company/<company_id>/users with valid data.
+    Test POST /companies/<company_id>/users with valid data.
     """
     company = Company(name="CompanyPost")
     session.add(company)
@@ -426,7 +426,7 @@ def test_post_user_for_company_success(client, session):
         "first_name": "Comp",
         "last_name": "User"
     }
-    response = client.post(f'/company/{company.id}/users', json=payload)
+    response = client.post(f'/companies/{company.id}/users', json=payload)
     assert response.status_code == 201, response.get_json()
     data = response.get_json()
     assert data["email"] == "companyuser@example.com"
@@ -437,7 +437,7 @@ def test_post_user_for_company_success(client, session):
 
 def test_post_user_for_company_missing_fields(client, session):
     """
-    Test POST /company/<company_id>/users with missing required fields.
+    Test POST /companies/<company_id>/users with missing required fields.
     """
     company = Company(name="CompanyPost2")
     session.add(company)
@@ -446,14 +446,14 @@ def test_post_user_for_company_missing_fields(client, session):
         "email": "missingfields@example.com"
         # missing password, first_name, last_name
     }
-    response = client.post(f'/company/{company.id}/users', json=payload)
+    response = client.post(f'/companies/{company.id}/users', json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "password" in str(data).lower() or "first_name" in str(data).lower() or "last_name" in str(data).lower()
 
 def test_post_user_for_company_invalid_email(client, session):
     """
-    Test POST /company/<company_id>/users with invalid email.
+    Test POST /companies/<company_id>/users with invalid email.
     """
     company = Company(name="CompanyPost3")
     session.add(company)
@@ -464,14 +464,14 @@ def test_post_user_for_company_invalid_email(client, session):
         "first_name": "Comp",
         "last_name": "User"
     }
-    response = client.post(f'/company/{company.id}/users', json=payload)
+    response = client.post(f'/companies/{company.id}/users', json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "email" in str(data).lower()
 
 def test_post_user_for_company_not_found(client, session):
     """
-    Test POST /company/<company_id>/users with non-existent company.
+    Test POST /companies/<company_id>/users with non-existent company.
     """
     fake_company_id = str(uuid.uuid4())
     payload = {
@@ -480,7 +480,7 @@ def test_post_user_for_company_not_found(client, session):
         "first_name": "Ghost",
         "last_name": "User"
     }
-    response = client.post(f'/company/{fake_company_id}/users', json=payload)
+    response = client.post(f'/companies/{fake_company_id}/users', json=payload)
     assert response.status_code == 404
     data = response.get_json()
     assert "not found" in str(data).lower() or "company" in str(data).lower()
@@ -491,7 +491,7 @@ def test_post_user_for_company_not_found(client, session):
 
 def test_delete_users_by_company_success(client, session):
     """
-    Test DELETE /company/<company_id>/users supprime tous les utilisateurs de la société.
+    Test DELETE /companies/<company_id>/users supprime tous les utilisateurs de la société.
     """
     company = Company(name="DeleteCompany")
     session.add(company)
@@ -501,11 +501,11 @@ def test_delete_users_by_company_success(client, session):
     session.add_all([user1, user2])
     session.commit()
 
-    response = client.delete(f'/company/{company.id}/users')
+    response = client.delete(f'/companies/{company.id}/users')
     assert response.status_code == 204
 
     # Vérifie qu'il n'y a plus d'utilisateurs pour cette société
-    get_response = client.get(f'/company/{company.id}/users')
+    get_response = client.get(f'/companies/{company.id}/users')
     assert get_response.status_code == 200
     data = get_response.get_json()
     assert isinstance(data, list)
@@ -527,7 +527,7 @@ def test_delete_users_by_company_not_found(client, session):
 
 def test_get_users_by_position(client, session):
     """
-    Test GET /position/<position_id>/users returns only users for the given position.
+    Test GET /positions/<position_id>/users returns only users for the given position.
     """
     company = Company(name="PosCo")
     session.add(company)
@@ -563,26 +563,26 @@ def test_get_users_by_position(client, session):
     session.add_all([user1, user2, user3])
     session.commit()
 
-    response = client.get(f'/position/{position1_id}/users')
+    response = client.get(f'/positions/{position1_id}/users')
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
     assert len(data) == 1
     assert data[0]["email"] == "pos1@example.com"
 
-    response2 = client.get(f'/position/{position2_id}/users')
+    response2 = client.get(f'/positions/{position2_id}/users')
     assert response2.status_code == 200
     data2 = response2.get_json()
     assert isinstance(data2, list)
     assert len(data2) == 1
     assert data2[0]["email"] == "pos2@example.com"
 
-def test_get_users_by_position_not_found(client, session):
+def test_get_users_by_position_not_found(client):
     """
-    Test GET /position/<position_id>/users for a position with no users.
+    Test GET /positions/<position_id>/users for a position with no users.
     """
     fake_position_id = str(uuid.uuid4())
-    response = client.get(f'/position/{fake_position_id}/users')
+    response = client.get(f'/positions/{fake_position_id}/users')
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)

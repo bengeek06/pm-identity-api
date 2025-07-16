@@ -143,16 +143,15 @@ class CompanyResource(Resource):
         logger.info("Updating company with ID: %s", company_id)
 
         json_data = request.get_json()
-        company_schema = CompanySchema(session=db.session)
+        company = Company.get_by_id(company_id)
+        if not company:
+            logger.warning("Company with ID %s not found", company_id)
+            return {"message": "Company not found"}, 404
+
+        company_schema = CompanySchema(context={'company': company}, session=db.session)
 
         try:
-            company = Company.get_by_id(company_id)
-            if not company:
-                logger.warning("Company with ID %s not found", company_id)
-                return {"message": "Company not found"}, 404
-
             company = company_schema.load(json_data, instance=company)
-
             db.session.commit()
             return company_schema.dump(company), 200
         except ValidationError as err:
@@ -185,16 +184,18 @@ class CompanyResource(Resource):
         logger.info("Partially updating company with ID: %s", company_id)
 
         json_data = request.get_json()
-        company_schema = CompanySchema(session=db.session, partial=True)
+        company = Company.get_by_id(company_id)
+        if not company:
+            logger.warning("Company with ID %s not found", company_id)
+            return {"message": "Company not found"}, 404
+
+        company_schema = CompanySchema(
+            context={'company': company},
+            session=db.session, partial=True
+        )
 
         try:
-            company = Company.get_by_id(company_id)
-            if not company:
-                logger.warning("Company with ID %s not found", company_id)
-                return {"message": "Company not found"}, 404
-
             company = company_schema.load(json_data, instance=company)
-
             db.session.commit()
             return company_schema.dump(company), 200
         except ValidationError as err:

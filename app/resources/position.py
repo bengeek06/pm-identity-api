@@ -54,7 +54,8 @@ class PositionListResource(Resource):
         Create a new position.
 
         Expects:
-            JSON payload with at least the 'title' and 'company_id' fields.
+            JSON payload with au moins 'title' et 'organization_unit_id'.
+            Le champ company_id est automatiquement renseigné.
 
         Returns:
             tuple: The serialized created position and HTTP status code 201
@@ -64,10 +65,22 @@ class PositionListResource(Resource):
         logger.info("Creating a new position")
 
         json_data = request.get_json()
+        org_unit_id = json_data.get('organization_unit_id')
+        if not org_unit_id:
+            logger.warning("organization_unit_id is required")
+            return {"message": "organization_unit_id is required"}, 400
+
+        org_unit = OrganizationUnit.get_by_id(org_unit_id)
+        if not org_unit:
+            logger.warning("Organization unit with ID %s not found", org_unit_id)
+            return {"message": "Organization unit not found"}, 404
+
         position_schema = PositionSchema(session=db.session)
 
         try:
             position = position_schema.load(json_data)
+            # Renseigne company_id sur l'instance après le load
+            position.company_id = org_unit.company_id
             db.session.add(position)
             db.session.commit()
             return position_schema.dump(position), 201
@@ -269,16 +282,20 @@ class OrganizationUnitPositionsResource(Resource):
                    on success.
             tuple: Error message and HTTP status code 400 or 404 on failure.
         """
-        # Vérifie que l'unité existe
-        if not OrganizationUnit.get_by_id(unit_id):
+        # Vérifie que l'unité existe et récupère-la
+        org_unit = OrganizationUnit.get_by_id(unit_id)
+        if not org_unit:
             logger.warning("Organization unit with ID %s not found", unit_id)
             return {"error": "Organization unit not found"}, 404
 
         json_data = request.get_json()
+        # Renseigne automatiquement organization_unit_id
         json_data['organization_unit_id'] = unit_id
         position_schema = PositionSchema(session=db.session)
         try:
             position = position_schema.load(json_data)
+            # Renseigne company_id sur l'instance après le load
+            position.company_id = org_unit.company_id
             db.session.add(position)
             db.session.commit()
             return position_schema.dump(position), 201
