@@ -77,7 +77,8 @@ class UserListResource(Resource):
 
         try:
             user = user_schema.load(json_data)
-            if "company_id" in json_data:
+            # Handle nullable company_id for superuser creation
+            if "company_id" in json_data and json_data["company_id"] is not None:
                 company = Company.get_by_id(json_data["company_id"])
                 if not company:
                     logger.warning(
@@ -86,6 +87,7 @@ class UserListResource(Resource):
                     )
                     return {"message": "Company not found"}, 404
                 user.company = company
+            # If company_id is None, this is a superuser creation
             db.session.add(user)
             db.session.commit()
             return user_schema.dump(user), 201
@@ -220,6 +222,7 @@ class UserResource(Resource):
             del json_data["password"]
 
         try:
+            # Company_id modification is prevented by schema validation
             updated_user = user_schema.load(
                 json_data, instance=user, partial=True)
             db.session.commit()
@@ -451,3 +454,79 @@ class VerifyPasswordResource(Resource):
 
         schema = UserSchema()
         return schema.dump(user), 200
+
+
+class SuperUserResource(Resource):
+    """
+    Resource for handling superuser operations.
+
+    Methods:
+        get():
+            Retrieve all superusers.
+
+        post():
+            Create a new superuser (company_id will be None).
+    """
+    def get(self):
+        """
+        Get all superusers.
+
+        Returns:
+            tuple: List of serialized superusers and HTTP status code 200.
+        """
+        logger.info("Fetching all superusers")
+        try:
+            superusers = User.get_superusers()
+            schema = UserSchema(many=True)
+            return schema.dump(superusers), 200
+        except SQLAlchemyError as e:
+            logger.error("Error fetching superusers: %s", str(e))
+            return {"message": "Error fetching superusers"}, 500
+
+    def post(self):
+        """
+        Create a new superuser.
+
+        Expects:
+            JSON payload with at least 'email', 'password', 'first_name',
+            and 'last_name'. company_id must be null or omitted.
+
+        Returns:
+            tuple: The serialized created superuser and HTTP status code 201 on
+                   success.
+            tuple: Error message and HTTP status code 400 or 500 on failure.
+        """
+        logger.info("Creating a new superuser")
+
+        json_data = request.get_json()
+        
+        # Ensure company_id is None for superuser creation
+        if "company_id" in json_data and json_data["company_id"] is not None:
+            logger.error("Cannot create superuser with company_id")
+            return {"message": "Superuser cannot have a company_id"}, 400
+        
+        json_data["company_id"] = None
+        user_schema = UserSchema(session=db.session)
+
+        if "password" in json_data:
+            json_data["hashed_password"] = generate_password_hash(
+                json_data["password"]
+            )
+            del json_data["password"]
+
+        try:
+            user = user_schema.load(json_data)
+            db.session.add(user)
+            db.session.commit()
+            return user_schema.dump(user), 201
+        except ValidationError as e:
+            logger.error("Validation error: %s", e.messages)
+            return {"message": "Validation error", "errors": e.messages}, 400
+        except IntegrityError as e:
+            db.session.rollback()
+            logger.error("Integrity error: %s", str(e.orig))
+            return {"message": "Integrity error"}, 400
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logger.error("Database error: %s", str(e))
+            return {"message": "Database error"}, 500

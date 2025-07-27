@@ -81,8 +81,10 @@ class UserSchema(SQLAlchemyAutoSchema):
     is_active = fields.Boolean(load_default=True, dump_default=True)
     is_verified = fields.Boolean(load_default=False, dump_default=False)
     last_login_at = fields.DateTime(allow_none=True)
+    # Allow nullable company_id for superuser creation
     company_id = fields.String(
-        required=True,
+        required=False,
+        allow_none=True,
         validate=validate.Regexp(
             r'^[a-fA-F0-9]{8}-'
             r'[a-fA-F0-9]{4}-'
@@ -130,4 +132,35 @@ class UserSchema(SQLAlchemyAutoSchema):
                 value
             )
             raise ValidationError("Email already exists.")
+        return value
+
+    @validates('company_id')
+    def validate_company_id(self, value, **kwargs):
+        """
+        Validate company_id updates to prevent modification after creation.
+
+        Args:
+            value (str): The company_id to validate.
+
+        Raises:
+            ValidationError: If trying to update company_id on existing user.
+
+        Returns:
+            str: The validated company_id.
+        """
+        _ = kwargs
+
+        # Get current user from context if this is an update operation
+        current_user = self.context.get('user') if hasattr(self, 'context') else None
+        
+        # If this is an update operation (current_user exists)
+        if current_user:
+            # Check if company_id is being changed
+            if hasattr(current_user, 'company_id') and current_user.company_id != value:
+                logger.error(
+                    "Security violation: Attempt to change company_id for user %s",
+                    getattr(current_user, 'id', 'unknown')
+                )
+                raise ValidationError("Company ID cannot be modified after user creation.")
+        
         return value
