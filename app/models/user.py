@@ -244,3 +244,35 @@ class User(db.Model):
         except SQLAlchemyError as e:
             logger.error("Error retrieving superusers: %s", str(e))
             return []
+
+    @classmethod
+    def ensure_superuser_exists(cls):
+        """
+        Ensure that at least one superuser exists in the database.
+
+        If the user table is completely empty, create a default superuser
+        with a generated UUID and a placeholder password.
+        """
+        try:
+            # Check if the user table is empty
+            user_count = cls.query.count()
+            if user_count == 0:
+                from werkzeug.security import generate_password_hash
+                #TODO: Send request to guardian API to get superadmin role ID
+                superuser = cls(
+                    email="superuser@example.com",
+                    first_name="Super",
+                    last_name="User",
+                    hashed_password=generate_password_hash("SuperUser123!")
+                )
+                db.session.add(superuser)
+                db.session.commit()
+                logger.info("Created default superuser (table was empty).")
+                return superuser
+            else:
+                logger.info("User table is not empty, no need to create superuser.")
+                return None
+        except Exception as e:
+            logger.error("Error creating default superuser: %s", str(e))
+            db.session.rollback()
+            return None

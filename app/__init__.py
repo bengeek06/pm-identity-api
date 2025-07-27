@@ -23,9 +23,10 @@ from flask_migrate import Migrate
 from flask_marshmallow import Marshmallow
 from flask_cors import CORS
 
-from .models import db
-from .logger import logger
-from .routes import register_routes
+from app.models import db
+from app.logger import logger
+from app.routes import register_routes
+from app.models.user import User
 
 # Initialize Flask extensions
 migrate = Migrate()
@@ -196,5 +197,9 @@ def create_app(config_class):
     register_error_handlers(app)
     register_routes(app)
     logger.info("App created successfully.")
+    
+    with app.app_context():
+        # Ensure the superuser exists on app startup
+        User.ensure_superuser_exists()
 
     return app
