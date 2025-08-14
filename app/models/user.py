@@ -8,9 +8,12 @@ attributes, relationships, and utility methods for CRUD operations.
 The User model represents an individual user account within a company.
 """
 
+import os
 import uuid
+
+import requests
 from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from app.models import db
 from app.logger import logger
 
@@ -257,12 +260,24 @@ class User(db.Model):
             # Check if the user table is empty
             user_count = cls.query.count()
             if user_count == 0:
-                from werkzeug.security import generate_password_hash
                 #TODO: Send request to guardian API to get superadmin role ID
+                guardian = os.getenv('GUARDIAN_SERVICE_URL')
+                response = requests.get(f"{guardian}/roles")
+                if response.status_code == 200:
+                    roles = response.json()
+                    superadmin_role = next(
+                        (role for role in roles if role['name'] == 'superadmin'),
+                        None
+                    )
+                    if not superadmin_role:
+                        logger.error("Superadmin role not found in Guardian API.")
+                        return None
+
                 superuser = cls(
                     email="superuser@example.com",
                     first_name="Super",
                     last_name="User",
+                    role_id=superadmin_role['id'],
                     hashed_password=generate_password_hash("SuperUser123!")
                 )
                 db.session.add(superuser)

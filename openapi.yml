@@ -5,10 +5,11 @@ info:
   description: API for managing users, companies, organizations, positions, subcontractors, and customers
 
 servers:
+  - url: http://localhost:5002
+    description: Staging development server
   - url: http://localhost:5000
     description: Local development server
-  - url: http://localhost:5001
-    description: Staging development server
+  
 
 paths:
   /version:

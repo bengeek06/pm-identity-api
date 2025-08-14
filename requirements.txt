@@ -1,6 +1,7 @@
 colorlog
 structlog
 python-dotenv
+requests
 Flask
 flask-cors
 flask-marshmallow

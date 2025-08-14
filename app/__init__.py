@@ -199,6 +199,7 @@ def create_app(config_class):
     logger.info("App created successfully.")
     
     with app.app_context():
+        db.create_all()
         # Ensure the superuser exists on app startup
         User.ensure_superuser_exists()
 
