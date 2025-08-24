@@ -207,16 +207,15 @@ def test_put_user_success(client, session):
     """
     Test PUT /users/<id> for a full update.
     """
-    company1 = Company(name="Company1")
-    company2 = Company(name="Company2")
-    session.add_all([company1, company2])
+    company = Company(name="Company")
+    session.add(company)
     session.commit()
     user = User(
         email="old@example.com",
         hashed_password="oldhash",
         first_name="Old",
         last_name="Name",
-        company_id=str(company1.id)  # <-- string ici
+        company_id=str(company.id)
     )
     session.add(user)
     session.commit()
@@ -226,7 +225,7 @@ def test_put_user_success(client, session):
         "password": "NewSecret123!",
         "first_name": "Updated",
         "last_name": "User",
-        "company_id": str(company2.id)  # <-- string ici aussi
+        "company_id": str(company.id)  # Keep same company to avoid security violation
     }
     response = client.put(f'/users/{user.id}', json=payload)
     assert response.status_code == 200, response.get_json()
@@ -235,7 +234,7 @@ def test_put_user_success(client, session):
     assert data["email"] == "updated@example.com"
     assert data["first_name"] == "Updated"
     assert data["last_name"] == "User"
-    assert data["company_id"] == str(company2.id)
+    assert data["company_id"] == str(company.id)
 
 def test_put_user_not_found(client, session):
     """

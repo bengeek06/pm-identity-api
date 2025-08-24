@@ -38,6 +38,7 @@ from app.resources.user import (
     VerifyPasswordResource,
     SuperUserResource
 )
+from app.resources.init_db import InitDBResource
 
 
 def register_routes(app):
@@ -56,6 +57,7 @@ def register_routes(app):
 
     api.add_resource(VersionResource, '/version')
     api.add_resource(ConfigResource, '/config')
+    api.add_resource(InitDBResource, '/init-db')
     api.add_resource(CompanyListResource, '/companies')
     api.add_resource(CompanyResource, '/companies/<string:company_id>')
     api.add_resource(CustomerListResource, '/customers')

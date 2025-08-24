@@ -121,7 +121,7 @@ class User(db.Model):
             User or None: The User object if found, None otherwise.
         """
         try:
-            return cls.query.get(user_id)
+            return db.session.get(cls, user_id)
         except SQLAlchemyError as e:
             logger.error("Error retrieving user by ID %s: %s", user_id, str(e))
             return None

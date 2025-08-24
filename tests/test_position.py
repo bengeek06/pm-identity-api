@@ -74,7 +74,8 @@ def test_post_position_success(client, session):
     session.commit()
     payload = {
         "title": "Engineer",
-        "organization_unit_id": unit.id
+        "organization_unit_id": unit.id,
+        "company_id": company_id
     }
     response = client.post('/positions', json=payload)
     assert response.status_code == 201, response.get_json()
@@ -249,7 +250,9 @@ def test_post_position_for_unit_success(client, session):
     session.add(unit)
     session.commit()
     payload = {
-        "title": "Analyst"
+        "title": "Analyst",
+        "company_id": company_id,
+        "organization_unit_id": unit.id
     }
     response = client.post(f'/organization_units/{unit.id}/positions', json=payload)
     assert response.status_code == 201, response.get_json()
@@ -327,7 +330,8 @@ def test_put_position_success(client, session):
 
     payload = {
         "title": "NewTitle",
-        "organization_unit_id": unit2.id
+        "organization_unit_id": unit2.id,
+        "company_id": company_id
     }
     response = client.put(f'/positions/{pos.id}', json=payload)
     assert response.status_code == 200, response.get_json()

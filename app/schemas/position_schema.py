@@ -58,8 +58,7 @@ class PositionSchema(SQLAlchemyAutoSchema):
     )
 
     company_id = fields.String(
-        required=False,
-        dump_only=True,
+        required=True,
         validate=validate.Regexp(
             r'^[a-fA-F0-9]{8}-'
             r'[a-fA-F0-9]{4}-'

@@ -120,7 +120,7 @@ class Company(db.Model):
                              if not found.
         """
         try:
-            return cls.query.get(company_id)
+            return db.session.get(cls, company_id)
         except SQLAlchemyError as e:
             logger.error(
                 f"Error retrieving company by ID {company_id}: {e}"
