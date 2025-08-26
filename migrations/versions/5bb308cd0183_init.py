@@ -34,12 +34,6 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('dummy',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=50), nullable=False),
-    sa.Column('description', sa.String(length=200), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
     op.create_table('customer',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
@@ -125,6 +119,5 @@ def downgrade():
     op.drop_table('subcontractor')
     op.drop_table('organization_unit')
     op.drop_table('customer')
-    op.drop_table('dummy')
     op.drop_table('company')
     # ### end Alembic commands ###

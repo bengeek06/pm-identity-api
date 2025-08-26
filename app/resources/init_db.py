@@ -130,6 +130,7 @@ class InitDBResource(Resource):
             }
         """
         if Company.query.count() != 0 or User.query.count() != 0:
+            logger.warning("Identity database initialization attempted when already initialized.")
             return {"message": "Identity already initialized"}, 403
 
         json_data = request.get_json()
@@ -145,6 +146,7 @@ class InitDBResource(Resource):
         user_data = json_data.get("user")
         if (not company_data or not org_unit_data or not position_data or
                 not user_data):
+            logger.error("Initialization data missing required fields.")
             return {
                 "message": (
                     "'company', 'organization_unit', 'position', and 'user' "
@@ -155,11 +157,13 @@ class InitDBResource(Resource):
         try:
             with db.session.begin_nested():
                 # Create company
+                logger.info("Starting identity database initialization.")
                 new_company = company_schema.load(company_data)
                 db.session.add(new_company)
                 db.session.flush()  # get new_company.id
 
                 # Prepare and create organization unit
+                logger.info("Creating organization unit.")
                 json_data = request.get_json()
                 json_data['organization_unit']['company_id'] = new_company.id
                 new_org_unit = org_unit_schema.load(
@@ -169,6 +173,7 @@ class InitDBResource(Resource):
                 db.session.flush()  # get new_org_unit.id
 
                 # Prepare and create position
+                logger.info("Creating position.")
                 json_data['position']['company_id'] = new_company.id
                 json_data['position']['organization_unit_id'] = (
                     new_org_unit.id
@@ -178,6 +183,7 @@ class InitDBResource(Resource):
                 db.session.flush()  # get new_position.id
 
                 # Prepare user data
+                logger.info("Creating user.")
                 json_data['user']['company_id'] = new_company.id
                 json_data['user']['position_id'] = new_position.id
                 if "password" in json_data['user']:
