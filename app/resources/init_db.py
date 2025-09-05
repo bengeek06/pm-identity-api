@@ -72,8 +72,10 @@ class InitDBResource(Resource):
         """
         user_count = User.query.count()
         if user_count == 0:
+            logger.debug("Database not initialized: no users found.")
             return {"initialized": False}, 200
         else:
+            logger.debug("Database initialized: users found.")
             return {"initialized": True}, 200
 
     def post(self):
