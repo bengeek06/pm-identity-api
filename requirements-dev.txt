@@ -10,6 +10,7 @@ flask-restful
 Flask-SQLAlchemy
 flask-cors
 marshmallow-sqlalchemy
+PyJWT
 pytest
 pytest-cov
 pylint

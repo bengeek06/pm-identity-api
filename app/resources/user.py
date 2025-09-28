@@ -11,11 +11,13 @@ schemas for validation and serialization, and handle database errors
 gracefully.
 """
 
-from flask import request
+import os
+from flask import request, current_app
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from flask_restful import Resource
 from werkzeug.security import generate_password_hash
+import jwt
 
 from app.models import db
 from app.logger import logger
@@ -66,7 +68,32 @@ class UserListResource(Resource):
         """
         logger.info("Creating a new user")
 
+        jwt_token = request.cookies.get('access_token')
+        if not jwt_token:
+            logger.error("Missing JWT token")
+            return {"message": "Missing JWT token"}, 401
+
+        logger.debug("Found JWT token in cookies")
+        jwt_secret = os.environ.get('JWT_SECRET')
+        if not jwt_secret:
+            logger.warning("JWT_SECRET not found in environment variables.")
+        try:
+            payload = jwt.decode(jwt_token, jwt_secret, algorithms=["HS256"])
+            company_id = payload.get("company_id")
+            if not company_id:
+                logger.error("company_id missing in JWT")
+                return {"message": "company_id missing in JWT"}, 400
+            logger.debug(f"Extracted company_id {company_id} from JWT")
+        except jwt.ExpiredSignatureError:
+            logger.error("JWT expired")
+            return {"message": "JWT expired"}, 401
+        except jwt.InvalidTokenError as e:
+            logger.error("JWT error: %s", str(e))
+            return {"message": "JWT error"}, 401
+
         json_data = request.get_json()
+        json_data["company_id"] = company_id
+
         user_schema = UserSchema(session=db.session)
 
         if "password" in json_data:
