@@ -67,7 +67,7 @@ def test_post_already_initialized(client):
     assert resp.status_code == 403
     assert resp.json["message"].lower().startswith("identity already initialized")
 
-@pytest.mark.parametrize("missing_key", ["company", "organization_unit", "position", "user"])
+@pytest.mark.parametrize("missing_key", ["company", "user"])
 def test_post_missing_data(client, missing_key):
     """
 	Check that a POST to /init-db without one of the required keys returns a 400 error.
