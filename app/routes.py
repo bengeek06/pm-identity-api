@@ -39,7 +39,7 @@ from app.resources.user import (
     SuperUserResource
 )
 from app.resources.init_db import InitDBResource
-
+from app.resources.health import HealthResource
 
 def register_routes(app):
     """
@@ -88,5 +88,6 @@ def register_routes(app):
         UserPositionResource, '/positions/<string:position_id>/users'
     )
     api.add_resource(VerifyPasswordResource, '/verify_password')
+    api.add_resource(HealthResource, '/health')
 
     logger.info("Routes registered successfully.")
