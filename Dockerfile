@@ -9,4 +9,4 @@ COPY . .
 COPY ./wait-for-it.sh /
 RUN chmod +x /wait-for-it.sh
 
-CMD [ "sh", "-c", "/wait-for-it.sh db_service:5432 --timeout=60 --strict -- flask db upgrade && python run.py" ]
+CMD [ "sh", "-c", "/wait-for-it.sh db_service:5432 -t 120 --strict -- flask db upgrade && python run.py" ]
