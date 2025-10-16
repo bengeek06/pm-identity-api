@@ -41,9 +41,10 @@ class UserSchema(SQLAlchemyAutoSchema):
         created_at (datetime): Timestamp when the user was created.
         updated_at (datetime): Timestamp when the user was last updated.
     """
+
     # Permet le passage explicite du contexte lors de l'instanciation
     def __init__(self, *args, **kwargs):
-        self.context = kwargs.pop('context', {})
+        self.context = kwargs.pop("context", {})
         super().__init__(*args, **kwargs)
 
     class Meta:
@@ -56,27 +57,24 @@ class UserSchema(SQLAlchemyAutoSchema):
             include_fk: Whether to include foreign keys.
             dump_only: Fields that are only used for serialization.
         """
+
         model = User
         load_instance = True
         include_fk = True
-        dump_only = ('id', 'created_at', 'updated_at')
+        dump_only = ("id", "created_at", "updated_at")
 
     id = fields.UUID(dump_only=True)
     email = fields.Email(required=True, validate=validate.Length(max=100))
     hashed_password = fields.String(
-        required=True,
-        validate=validate.Length(max=255),
-        load_only=True
+        required=True, validate=validate.Length(max=255), load_only=True
     )
     first_name = fields.String(validate=validate.Length(max=50))
     last_name = fields.String(validate=validate.Length(max=50))
     phone_number = fields.String(
-        validate=validate.Length(max=50),
-        allow_none=True
+        validate=validate.Length(max=50), allow_none=True
     )
     avatar_url = fields.String(
-        validate=validate.Length(max=255),
-        allow_none=True
+        validate=validate.Length(max=255), allow_none=True
     )
     is_active = fields.Boolean(load_default=True, dump_default=True)
     is_verified = fields.Boolean(load_default=False, dump_default=False)
@@ -86,29 +84,29 @@ class UserSchema(SQLAlchemyAutoSchema):
         required=False,
         allow_none=True,
         validate=validate.Regexp(
-            r'^[a-fA-F0-9]{8}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{12}$',
-            error="Company ID must be a valid UUID."
-        )
+            r"^[a-fA-F0-9]{8}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{12}$",
+            error="Company ID must be a valid UUID.",
+        ),
     )
     position_id = fields.String(
         required=False,
         validate=validate.Regexp(
-            r'^[a-fA-F0-9]{8}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{12}$',
-            error="Position ID must be a valid UUID."
-        )
+            r"^[a-fA-F0-9]{8}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{12}$",
+            error="Position ID must be a valid UUID.",
+        ),
     )
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
-    @validates('email')
+    @validates("email")
     def validate_email(self, value, **kwargs):
         """
         Validate that the email is unique, except for the current user (on update).
@@ -125,16 +123,19 @@ class UserSchema(SQLAlchemyAutoSchema):
         _ = kwargs
 
         user = User.get_by_email(value)
-        current_user = self.context.get('user') if hasattr(self, 'context') else None
-        if user and (not current_user or user.id != getattr(current_user, 'id', None)):
+        current_user = (
+            self.context.get("user") if hasattr(self, "context") else None
+        )
+        if user and (
+            not current_user or user.id != getattr(current_user, "id", None)
+        ):
             logger.error(
-                "Validation error: User with email '%s' already exists.",
-                value
+                "Validation error: User with email '%s' already exists.", value
             )
             raise ValidationError("Email already exists.")
         return value
 
-    @validates('company_id')
+    @validates("company_id")
     def validate_company_id(self, value, **kwargs):
         """
         Validate company_id updates to prevent modification after creation.
@@ -151,16 +152,23 @@ class UserSchema(SQLAlchemyAutoSchema):
         _ = kwargs
 
         # Get current user from context if this is an update operation
-        current_user = self.context.get('user') if hasattr(self, 'context') else None
-        
+        current_user = (
+            self.context.get("user") if hasattr(self, "context") else None
+        )
+
         # If this is an update operation (current_user exists)
         if current_user:
             # Check if company_id is being changed
-            if hasattr(current_user, 'company_id') and current_user.company_id != value:
+            if (
+                hasattr(current_user, "company_id")
+                and current_user.company_id != value
+            ):
                 logger.error(
                     "Security violation: Attempt to change company_id for user %s",
-                    getattr(current_user, 'id', 'unknown')
+                    getattr(current_user, "id", "unknown"),
                 )
-                raise ValidationError("Company ID cannot be modified after user creation.")
-        
+                raise ValidationError(
+                    "Company ID cannot be modified after user creation."
+                )
+
         return value

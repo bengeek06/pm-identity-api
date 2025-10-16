@@ -197,10 +197,5 @@ def create_app(config_class):
     register_error_handlers(app)
     register_routes(app)
     logger.info("App created successfully.")
-    
-    #with app.app_context():
-    #    db.create_all()
-    #    # Ensure the superuser exists on app startup
-    #    User.ensure_superuser_exists()
 
     return app

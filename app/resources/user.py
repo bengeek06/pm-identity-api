@@ -12,7 +12,7 @@ gracefully.
 """
 
 import os
-from flask import request, current_app
+from flask import request
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from flask_restful import Resource
@@ -37,6 +37,7 @@ class UserListResource(Resource):
         post():
             Create a new user with the provided data.
     """
+
     def get(self):
         """
         Get all users.
@@ -68,13 +69,13 @@ class UserListResource(Resource):
         """
         logger.info("Creating a new user")
 
-        jwt_token = request.cookies.get('access_token')
+        jwt_token = request.cookies.get("access_token")
         if not jwt_token:
             logger.error("Missing JWT token")
             return {"message": "Missing JWT token"}, 401
 
         logger.debug("Found JWT token in cookies")
-        jwt_secret = os.environ.get('JWT_SECRET')
+        jwt_secret = os.environ.get("JWT_SECRET")
         if not jwt_secret:
             logger.warning("JWT_SECRET not found in environment variables.")
         try:
@@ -105,12 +106,14 @@ class UserListResource(Resource):
         try:
             user = user_schema.load(json_data)
             # Handle nullable company_id for superuser creation
-            if "company_id" in json_data and json_data["company_id"] is not None:
+            if (
+                "company_id" in json_data
+                and json_data["company_id"] is not None
+            ):
                 company = Company.get_by_id(json_data["company_id"])
                 if not company:
                     logger.warning(
-                        "Company with ID %s not found",
-                        json_data["company_id"]
+                        "Company with ID %s not found", json_data["company_id"]
                     )
                     return {"message": "Company not found"}, 404
                 user.company = company
@@ -148,6 +151,7 @@ class UserResource(Resource):
         delete(user_id):
             Delete a user by ID.
     """
+
     def get(self, user_id):
         """
         Get a user by ID.
@@ -192,7 +196,7 @@ class UserResource(Resource):
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
 
-        user_schema = UserSchema(session=db.session, context={'user': user})
+        user_schema = UserSchema(session=db.session, context={"user": user})
 
         if "password" in json_data:
             json_data["hashed_password"] = generate_password_hash(
@@ -240,7 +244,9 @@ class UserResource(Resource):
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
 
-        user_schema = UserSchema(session=db.session, partial=True, context={'user': user})
+        user_schema = UserSchema(
+            session=db.session, partial=True, context={"user": user}
+        )
 
         if "password" in json_data:
             json_data["hashed_password"] = generate_password_hash(
@@ -251,7 +257,8 @@ class UserResource(Resource):
         try:
             # Company_id modification is prevented by schema validation
             updated_user = user_schema.load(
-                json_data, instance=user, partial=True)
+                json_data, instance=user, partial=True
+            )
             db.session.commit()
             return user_schema.dump(updated_user), 200
         except ValidationError as e:
@@ -308,6 +315,7 @@ class UserCompanyResource(Resource):
         delete(company_id):
             Delete all users for a specific company.
     """
+
     def get(self, company_id):
         """
         Get all users for a specific company.
@@ -326,7 +334,8 @@ class UserCompanyResource(Resource):
             return schema.dump(users), 200
         except SQLAlchemyError as e:
             logger.error(
-                "Error fetching users for company %s: %s", company_id, str(e))
+                "Error fetching users for company %s: %s", company_id, str(e)
+            )
             return {"message": "Error fetching users"}, 500
 
     def post(self, company_id):
@@ -415,6 +424,7 @@ class UserPositionResource(Resource):
         get(position_id):
             Retrieve all users for a specific position.
     """
+
     def get(self, position_id):
         """
         Get all users for a specific position.
@@ -433,8 +443,7 @@ class UserPositionResource(Resource):
             return schema.dump(users), 200
         except SQLAlchemyError as e:
             logger.error(
-                "Error fetching users for position %s: %s",
-                position_id, str(e)
+                "Error fetching users for position %s: %s", position_id, str(e)
             )
             return {"message": "Error fetching users"}, 500
 
@@ -447,6 +456,7 @@ class VerifyPasswordResource(Resource):
         post():
             Verify a user's password.
     """
+
     def post(self):
         """
         Verify a user's password.
@@ -494,6 +504,7 @@ class SuperUserResource(Resource):
         post():
             Create a new superuser (company_id will be None).
     """
+
     def get(self):
         """
         Get all superusers.
@@ -526,12 +537,12 @@ class SuperUserResource(Resource):
         logger.info("Creating a new superuser")
 
         json_data = request.get_json()
-        
+
         # Ensure company_id is None for superuser creation
         if "company_id" in json_data and json_data["company_id"] is not None:
             logger.error("Cannot create superuser with company_id")
             return {"message": "Superuser cannot have a company_id"}, 400
-        
+
         json_data["company_id"] = None
         user_schema = UserSchema(session=db.session)
 

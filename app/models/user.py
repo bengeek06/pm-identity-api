@@ -42,12 +42,11 @@ class User(db.Model):
         created_at (datetime): Timestamp when the user was created.
         updated_at (datetime): Timestamp when the user was last updated.
     """
-    __tablename__ = 'user'
+
+    __tablename__ = "user"
 
     id = db.Column(
-        db.String(36),
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     email = db.Column(db.String(100), nullable=False, unique=True)
     hashed_password = db.Column(db.String(255), nullable=False)
@@ -60,26 +59,19 @@ class User(db.Model):
     last_login_at = db.Column(db.DateTime, nullable=True)
     # Allow nullable company_id for superuser creation
     company_id = db.Column(
-        db.String(36),
-        db.ForeignKey('company.id'),
-        nullable=True
+        db.String(36), db.ForeignKey("company.id"), nullable=True
     )
     position_id = db.Column(
-        db.String(36),
-        db.ForeignKey('position.id'),
-        nullable=True
+        db.String(36), db.ForeignKey("position.id"), nullable=True
     )
-    created_at = db.Column(
-        db.DateTime,
-        default=db.func.current_timestamp()
-    )
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
         default=db.func.current_timestamp(),
-        onupdate=db.func.current_timestamp()
+        onupdate=db.func.current_timestamp(),
     )
 
-    company = db.relationship('Company', back_populates='users', lazy=True)
+    company = db.relationship("Company", back_populates="users", lazy=True)
 
     def __repr__(self):
         """
@@ -182,7 +174,8 @@ class User(db.Model):
         except SQLAlchemyError as e:
             logger.error(
                 "Error retrieving users for position %s: %s",
-                position_id, str(e)
+                position_id,
+                str(e),
             )
             return []
 
@@ -207,9 +200,7 @@ class User(db.Model):
                 query = query.filter(cls.last_name.ilike(f"%{last_name}%"))
             return query.all()
         except SQLAlchemyError as e:
-            logger.error(
-                "Error retrieving users by name: %s", str(e)
-            )
+            logger.error("Error retrieving users by name: %s", str(e))
             return []
 
     def verify_password(self, password):
@@ -260,33 +251,41 @@ class User(db.Model):
             # Check if the user table is empty
             user_count = cls.query.count()
             if user_count == 0:
-                #TODO: Send request to guardian API to get superadmin role ID
-                guardian = os.getenv('GUARDIAN_SERVICE_URL')
+                # TODO: Send request to guardian API to get superadmin role ID
+                guardian = os.getenv("GUARDIAN_SERVICE_URL")
                 response = requests.get(f"{guardian}/roles")
                 if response.status_code == 200:
                     roles = response.json()
                     superadmin_role = next(
-                        (role for role in roles if role['name'] == 'superadmin'),
-                        None
+                        (
+                            role
+                            for role in roles
+                            if role["name"] == "superadmin"
+                        ),
+                        None,
                     )
                     if not superadmin_role:
-                        logger.error("Superadmin role not found in Guardian API.")
+                        logger.error(
+                            "Superadmin role not found in Guardian API."
+                        )
                         return None
 
                 superuser = cls(
                     email="superuser@example.com",
                     first_name="Super",
                     last_name="User",
-                    role_id=superadmin_role['id'],
-                    hashed_password=generate_password_hash("SuperUser123!")
+                    role_id=superadmin_role["id"],
+                    hashed_password=generate_password_hash("SuperUser123!"),
                 )
                 db.session.add(superuser)
                 db.session.commit()
                 logger.info("Created default superuser (table was empty).")
                 return superuser
-            else:
-                logger.info("User table is not empty, no need to create superuser.")
-                return None
+
+            logger.info(
+                "User table is not empty, no need to create superuser."
+            )
+            return None
         except Exception as e:
             logger.error("Error creating default superuser: %s", str(e))
             db.session.rollback()

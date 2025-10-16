@@ -22,6 +22,7 @@ Typical usage:
     Register this resource with your Flask-RESTful API to allow one-time
     initialization of the identity database.
 """
+
 from flask import request
 from flask_restful import Resource
 from marshmallow import ValidationError
@@ -39,6 +40,7 @@ from app.schemas.user_schema import UserSchema
 from app.schemas.organization_unit_schema import OrganizationUnitSchema
 from app.schemas.position_schema import PositionSchema
 
+
 class InitDBResource(Resource):
     """
     Resource for initializing the database with a company, organization unit,
@@ -52,6 +54,7 @@ class InitDBResource(Resource):
       This endpoint is only available if the database is not already
       initialized.
     """
+
     def get(self):
         """
         Check if the identity database has already been initialized.
@@ -74,18 +77,28 @@ class InitDBResource(Resource):
         if user_count == 0:
             logger.debug("Database not initialized: no users found.")
             return {"initialized": False}, 200
-        else:
-            logger.debug("Database initialized: users found.")
-            return {"initialized": True}, 200
+
+        logger.debug("Database initialized: users found.")
+        return {"initialized": True}, 200
 
     def post(self):
         """
-        Initialize the database with a company, a default organization unit, a default position, and an admin user in a single transaction.
+        Initialize the database with a company, a default organization unit,
+        a default position, and an admin user in a single transaction.
 
-        This endpoint is intended to be called only once, on a fresh database. It expects a JSON payload containing two objects: 'company' and 'user'.
-        The 'organization_unit' and 'position' objects are created automatically with the following default values:
-            - organization_unit: {"name": "default organization", "company_id": <id of the created company>}
-            - position: {"title": "Administrator", "company_id": <id of the created company>, "organization_unit_id": <id of the created organization unit>}
+        This endpoint is intended to be called only once, on a fresh database.
+        It expects a JSON payload containing two objects: 'company' and 'user'.
+        The 'organization_unit' and 'position' objects are created automatically
+        with the following default values:
+            - organization_unit: {
+                                    "name": "default organization",
+                                    "company_id": <id of the created company>
+                                 }
+            - position: {
+                            "title": "Administrator",
+                            "company_id": <id of the created company>,
+                            "organization_unit_id": <id of the created organization unit>
+                        }
 
         Expected JSON structure:
             {
@@ -97,8 +110,10 @@ class InitDBResource(Resource):
             }
 
         Behavior:
-            - If the database already contains a company or a user, returns 403 and does nothing.
-            - Validates and creates the company, then automatically creates the default organization unit and position.
+            - If the database already contains a company or a user, returns 403
+              and does nothing.
+            - Validates and creates the company, then automatically creates the
+              default organization unit and position.
             - The user's password is hashed before storing.
             - All entities are created in a single atomic transaction.
             - On validation or integrity error, returns 400 with details.
@@ -106,7 +121,8 @@ class InitDBResource(Resource):
 
         Returns:
             tuple: (dict, int)
-                - dict: The serialized representations of the created company, organization unit, position, and user.
+                - dict: The serialized representations of the created company,
+                        organization unit, position, and user.
                 - int: HTTP status code (201 on success, 400/403/500 on error).
 
         Example success response (201):
@@ -124,7 +140,9 @@ class InitDBResource(Resource):
             }
         """
         if Company.query.count() != 0 or User.query.count() != 0:
-            logger.warning("Identity database initialization attempted when already initialized.")
+            logger.warning(
+                "Database initialization attempted when already initialized."
+            )
             return {"message": "Identity already initialized"}, 403
 
         json_data = request.get_json()
@@ -140,20 +158,14 @@ class InitDBResource(Resource):
         if not company_data or not user_data:
             logger.error("Initialization data missing required fields.")
             return {
-                "message": (
-                    "'company' and 'user' data are required."
-                )
+                "message": ("'company' and 'user' data are required.")
             }, 400
         if not isinstance(company_data, dict):
             logger.error("'company' must be a JSON object.")
-            return {
-                "message": "'company' must be a JSON object."
-            }, 400
+            return {"message": "'company' must be a JSON object."}, 400
         if not isinstance(user_data, dict):
             logger.error("'user' must be a JSON object.")
-            return {
-                "message": "'user' must be a JSON object."
-            }, 400
+            return {"message": "'user' must be a JSON object."}, 400
 
         try:
             with db.session.begin_nested():
@@ -167,9 +179,11 @@ class InitDBResource(Resource):
                 # Create default organization unit
                 default_org_unit_data = {
                     "name": "default organization",
-                    "company_id": new_company.id
+                    "company_id": new_company.id,
                 }
-                logger.info(f"default_org_unit_data type: {type(default_org_unit_data)}")
+                logger.info(
+                    f"default_org_unit_data type: {type(default_org_unit_data)}"
+                )
                 logger.info("Creating default organization unit.")
                 new_org_unit = org_unit_schema.load(default_org_unit_data)
                 db.session.add(new_org_unit)
@@ -179,9 +193,11 @@ class InitDBResource(Resource):
                 default_position_data = {
                     "title": "Administrator",
                     "company_id": new_company.id,
-                    "organization_unit_id": new_org_unit.id
+                    "organization_unit_id": new_org_unit.id,
                 }
-                logger.info(f"default_position_data type: {type(default_position_data)}")
+                logger.info(
+                    f"default_position_data type: {type(default_position_data)}"
+                )
                 logger.info("Creating default position.")
                 new_position = position_schema.load(default_position_data)
                 db.session.add(new_position)
@@ -190,14 +206,18 @@ class InitDBResource(Resource):
                 # Prepare user data
                 logger.info(f"user_data type: {type(user_data)}")
                 logger.info("Creating user.")
-                user_data['company_id'] = new_company.id
-                user_data['position_id'] = new_position.id
+                user_data["company_id"] = new_company.id
+                user_data["position_id"] = new_position.id
                 if "password" in user_data:
-                    user_data["hashed_password"] = generate_password_hash(user_data["password"])
+                    user_data["hashed_password"] = generate_password_hash(
+                        user_data["password"]
+                    )
                     del user_data["password"]
                 else:
                     logger.error("User data missing 'password' field.")
-                    raise ValidationError({"password": ["Missing data for required field."]})
+                    raise ValidationError(
+                        {"password": ["Missing data for required field."]}
+                    )
                 new_user = user_schema.load(user_data)
                 new_user.company_id = new_company.id
                 new_user.position_id = new_position.id
@@ -208,15 +228,12 @@ class InitDBResource(Resource):
                 "company": company_schema.dump(new_company),
                 "organization_unit": org_unit_schema.dump(new_org_unit),
                 "position": position_schema.dump(new_position),
-                "user": user_schema.dump(new_user)
+                "user": user_schema.dump(new_user),
             }, 201
         except ValidationError as err:
             db.session.rollback()
             logger.error("Validation error: %s", err.messages)
-            return {
-                "message": "Validation error",
-                "errors": err.messages
-            }, 400
+            return {"message": "Validation error", "errors": err.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
             logger.error("Integrity error: %s", str(e))
