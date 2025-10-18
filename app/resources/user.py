@@ -39,6 +39,7 @@ class UserListResource(Resource):
         post():
             Create a new user with the provided data.
     """
+
     @check_access_required("list")
     @require_jwt_auth(extract_company_id=True)
     def get(self):
@@ -51,13 +52,13 @@ class UserListResource(Resource):
         logger.info("Fetching all users")
         try:
             # Get company_id from JWT data stored in g by the decorator
-            jwt_data = getattr(g, 'jwt_data', {})
-            company_id = jwt_data.get('company_id')
-            
+            jwt_data = getattr(g, "jwt_data", {})
+            company_id = jwt_data.get("company_id")
+
             if not company_id:
                 logger.error("company_id missing in JWT")
                 return {"message": "company_id missing in JWT"}, 400
-                
+
             # Filter users by company_id to only return users from the same company
             users = User.query.filter_by(company_id=company_id).all()
             schema = UserSchema(many=True)
@@ -165,6 +166,7 @@ class UserResource(Resource):
         delete(user_id):
             Delete a user by ID.
     """
+
     @check_access_required("read")
     @require_jwt_auth(extract_company_id=True)
     def get(self, user_id):
@@ -322,123 +324,6 @@ class UserResource(Resource):
             return {"message": "Database error"}, 500
 
 
-class UserCompanyResource(Resource):
-    """
-    Resource for handling users by company.
-
-    Methods:
-        get(company_id):
-            Retrieve all users for a specific company.
-
-        post(company_id):
-            Create a new user for a specific company.
-
-        delete(company_id):
-            Delete all users for a specific company.
-    """
-    @require_jwt_auth(extract_company_id=True)
-    def get(self, company_id):
-        """
-        Get all users for a specific company.
-
-        Args:
-            company_id (str): The ID of the company.
-
-        Returns:
-            tuple: List of serialized users and HTTP status code 200.
-        """
-        logger.info("Fetching users for company ID %s", company_id)
-
-        try:
-            users = User.get_by_company_id(company_id)
-            schema = UserSchema(many=True)
-            return schema.dump(users), 200
-        except SQLAlchemyError as e:
-            logger.error(
-                "Error fetching users for company %s: %s", company_id, str(e)
-            )
-            return {"message": "Error fetching users"}, 500
-
-    @require_jwt_auth(extract_company_id=True)
-    def post(self, company_id):
-        """
-        Create a new user for a specific company.
-
-        Expects:
-            JSON payload with at least 'email', 'password', 'first_name',
-            and 'last_name'.
-
-        Args:
-            company_id (str): The ID of the company.
-
-        Returns:
-            tuple: The serialized created user and HTTP status code 201 on
-                   success.
-            tuple: Error message and HTTP status code 400 or 500 on failure.
-        """
-        logger.info("Creating a new user for company ID %s", company_id)
-
-        company = Company.get_by_id(company_id)
-        if not company:
-            logger.warning("Company with ID %s not found", company_id)
-            return {"message": "Company not found"}, 404
-
-        json_data = request.get_json()
-        json_data["company_id"] = company_id
-        user_schema = UserSchema(session=db.session)
-
-        if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(
-                json_data["password"]
-            )
-            del json_data["password"]
-
-        try:
-            user = user_schema.load(json_data)
-            db.session.add(user)
-            db.session.commit()
-            return user_schema.dump(user), 201
-        except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
-        except IntegrityError as e:
-            db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
-
-    @require_jwt_auth(extract_company_id=True)
-    def delete(self, company_id):
-        """
-        Delete all users for a specific company.
-
-        Args:
-            company_id (str): The ID of the company.
-
-        Returns:
-            tuple: Message and HTTP status code 204 on success,
-                   or error message and code on failure.
-        """
-        logger.info("Deleting all users for company ID %s", company_id)
-
-        try:
-            users = User.get_by_company_id(company_id)
-            if not users:
-                return {"message": "No users found for this company"}, 404
-
-            for user in users:
-                db.session.delete(user)
-            db.session.commit()
-            return {"message": "All users deleted successfully"}, 204
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
-
-
 class UserPositionResource(Resource):
     """
     Resource for handling users by position.
@@ -447,6 +332,7 @@ class UserPositionResource(Resource):
         get(position_id):
             Retrieve all users for a specific position.
     """
+
     @require_jwt_auth(extract_company_id=True)
     def get(self, position_id):
         """
@@ -481,6 +367,7 @@ class UserRolesResource(Resource):
         post(role):
             Add a new role for a specific user.
     """
+
     @require_jwt_auth(extract_company_id=True)
     def get(self, user_id):
         """
@@ -494,9 +381,9 @@ class UserRolesResource(Resource):
         """
         logger.info("Fetching roles for user ID %s", user_id)
 
-        jwt_data = getattr(g, 'jwt_data', {})
-        requesting_user_id = jwt_data.get('user_id')
-        company_id = jwt_data.get('company_id')
+        jwt_data = getattr(g, "jwt_data", {})
+        requesting_user_id = jwt_data.get("user_id")
+        company_id = jwt_data.get("company_id")
 
         if not requesting_user_id:
             logger.error("user_id missing in JWT")
@@ -507,10 +394,13 @@ class UserRolesResource(Resource):
         if not target_user:
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
-            
+
         if target_user.company_id != company_id:
-            logger.warning("User %s attempted to access roles for user %s from different company", 
-                         requesting_user_id, user_id)
+            logger.warning(
+                "User %s attempted to access roles for user %s from different company",
+                requesting_user_id,
+                user_id,
+            )
             return {"message": "Access denied"}, 403
 
         guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
@@ -522,23 +412,19 @@ class UserRolesResource(Resource):
             response = requests.get(
                 f"{guardian_url}/user_roles",
                 params={"user_id": user_id},
-                timeout=5
+                timeout=5,
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))
             return {"message": "Error fetching roles"}, 500
         if response.status_code != 200:
             logger.error(
-                "Error fetching roles from Guardian: %s",
-                response.text
+                "Error fetching roles from Guardian: %s", response.text
             )
             return {"message": "Error fetching roles"}, 500
-        
+
         roles = response.json().get("roles", [])
         return {"roles": roles}, 200
-       
-        
-
 
 
 class VerifyPasswordResource(Resource):
@@ -584,5 +470,3 @@ class VerifyPasswordResource(Resource):
 
         schema = UserSchema()
         return schema.dump(user), 200
-
-

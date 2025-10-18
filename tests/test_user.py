@@ -1,6 +1,7 @@
 """
 Test cases for the UserResource class in the PM Identity API.
 """
+
 import uuid
 import os
 import jwt
@@ -12,38 +13,31 @@ from app.models.company import Company
 
 def get_init_db_payload():
     """
-	Generate a valid payload for full database initialization via /init-db.
-	Returns a dictionary containing data for company, organization_unit, position, and user.
-	"""
+    Generate a valid payload for full database initialization via /init-db.
+    Returns a dictionary containing data for company, organization_unit, position, and user.
+    """
     return {
-		"company": {
-			"name": "TestCorp",
-			"description": "A test company"
-		},
-		"organization_unit": {
-			"name": "Direction",
-			"description": "Direction générale"
-		},
-		"position": {
-			"title": "CEO",
-			"description": "Chief Executive Officer"
-		},
-		"user": {
-			"email": "admin@testcorp.com",
-			"first_name": "Alice",
-			"last_name": "Admin",
-			"password": "supersecret"
-		}
-	}
+        "company": {"name": "TestCorp", "description": "A test company"},
+        "organization_unit": {
+            "name": "Direction",
+            "description": "Direction générale",
+        },
+        "position": {"title": "CEO", "description": "Chief Executive Officer"},
+        "user": {
+            "email": "admin@testcorp.com",
+            "first_name": "Alice",
+            "last_name": "Admin",
+            "password": "supersecret",
+        },
+    }
+
 
 def create_jwt_token(company_id, user_id):
     """Helper function to create a JWT token for testing."""
-    jwt_secret = os.environ.get('JWT_SECRET', 'test_secret')
-    payload = {
-        "company_id": company_id,
-        "user_id": user_id
-    }
+    jwt_secret = os.environ.get("JWT_SECRET", "test_secret")
+    payload = {"company_id": company_id, "user_id": user_id}
     return jwt.encode(payload, jwt_secret, algorithm="HS256")
+
 
 ##################################################
 # Test cases for GET /users
@@ -60,18 +54,19 @@ def test_get_users_empty(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     # Remove the user that was created by init-db to test empty state
     user = User.get_by_id(user_id)
     session.delete(user)
     session.commit()
-    
-    response = client.get('/users')
+
+    response = client.get("/users")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
     assert len(data) == 0
+
 
 def test_get_users_single(client, session):
     """
@@ -83,16 +78,16 @@ def test_get_users_single(client, session):
         hashed_password="hashedpw1",
         first_name="Alice",
         last_name="Smith",
-        company_id=company_id
+        company_id=company_id,
     )
     session.add(user)
     session.commit()
-    
+
     # Create JWT token for authentication
     jwt_token = create_jwt_token(company_id, str(user.id))
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
-    response = client.get('/users')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    response = client.get("/users")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
@@ -102,6 +97,7 @@ def test_get_users_single(client, session):
     assert data[0]["last_name"] == "Smith"
     assert data[0]["company_id"] == company_id
     assert "id" in data[0]
+
 
 def test_get_users_multiple(client, session):
     """
@@ -113,23 +109,23 @@ def test_get_users_multiple(client, session):
         hashed_password="hashedpw2",
         first_name="Bob",
         last_name="Jones",
-        company_id=company_id
+        company_id=company_id,
     )
     user2 = User(
         email="test3@example.com",
         hashed_password="hashedpw3",
         first_name="Carol",
         last_name="Brown",
-        company_id=company_id
+        company_id=company_id,
     )
     session.add_all([user1, user2])
     session.commit()
-    
+
     # Create JWT token for authentication using the first user
     jwt_token = create_jwt_token(company_id, str(user1.id))
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
-    response = client.get('/users')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    response = client.get("/users")
     assert response.status_code == 200
     data = response.get_json()
     emails = [item["email"] for item in data]
@@ -139,9 +135,11 @@ def test_get_users_multiple(client, session):
     assert "Bob" in first_names
     assert "Carol" in first_names
 
+
 ##################################################
 # Test cases for POST /users
 ##################################################
+
 
 def test_post_user_success(client):
     """
@@ -154,16 +152,16 @@ def test_post_user_success(client):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     payload = {
         "email": "newuser@example.com",
         "password": "MySecret123!",
         "first_name": "John",
         "last_name": "Doe",
-        "company_id": company_id
+        "company_id": company_id,
     }
-    response = client.post('/users', json=payload)
+    response = client.post("/users", json=payload)
     assert response.status_code == 201, response.get_json()
     data = response.get_json()
     assert data["email"] == "newuser@example.com"
@@ -171,6 +169,7 @@ def test_post_user_success(client):
     assert data["last_name"] == "Doe"
     assert data["company_id"] == str(company_id)
     assert "id" in data
+
 
 def test_post_user_missing_required_fields(client):
     """
@@ -183,17 +182,23 @@ def test_post_user_missing_required_fields(client):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {
         "email": "nouser@example.com"
         # missing password, first_name, last_name, company_id
     }
-    response = client.post('/users', json=payload)
+    response = client.post("/users", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     # At least one required field should be mentioned in the error
-    assert "password" in str(data).lower() or "first_name" in str(data).lower() or "last_name" in str(data).lower() or "company_id" in str(data).lower()
+    assert (
+        "password" in str(data).lower()
+        or "first_name" in str(data).lower()
+        or "last_name" in str(data).lower()
+        or "company_id" in str(data).lower()
+    )
+
 
 def test_post_user_duplicate_email(client, session):
     """
@@ -206,14 +211,14 @@ def test_post_user_duplicate_email(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     user = User(
         email="dup@example.com",
         hashed_password="hashedpw",
         first_name="Dup",
         last_name="User",
-        company_id=company_id
+        company_id=company_id,
     )
     session.add(user)
     session.commit()
@@ -222,12 +227,13 @@ def test_post_user_duplicate_email(client, session):
         "password": "AnotherSecret!",
         "first_name": "Dup",
         "last_name": "User",
-        "company_id": company_id
+        "company_id": company_id,
     }
-    response = client.post('/users', json=payload)
+    response = client.post("/users", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "email" in str(data).lower()
+
 
 def test_post_user_invalid_email(client, session):
     """
@@ -240,23 +246,25 @@ def test_post_user_invalid_email(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {
         "email": "not-an-email",
         "password": "Secret123!",
         "first_name": "Bad",
         "last_name": "Email",
-        "company_id": company_id
+        "company_id": company_id,
     }
-    response = client.post('/users', json=payload)
+    response = client.post("/users", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "email" in str(data).lower()
 
+
 ##################################################
 # Test cases for GET /users/<id>
 ##################################################
+
 
 def test_get_user_by_id_success(client, session):
     """
@@ -269,19 +277,19 @@ def test_get_user_by_id_success(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     user = User(
         email="uniqueuser@example.com",
         hashed_password="hashedpw",
         first_name="Unique",
         last_name="User",
-        company_id=company_id
+        company_id=company_id,
     )
     session.add(user)
     session.commit()
 
-    response = client.get(f'/users/{user.id}')
+    response = client.get(f"/users/{user.id}")
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == str(user.id)
@@ -289,6 +297,7 @@ def test_get_user_by_id_success(client, session):
     assert data["first_name"] == "Unique"
     assert data["last_name"] == "User"
     assert data["company_id"] == company_id
+
 
 def test_get_user_by_id_not_found(client, session):
     """
@@ -302,16 +311,22 @@ def test_get_user_by_id_not_found(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
-    response = client.get(f'/users/{fake_id}')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    response = client.get(f"/users/{fake_id}")
     assert response.status_code == 404
     data = response.get_json()
-    assert "not found" in str(data).lower() or "error" in data or "message" in data
+    assert (
+        "not found" in str(data).lower()
+        or "error" in data
+        or "message" in data
+    )
+
 
 ##################################################
 # Test cases for PUT /users/<id>
 ##################################################
+
 
 def test_put_user_success(client, session):
     """
@@ -324,14 +339,14 @@ def test_put_user_success(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     user = User(
         email="old@example.com",
         hashed_password="oldhash",
         first_name="Old",
         last_name="Name",
-        company_id=str(company_id)
+        company_id=str(company_id),
     )
     session.add(user)
     session.commit()
@@ -341,9 +356,11 @@ def test_put_user_success(client, session):
         "password": "NewSecret123!",
         "first_name": "Updated",
         "last_name": "User",
-        "company_id": str(company_id)  # Keep same company to avoid security violation
+        "company_id": str(
+            company_id
+        ),  # Keep same company to avoid security violation
     }
-    response = client.put(f'/users/{user.id}', json=payload)
+    response = client.put(f"/users/{user.id}", json=payload)
     assert response.status_code == 200, response.get_json()
     data = response.get_json()
     assert data["id"] == str(user.id)
@@ -351,6 +368,7 @@ def test_put_user_success(client, session):
     assert data["first_name"] == "Updated"
     assert data["last_name"] == "User"
     assert data["company_id"] == str(company_id)
+
 
 def test_put_user_not_found(client, session):
     """
@@ -363,20 +381,25 @@ def test_put_user_not_found(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     payload = {
         "email": "nouser@example.com",
         "password": "Secret123!",
         "first_name": "No",
         "last_name": "User",
-        "company_id": str(company_id)
+        "company_id": str(company_id),
     }
-    response = client.put(f'/users/{fake_id}', json=payload)
+    response = client.put(f"/users/{fake_id}", json=payload)
     assert response.status_code == 404
     data = response.get_json()
-    assert "not found" in str(data).lower() or "error" in data or "message" in data
+    assert (
+        "not found" in str(data).lower()
+        or "error" in data
+        or "message" in data
+    )
+
 
 def test_put_user_missing_required_fields(client, session):
     """
@@ -389,14 +412,14 @@ def test_put_user_missing_required_fields(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     user = User(
         email="miss@example.com",
         hashed_password="hash",
         first_name="Miss",
         last_name="Field",
-        company_id=str(company_id)
+        company_id=str(company_id),
     )
     session.add(user)
     session.commit()
@@ -404,14 +427,21 @@ def test_put_user_missing_required_fields(client, session):
         "email": "miss2@example.com"
         # missing password, first_name, last_name, company_id
     }
-    response = client.put(f'/users/{user.id}', json=payload)
+    response = client.put(f"/users/{user.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
-    assert "password" in str(data).lower() or "first_name" in str(data).lower() or "last_name" in str(data).lower() or "company_id" in str(data).lower()
+    assert (
+        "password" in str(data).lower()
+        or "first_name" in str(data).lower()
+        or "last_name" in str(data).lower()
+        or "company_id" in str(data).lower()
+    )
+
 
 ##################################################
 # Test cases for PATCH /users/<id>
 ##################################################
+
 
 def test_patch_user_success(client, session):
     """
@@ -424,28 +454,26 @@ def test_patch_user_success(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     user = User(
         email="patchme@example.com",
         hashed_password="oldhash",
         first_name="Patch",
         last_name="User",
-        company_id=str(company_id)
+        company_id=str(company_id),
     )
     session.add(user)
     session.commit()
 
-    payload = {
-        "first_name": "Patched",
-        "last_name": "UserUpdated"
-    }
-    response = client.patch(f'/users/{user.id}', json=payload)
+    payload = {"first_name": "Patched", "last_name": "UserUpdated"}
+    response = client.patch(f"/users/{user.id}", json=payload)
     assert response.status_code == 200, response.get_json()
     data = response.get_json()
     assert data["first_name"] == "Patched"
     assert data["last_name"] == "UserUpdated"
     assert data["email"] == "patchme@example.com"
+
 
 def test_patch_user_not_found(client, session):
     """
@@ -458,14 +486,19 @@ def test_patch_user_not_found(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     payload = {"first_name": "Ghost"}
-    response = client.patch(f'/users/{fake_id}', json=payload)
+    response = client.patch(f"/users/{fake_id}", json=payload)
     assert response.status_code == 404
     data = response.get_json()
-    assert "not found" in str(data).lower() or "error" in data or "message" in data
+    assert (
+        "not found" in str(data).lower()
+        or "error" in data
+        or "message" in data
+    )
+
 
 def test_patch_user_invalid_email(client, session):
     """
@@ -478,26 +511,28 @@ def test_patch_user_invalid_email(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     user = User(
         email="patchmail@example.com",
         hashed_password="hash",
         first_name="PatchMail",
         last_name="User",
-        company_id=str(company_id)
+        company_id=str(company_id),
     )
     session.add(user)
     session.commit()
     payload = {"email": "not-an-email"}
-    response = client.patch(f'/users/{user.id}', json=payload)
+    response = client.patch(f"/users/{user.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "email" in str(data).lower()
 
+
 ##################################################
 # Test cases for DELETE /users/<id>
 ##################################################
+
 
 def test_delete_user_success(client, session):
     """
@@ -510,24 +545,25 @@ def test_delete_user_success(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     user = User(
         email="delete@example.com",
         hashed_password="hash",
         first_name="Del",
         last_name="User",
-        company_id=str(company_id)
+        company_id=str(company_id),
     )
     session.add(user)
     session.commit()
 
-    response = client.delete(f'/users/{user.id}')
+    response = client.delete(f"/users/{user.id}")
     assert response.status_code == 204
 
     # Vérifie que l'utilisateur n'existe plus
-    get_response = client.get(f'/users/{user.id}')
+    get_response = client.get(f"/users/{user.id}")
     assert get_response.status_code == 404
+
 
 def test_delete_user_not_found(client, session):
     """
@@ -540,153 +576,23 @@ def test_delete_user_not_found(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
-    response = client.delete(f'/users/{fake_id}')
+    response = client.delete(f"/users/{fake_id}")
     assert response.status_code == 404
     data = response.get_json()
-    assert "not found" in str(data).lower() or "error" in data or "message" in data
+    assert (
+        "not found" in str(data).lower()
+        or "error" in data
+        or "message" in data
+    )
 
-##################################################
-# Test cases for GET /company/<string:company_id>/users
-##################################################
-
-def test_get_users_by_company(client, session):
-    """
-    Test GET /companies/<company_id>/users returns only users for the given company.
-    """
-    company1 = Company(name="CompA")
-    company2 = Company(name="CompB")
-    session.add_all([company1, company2])
-    session.commit()
-    user1 = User(email="a@a.com", hashed_password="hash", first_name="A", last_name="A", company_id=str(company1.id))
-    user2 = User(email="b@b.com", hashed_password="hash", first_name="B", last_name="B", company_id=str(company2.id))
-    session.add_all([user1, user2])
-    session.commit()
-
-    response = client.get(f'/companies/{company1.id}/users')
-    assert response.status_code == 200
-    data = response.get_json()
-    assert isinstance(data, list)
-    assert len(data) == 1
-    assert data[0]["email"] == "a@a.com"
-
-##################################################
-# Test cases for POST /company/<string:company_id>/users
-##################################################
-
-def test_post_user_for_company_success(client, session):
-    """
-    Test POST /companies/<company_id>/users with valid data.
-    """
-    company = Company(name="CompanyPost")
-    session.add(company)
-    session.commit()
-    payload = {
-        "email": "companyuser@example.com",
-        "password": "Secret123!",
-        "first_name": "Comp",
-        "last_name": "User"
-    }
-    response = client.post(f'/companies/{company.id}/users', json=payload)
-    assert response.status_code == 201, response.get_json()
-    data = response.get_json()
-    assert data["email"] == "companyuser@example.com"
-    assert data["first_name"] == "Comp"
-    assert data["last_name"] == "User"
-    assert data["company_id"] == str(company.id)
-    assert "id" in data
-
-def test_post_user_for_company_missing_fields(client, session):
-    """
-    Test POST /companies/<company_id>/users with missing required fields.
-    """
-    company = Company(name="CompanyPost2")
-    session.add(company)
-    session.commit()
-    payload = {
-        "email": "missingfields@example.com"
-        # missing password, first_name, last_name
-    }
-    response = client.post(f'/companies/{company.id}/users', json=payload)
-    assert response.status_code == 400
-    data = response.get_json()
-    assert "password" in str(data).lower() or "first_name" in str(data).lower() or "last_name" in str(data).lower()
-
-def test_post_user_for_company_invalid_email(client, session):
-    """
-    Test POST /companies/<company_id>/users with invalid email.
-    """
-    company = Company(name="CompanyPost3")
-    session.add(company)
-    session.commit()
-    payload = {
-        "email": "not-an-email",
-        "password": "Secret123!",
-        "first_name": "Comp",
-        "last_name": "User"
-    }
-    response = client.post(f'/companies/{company.id}/users', json=payload)
-    assert response.status_code == 400
-    data = response.get_json()
-    assert "email" in str(data).lower()
-
-def test_post_user_for_company_not_found(client, session):
-    """
-    Test POST /companies/<company_id>/users with non-existent company.
-    """
-    fake_company_id = str(uuid.uuid4())
-    payload = {
-        "email": "nouser@example.com",
-        "password": "Secret123!",
-        "first_name": "Ghost",
-        "last_name": "User"
-    }
-    response = client.post(f'/companies/{fake_company_id}/users', json=payload)
-    assert response.status_code == 404
-    data = response.get_json()
-    assert "not found" in str(data).lower() or "company" in str(data).lower()
-
-##################################################
-# Test cases for DELETE /company/<string:company_id>/users
-##################################################
-
-def test_delete_users_by_company_success(client, session):
-    """
-    Test DELETE /companies/<company_id>/users supprime tous les utilisateurs de la société.
-    """
-    company = Company(name="DeleteCompany")
-    session.add(company)
-    session.commit()
-    user1 = User(email="del1@example.com", hashed_password="hash", first_name="Del1", last_name="User1", company_id=str(company.id))
-    user2 = User(email="del2@example.com", hashed_password="hash", first_name="Del2", last_name="User2", company_id=str(company.id))
-    session.add_all([user1, user2])
-    session.commit()
-
-    response = client.delete(f'/companies/{company.id}/users')
-    assert response.status_code == 204
-
-    # Vérifie qu'il n'y a plus d'utilisateurs pour cette société
-    get_response = client.get(f'/companies/{company.id}/users')
-    assert get_response.status_code == 200
-    data = get_response.get_json()
-    assert isinstance(data, list)
-    assert len(data) == 0
-
-def test_delete_users_by_company_not_found(client, session):
-    """
-    Test DELETE /company/<company_id>/users pour une société inexistante.
-    """
-    fake_company_id = str(uuid.uuid4())
-    response = client.delete(f'/company/{fake_company_id}/users')
-    assert response.status_code == 404
-    data = response.get_json()
-    assert "not found" in str(data).lower() or "company" in str(data).lower()
 
 ##################################################
 # Test cases for GET /position/<string:position_id>/users
 ##################################################
+
 
 def test_get_users_by_position(client, session):
     """
@@ -699,7 +605,7 @@ def test_get_users_by_position(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     position1_id = str(uuid.uuid4())
     position2_id = str(uuid.uuid4())
@@ -710,7 +616,7 @@ def test_get_users_by_position(client, session):
         first_name="Pos1",
         last_name="User1",
         company_id=str(company_id),
-        position_id=position1_id
+        position_id=position1_id,
     )
     user2 = User(
         email="pos2@example.com",
@@ -718,7 +624,7 @@ def test_get_users_by_position(client, session):
         first_name="Pos2",
         last_name="User2",
         company_id=str(company_id),
-        position_id=position2_id
+        position_id=position2_id,
     )
     user3 = User(
         email="nopos@example.com",
@@ -726,24 +632,25 @@ def test_get_users_by_position(client, session):
         first_name="NoPos",
         last_name="User3",
         company_id=str(company_id),
-        position_id=None
+        position_id=None,
     )
     session.add_all([user1, user2, user3])
     session.commit()
 
-    response = client.get(f'/positions/{position1_id}/users')
+    response = client.get(f"/positions/{position1_id}/users")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
     assert len(data) == 1
     assert data[0]["email"] == "pos1@example.com"
 
-    response2 = client.get(f'/positions/{position2_id}/users')
+    response2 = client.get(f"/positions/{position2_id}/users")
     assert response2.status_code == 200
     data2 = response2.get_json()
     assert isinstance(data2, list)
     assert len(data2) == 1
     assert data2[0]["email"] == "pos2@example.com"
+
 
 def test_get_users_by_position_not_found(client):
     """
@@ -756,20 +663,22 @@ def test_get_users_by_position_not_found(client):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
-    
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_position_id = str(uuid.uuid4())
-    response = client.get(f'/positions/{fake_position_id}/users')
+    response = client.get(f"/positions/{fake_position_id}/users")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
     assert len(data) == 0
+
 
 ##################################################
 # Test cases for POST /verify_password
 ##################################################
 
 from werkzeug.security import generate_password_hash
+
 
 def test_verify_password_success(client, session):
     """
@@ -782,16 +691,17 @@ def test_verify_password_success(client, session):
         hashed_password=generate_password_hash(password),
         first_name="Veri",
         last_name="Fy",
-        company_id=company_id
+        company_id=company_id,
     )
     session.add(user)
     session.commit()
 
     payload = {"email": "verify@example.com", "password": password}
-    response = client.post('/verify_password', json=payload)
+    response = client.post("/verify_password", json=payload)
     assert response.status_code == 200
     data = response.get_json()
     assert data["email"] == "verify@example.com"
+
 
 def test_verify_password_wrong_password(client, session):
     """
@@ -803,26 +713,28 @@ def test_verify_password_wrong_password(client, session):
         hashed_password=generate_password_hash("RightPassword!"),
         first_name="Wrong",
         last_name="PW",
-        company_id=company_id
+        company_id=company_id,
     )
     session.add(user)
     session.commit()
 
     payload = {"email": "wrongpw@example.com", "password": "WrongPassword!"}
-    response = client.post('/verify_password', json=payload)
+    response = client.post("/verify_password", json=payload)
     assert response.status_code == 403
     data = response.get_json()
     assert "invalid" in str(data).lower()
+
 
 def test_verify_password_user_not_found(client, session):
     """
     Test POST /verify_password with non-existent user.
     """
     payload = {"email": "notfound@example.com", "password": "AnyPassword"}
-    response = client.post('/verify_password', json=payload)
+    response = client.post("/verify_password", json=payload)
     assert response.status_code == 403
     data = response.get_json()
     assert "invalid" in str(data).lower()
+
 
 def test_verify_password_missing_password(client, session):
     """
@@ -834,20 +746,22 @@ def test_verify_password_missing_password(client, session):
         hashed_password=generate_password_hash("SomePassword!"),
         first_name="No",
         last_name="PW",
-        company_id=company_id
+        company_id=company_id,
     )
     session.add(user)
     session.commit()
 
     payload = {"email": "nopw@example.com"}
-    response = client.post('/verify_password', json=payload)
+    response = client.post("/verify_password", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "required" in str(data).lower()
 
+
 ##################################################
 # Test cases for GET /users/<user_id>/roles
 ##################################################
+
 
 def test_get_user_roles_success(client, session):
     """
@@ -861,60 +775,63 @@ def test_get_user_roles_success(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock the Guardian service response
     mock_response = mock.Mock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "roles": ["admin", "user", "editor"]
-    }
+    mock_response.json.return_value = {"roles": ["admin", "user", "editor"]}
 
-    with mock.patch('requests.get', return_value=mock_response) as mock_get:
-        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
-            response = client.get(f'/users/{user_id}/roles')
-            
+    with mock.patch("requests.get", return_value=mock_response) as mock_get:
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/roles")
+
             # Verify the response
             assert response.status_code == 200
             data = response.get_json()
             assert "roles" in data
             assert data["roles"] == ["admin", "user", "editor"]
-            
+
             # Verify the Guardian service was called correctly
             mock_get.assert_called_once_with(
                 "http://guardian:8000/user_roles",
                 params={"user_id": user_id},
-                timeout=5
+                timeout=5,
             )
+
 
 def test_get_user_roles_missing_jwt(client, session):
     """
     Test GET /users/<user_id>/roles without JWT authentication.
     """
     fake_user_id = str(uuid.uuid4())
-    response = client.get(f'/users/{fake_user_id}/roles')
+    response = client.get(f"/users/{fake_user_id}/roles")
     assert response.status_code == 401
     data = response.get_json()
     assert "jwt" in str(data).lower() or "token" in str(data).lower()
+
 
 def test_get_user_roles_missing_user_id_in_jwt(client, session):
     """
     Test GET /users/<user_id>/roles with JWT that doesn't contain user_id.
     """
     # Create a JWT without user_id
-    jwt_secret = os.environ.get('JWT_SECRET', 'test_secret')
+    jwt_secret = os.environ.get("JWT_SECRET", "test_secret")
     payload = {
         "company_id": str(uuid.uuid4())
         # Missing user_id
     }
     jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     fake_user_id = str(uuid.uuid4())
-    response = client.get(f'/users/{fake_user_id}/roles')
+    response = client.get(f"/users/{fake_user_id}/roles")
     assert response.status_code == 400
     data = response.get_json()
     assert "user_id missing" in str(data).lower()
+
 
 def test_get_user_roles_missing_guardian_url(client, session):
     """
@@ -928,16 +845,17 @@ def test_get_user_roles_missing_guardian_url(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Remove only GUARDIAN_SERVICE_URL from environment, keep JWT_SECRET
     current_env = dict(os.environ)
-    jwt_secret = current_env.get('JWT_SECRET', 'test_secret')
-    with mock.patch.dict('os.environ', {'JWT_SECRET': jwt_secret}, clear=True):
-        response = client.get(f'/users/{user_id}/roles')
+    jwt_secret = current_env.get("JWT_SECRET", "test_secret")
+    with mock.patch.dict("os.environ", {"JWT_SECRET": jwt_secret}, clear=True):
+        response = client.get(f"/users/{user_id}/roles")
         assert response.status_code == 500
         data = response.get_json()
         assert "internal server error" in str(data).lower()
+
 
 def test_get_user_roles_guardian_request_exception(client, session):
     """
@@ -951,15 +869,21 @@ def test_get_user_roles_guardian_request_exception(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock requests.get to raise an exception
-    with mock.patch('requests.get', side_effect=requests.exceptions.RequestException("Connection error")):
-        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
-            response = client.get(f'/users/{user_id}/roles')
+    with mock.patch(
+        "requests.get",
+        side_effect=requests.exceptions.RequestException("Connection error"),
+    ):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/roles")
             assert response.status_code == 500
             data = response.get_json()
             assert "error fetching roles" in str(data).lower()
+
 
 def test_get_user_roles_guardian_non_200_response(client, session):
     """
@@ -973,19 +897,22 @@ def test_get_user_roles_guardian_non_200_response(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service to return 404
     mock_response = mock.Mock()
     mock_response.status_code = 404
     mock_response.text = "User not found in Guardian"
 
-    with mock.patch('requests.get', return_value=mock_response):
-        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
-            response = client.get(f'/users/{user_id}/roles')
+    with mock.patch("requests.get", return_value=mock_response):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/roles")
             assert response.status_code == 500
             data = response.get_json()
             assert "error fetching roles" in str(data).lower()
+
 
 def test_get_user_roles_empty_roles(client, session):
     """
@@ -999,20 +926,23 @@ def test_get_user_roles_empty_roles(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service to return empty roles
     mock_response = mock.Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"roles": []}
 
-    with mock.patch('requests.get', return_value=mock_response):
-        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
-            response = client.get(f'/users/{user_id}/roles')
+    with mock.patch("requests.get", return_value=mock_response):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/roles")
             assert response.status_code == 200
             data = response.get_json()
             assert "roles" in data
             assert data["roles"] == []
+
 
 def test_get_user_roles_guardian_response_missing_roles_key(client, session):
     """
@@ -1026,20 +956,23 @@ def test_get_user_roles_guardian_response_missing_roles_key(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service response without 'roles' key
     mock_response = mock.Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"data": "some other data"}
 
-    with mock.patch('requests.get', return_value=mock_response):
-        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
-            response = client.get(f'/users/{user_id}/roles')
+    with mock.patch("requests.get", return_value=mock_response):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/roles")
             assert response.status_code == 200
             data = response.get_json()
             assert "roles" in data
             assert data["roles"] == []  # Should default to empty list
+
 
 def test_get_user_roles_user_not_found(client, session):
     """
@@ -1053,14 +986,15 @@ def test_get_user_roles_user_not_found(client, session):
     user_id = resp.get_json()["user"]["id"]
 
     jwt_token = create_jwt_token(company_id, user_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Try to get roles for a non-existent user
     fake_user_id = str(uuid.uuid4())
-    response = client.get(f'/users/{fake_user_id}/roles')
+    response = client.get(f"/users/{fake_user_id}/roles")
     assert response.status_code == 404
     data = response.get_json()
     assert "user not found" in str(data).lower()
+
 
 def test_get_user_roles_different_company_access_denied(client, session):
     """
@@ -1080,19 +1014,20 @@ def test_get_user_roles_different_company_access_denied(client, session):
         hashed_password="hashedpw",
         first_name="User",
         last_name="Two",
-        company_id=company2_id
+        company_id=company2_id,
     )
     session.add(user2)
     session.commit()
 
     # Authenticate as user1 and try to access user2's roles
     jwt_token = create_jwt_token(company1_id, user1_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    response = client.get(f'/users/{user2.id}/roles')
+    response = client.get(f"/users/{user2.id}/roles")
     assert response.status_code == 403
     data = response.get_json()
     assert "access denied" in str(data).lower()
+
 
 def test_get_user_roles_same_company_allowed(client, session):
     """
@@ -1111,23 +1046,25 @@ def test_get_user_roles_same_company_allowed(client, session):
         hashed_password="hashedpw",
         first_name="User",
         last_name="Two",
-        company_id=company_id
+        company_id=company_id,
     )
     session.add(user2)
     session.commit()
 
     # Authenticate as user1 and try to access user2's roles
     jwt_token = create_jwt_token(company_id, user1_id)
-    client.set_cookie('access_token', jwt_token, domain='localhost')
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service response
     mock_response = mock.Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"roles": ["viewer"]}
 
-    with mock.patch('requests.get', return_value=mock_response):
-        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
-            response = client.get(f'/users/{user2.id}/roles')
+    with mock.patch("requests.get", return_value=mock_response):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user2.id}/roles")
             assert response.status_code == 200
             data = response.get_json()
             assert "roles" in data

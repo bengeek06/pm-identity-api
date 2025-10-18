@@ -19,27 +19,27 @@ from app.resources.customer import CustomerListResource, CustomerResource
 from app.resources.organization_unit import (
     OrganizationUnitListResource,
     OrganizationUnitResource,
-    OrganizationUnitChildrenResource
+    OrganizationUnitChildrenResource,
 )
 from app.resources.position import (
     PositionListResource,
     PositionResource,
-    OrganizationUnitPositionsResource
+    OrganizationUnitPositionsResource,
 )
 from app.resources.subcontractor import (
     SubcontractorListResource,
-    SubcontractorResource
+    SubcontractorResource,
 )
 from app.resources.user import (
     UserListResource,
     UserResource,
-    UserCompanyResource,
     UserPositionResource,
     VerifyPasswordResource,
-    UserRolesResource
+    UserRolesResource,
 )
 from app.resources.init_db import InitDBResource
 from app.resources.health import HealthResource
+
 
 def register_routes(app):
     """
@@ -55,45 +55,44 @@ def register_routes(app):
     """
     api = Api(app)
 
-    api.add_resource(VersionResource, '/version')
-    api.add_resource(ConfigResource, '/config')
-    api.add_resource(InitDBResource, '/init-db')
-    api.add_resource(HealthResource, '/health')
-    
-    api.add_resource(CompanyListResource, '/companies')
-    api.add_resource(CompanyResource, '/companies/<string:company_id>')
-    
-    api.add_resource(CustomerListResource, '/customers')
-    api.add_resource(CustomerResource, '/customers/<string:customer_id>')
-    
-    api.add_resource(OrganizationUnitListResource, '/organization_units')
+    api.add_resource(VersionResource, "/version")
+    api.add_resource(ConfigResource, "/config")
+    api.add_resource(InitDBResource, "/init-db")
+    api.add_resource(HealthResource, "/health")
+
+    api.add_resource(CompanyListResource, "/companies")
+    api.add_resource(CompanyResource, "/companies/<string:company_id>")
+
+    api.add_resource(CustomerListResource, "/customers")
+    api.add_resource(CustomerResource, "/customers/<string:customer_id>")
+
+    api.add_resource(OrganizationUnitListResource, "/organization_units")
     api.add_resource(
-        OrganizationUnitResource, '/organization_units/<string:unit_id>'
+        OrganizationUnitResource, "/organization_units/<string:unit_id>"
     )
     api.add_resource(
         OrganizationUnitChildrenResource,
-        '/organization_units/<string:unit_id>/children'
+        "/organization_units/<string:unit_id>/children",
     )
-    
-    api.add_resource(PositionListResource, '/positions')
-    api.add_resource(PositionResource, '/positions/<string:position_id>')
+
+    api.add_resource(PositionListResource, "/positions")
+    api.add_resource(PositionResource, "/positions/<string:position_id>")
     api.add_resource(
         OrganizationUnitPositionsResource,
-        '/organization_units/<string:unit_id>/positions'
+        "/organization_units/<string:unit_id>/positions",
     )
-    
-    api.add_resource(SubcontractorListResource, '/subcontractors')
+
+    api.add_resource(SubcontractorListResource, "/subcontractors")
     api.add_resource(
-        SubcontractorResource, '/subcontractors/<string:subcontractor_id>'
+        SubcontractorResource, "/subcontractors/<string:subcontractor_id>"
     )
-    
-    api.add_resource(UserListResource, '/users')
-    api.add_resource(UserResource, '/users/<string:user_id>')
-    #api.add_resource(UserCompanyResource, '/companies/<string:company_id>/users')
-    api.add_resource(UserRolesResource, '/users/<string:user_id>/roles')
+
+    api.add_resource(UserListResource, "/users")
+    api.add_resource(UserResource, "/users/<string:user_id>")
+    api.add_resource(UserRolesResource, "/users/<string:user_id>/roles")
     api.add_resource(
-        UserPositionResource, '/positions/<string:position_id>/users'
+        UserPositionResource, "/positions/<string:position_id>/users"
     )
-    api.add_resource(VerifyPasswordResource, '/verify_password')
+    api.add_resource(VerifyPasswordResource, "/verify_password")
 
     logger.info("Routes registered successfully.")
