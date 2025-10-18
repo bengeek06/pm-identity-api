@@ -18,10 +18,11 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from flask_restful import Resource
 from werkzeug.security import generate_password_hash
 import jwt
+import requests
 
 from app.models import db
 from app.logger import logger
-from app.utils import require_jwt_auth
+from app.utils import require_jwt_auth, check_access_required
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
 from app.models.company import Company
@@ -38,6 +39,7 @@ class UserListResource(Resource):
         post():
             Create a new user with the provided data.
     """
+    @check_access_required("list")
     @require_jwt_auth(extract_company_id=True)
     def get(self):
         """
@@ -64,6 +66,7 @@ class UserListResource(Resource):
             logger.error("Error fetching users: %s", str(e))
             return {"message": "Error fetching users"}, 500
 
+    @check_access_required("create")
     @require_jwt_auth(extract_company_id=True)
     def post(self):
         """
@@ -162,6 +165,7 @@ class UserResource(Resource):
         delete(user_id):
             Delete a user by ID.
     """
+    @check_access_required("read")
     @require_jwt_auth(extract_company_id=True)
     def get(self, user_id):
         """
@@ -183,6 +187,7 @@ class UserResource(Resource):
         schema = UserSchema()
         return schema.dump(user), 200
 
+    @check_access_required("update")
     @require_jwt_auth(extract_company_id=True)
     def put(self, user_id):
         """
@@ -232,6 +237,7 @@ class UserResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @check_access_required("update")
     @require_jwt_auth(extract_company_id=True)
     def patch(self, user_id):
         """
@@ -286,6 +292,7 @@ class UserResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @check_access_required("delete")
     @require_jwt_auth(extract_company_id=True)
     def delete(self, user_id):
         """
@@ -329,7 +336,7 @@ class UserCompanyResource(Resource):
         delete(company_id):
             Delete all users for a specific company.
     """
-
+    @require_jwt_auth(extract_company_id=True)
     def get(self, company_id):
         """
         Get all users for a specific company.
@@ -352,6 +359,7 @@ class UserCompanyResource(Resource):
             )
             return {"message": "Error fetching users"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
     def post(self, company_id):
         """
         Create a new user for a specific company.
@@ -402,6 +410,7 @@ class UserCompanyResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
     def delete(self, company_id):
         """
         Delete all users for a specific company.
@@ -438,7 +447,7 @@ class UserPositionResource(Resource):
         get(position_id):
             Retrieve all users for a specific position.
     """
-
+    @require_jwt_auth(extract_company_id=True)
     def get(self, position_id):
         """
         Get all users for a specific position.
@@ -460,6 +469,76 @@ class UserPositionResource(Resource):
                 "Error fetching users for position %s: %s", position_id, str(e)
             )
             return {"message": "Error fetching users"}, 500
+
+
+class UserRolesResource(Resource):
+    """
+    Resource for handling roles by users.
+
+    Methods:
+        get(role):
+            Retrieve all roles for a specific user.
+        post(role):
+            Add a new role for a specific user.
+    """
+    @require_jwt_auth(extract_company_id=True)
+    def get(self, user_id):
+        """
+        Get all roles for a specific user.
+
+        Args:
+            user_id (str): The ID of the user whose roles to retrieve.
+
+        Returns:
+            tuple: List of roles and HTTP status code 200.
+        """
+        logger.info("Fetching roles for user ID %s", user_id)
+
+        jwt_data = getattr(g, 'jwt_data', {})
+        requesting_user_id = jwt_data.get('user_id')
+        company_id = jwt_data.get('company_id')
+
+        if not requesting_user_id:
+            logger.error("user_id missing in JWT")
+            return {"message": "user_id missing in JWT"}, 400
+
+        # Verify that the requested user belongs to the same company
+        target_user = User.get_by_id(user_id)
+        if not target_user:
+            logger.warning("User with ID %s not found", user_id)
+            return {"message": "User not found"}, 404
+            
+        if target_user.company_id != company_id:
+            logger.warning("User %s attempted to access roles for user %s from different company", 
+                         requesting_user_id, user_id)
+            return {"message": "Access denied"}, 403
+
+        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
+        if not guardian_url:
+            logger.error("GUARDIAN_SERVICE_URL not set")
+            return {"message": "Internal server error"}, 500
+        try:
+            # Add a timeout to avoid hanging indefinitely and handle network errors
+            response = requests.get(
+                f"{guardian_url}/user_roles",
+                params={"user_id": user_id},
+                timeout=5
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error("Error contacting Guardian service: %s", str(e))
+            return {"message": "Error fetching roles"}, 500
+        if response.status_code != 200:
+            logger.error(
+                "Error fetching roles from Guardian: %s",
+                response.text
+            )
+            return {"message": "Error fetching roles"}, 500
+        
+        roles = response.json().get("roles", [])
+        return {"roles": roles}, 200
+       
+        
+
 
 
 class VerifyPasswordResource(Resource):

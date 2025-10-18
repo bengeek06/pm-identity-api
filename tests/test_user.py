@@ -4,6 +4,8 @@ Test cases for the UserResource class in the PM Identity API.
 import uuid
 import os
 import jwt
+import requests
+import unittest.mock as mock
 from app.models.user import User
 from app.models.company import Company
 
@@ -690,9 +692,14 @@ def test_get_users_by_position(client, session):
     """
     Test GET /positions/<position_id>/users returns only users for the given position.
     """
-    company = Company(name="PosCo")
-    session.add(company)
-    session.commit()
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
 
     position1_id = str(uuid.uuid4())
     position2_id = str(uuid.uuid4())
@@ -702,7 +709,7 @@ def test_get_users_by_position(client, session):
         hashed_password="hash",
         first_name="Pos1",
         last_name="User1",
-        company_id=str(company.id),
+        company_id=str(company_id),
         position_id=position1_id
     )
     user2 = User(
@@ -710,7 +717,7 @@ def test_get_users_by_position(client, session):
         hashed_password="hash",
         first_name="Pos2",
         last_name="User2",
-        company_id=str(company.id),
+        company_id=str(company_id),
         position_id=position2_id
     )
     user3 = User(
@@ -718,7 +725,7 @@ def test_get_users_by_position(client, session):
         hashed_password="hash",
         first_name="NoPos",
         last_name="User3",
-        company_id=str(company.id),
+        company_id=str(company_id),
         position_id=None
     )
     session.add_all([user1, user2, user3])
@@ -742,6 +749,15 @@ def test_get_users_by_position_not_found(client):
     """
     Test GET /positions/<position_id>/users for a position with no users.
     """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     fake_position_id = str(uuid.uuid4())
     response = client.get(f'/positions/{fake_position_id}/users')
     assert response.status_code == 200
@@ -828,3 +844,291 @@ def test_verify_password_missing_password(client, session):
     assert response.status_code == 400
     data = response.get_json()
     assert "required" in str(data).lower()
+
+##################################################
+# Test cases for GET /users/<user_id>/roles
+##################################################
+
+def test_get_user_roles_success(client, session):
+    """
+    Test GET /users/<user_id>/roles with successful response from Guardian service.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    # Mock the Guardian service response
+    mock_response = mock.Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "roles": ["admin", "user", "editor"]
+    }
+
+    with mock.patch('requests.get', return_value=mock_response) as mock_get:
+        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
+            response = client.get(f'/users/{user_id}/roles')
+            
+            # Verify the response
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "roles" in data
+            assert data["roles"] == ["admin", "user", "editor"]
+            
+            # Verify the Guardian service was called correctly
+            mock_get.assert_called_once_with(
+                "http://guardian:8000/user_roles",
+                params={"user_id": user_id},
+                timeout=5
+            )
+
+def test_get_user_roles_missing_jwt(client, session):
+    """
+    Test GET /users/<user_id>/roles without JWT authentication.
+    """
+    fake_user_id = str(uuid.uuid4())
+    response = client.get(f'/users/{fake_user_id}/roles')
+    assert response.status_code == 401
+    data = response.get_json()
+    assert "jwt" in str(data).lower() or "token" in str(data).lower()
+
+def test_get_user_roles_missing_user_id_in_jwt(client, session):
+    """
+    Test GET /users/<user_id>/roles with JWT that doesn't contain user_id.
+    """
+    # Create a JWT without user_id
+    jwt_secret = os.environ.get('JWT_SECRET', 'test_secret')
+    payload = {
+        "company_id": str(uuid.uuid4())
+        # Missing user_id
+    }
+    jwt_token = jwt.encode(payload, jwt_secret, algorithm="HS256")
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    fake_user_id = str(uuid.uuid4())
+    response = client.get(f'/users/{fake_user_id}/roles')
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "user_id missing" in str(data).lower()
+
+def test_get_user_roles_missing_guardian_url(client, session):
+    """
+    Test GET /users/<user_id>/roles when GUARDIAN_SERVICE_URL is not set.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    # Remove only GUARDIAN_SERVICE_URL from environment, keep JWT_SECRET
+    current_env = dict(os.environ)
+    jwt_secret = current_env.get('JWT_SECRET', 'test_secret')
+    with mock.patch.dict('os.environ', {'JWT_SECRET': jwt_secret}, clear=True):
+        response = client.get(f'/users/{user_id}/roles')
+        assert response.status_code == 500
+        data = response.get_json()
+        assert "internal server error" in str(data).lower()
+
+def test_get_user_roles_guardian_request_exception(client, session):
+    """
+    Test GET /users/<user_id>/roles when Guardian service is unreachable.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    # Mock requests.get to raise an exception
+    with mock.patch('requests.get', side_effect=requests.exceptions.RequestException("Connection error")):
+        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
+            response = client.get(f'/users/{user_id}/roles')
+            assert response.status_code == 500
+            data = response.get_json()
+            assert "error fetching roles" in str(data).lower()
+
+def test_get_user_roles_guardian_non_200_response(client, session):
+    """
+    Test GET /users/<user_id>/roles when Guardian service returns non-200 status.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    # Mock Guardian service to return 404
+    mock_response = mock.Mock()
+    mock_response.status_code = 404
+    mock_response.text = "User not found in Guardian"
+
+    with mock.patch('requests.get', return_value=mock_response):
+        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
+            response = client.get(f'/users/{user_id}/roles')
+            assert response.status_code == 500
+            data = response.get_json()
+            assert "error fetching roles" in str(data).lower()
+
+def test_get_user_roles_empty_roles(client, session):
+    """
+    Test GET /users/<user_id>/roles when Guardian returns empty roles.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    # Mock Guardian service to return empty roles
+    mock_response = mock.Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"roles": []}
+
+    with mock.patch('requests.get', return_value=mock_response):
+        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
+            response = client.get(f'/users/{user_id}/roles')
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "roles" in data
+            assert data["roles"] == []
+
+def test_get_user_roles_guardian_response_missing_roles_key(client, session):
+    """
+    Test GET /users/<user_id>/roles when Guardian response doesn't contain 'roles' key.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    # Mock Guardian service response without 'roles' key
+    mock_response = mock.Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"data": "some other data"}
+
+    with mock.patch('requests.get', return_value=mock_response):
+        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
+            response = client.get(f'/users/{user_id}/roles')
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "roles" in data
+            assert data["roles"] == []  # Should default to empty list
+
+def test_get_user_roles_user_not_found(client, session):
+    """
+    Test GET /users/<user_id>/roles when the requested user doesn't exist.
+    """
+    # Create test data for authentication
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    # Try to get roles for a non-existent user
+    fake_user_id = str(uuid.uuid4())
+    response = client.get(f'/users/{fake_user_id}/roles')
+    assert response.status_code == 404
+    data = response.get_json()
+    assert "user not found" in str(data).lower()
+
+def test_get_user_roles_different_company_access_denied(client, session):
+    """
+    Test GET /users/<user_id>/roles when trying to access a user from a different company.
+    """
+    # Create first company and user
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company1_id = resp.get_json()["company"]["id"]
+    user1_id = resp.get_json()["user"]["id"]
+
+    # Create a second user in a different company
+    company2_id = str(uuid.uuid4())
+    user2 = User(
+        email="user2@company2.com",
+        hashed_password="hashedpw",
+        first_name="User",
+        last_name="Two",
+        company_id=company2_id
+    )
+    session.add(user2)
+    session.commit()
+
+    # Authenticate as user1 and try to access user2's roles
+    jwt_token = create_jwt_token(company1_id, user1_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    response = client.get(f'/users/{user2.id}/roles')
+    assert response.status_code == 403
+    data = response.get_json()
+    assert "access denied" in str(data).lower()
+
+def test_get_user_roles_same_company_allowed(client, session):
+    """
+    Test GET /users/<user_id>/roles when accessing a user from the same company.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user1_id = resp.get_json()["user"]["id"]
+
+    # Create a second user in the same company
+    user2 = User(
+        email="user2@company.com",
+        hashed_password="hashedpw",
+        first_name="User",
+        last_name="Two",
+        company_id=company_id
+    )
+    session.add(user2)
+    session.commit()
+
+    # Authenticate as user1 and try to access user2's roles
+    jwt_token = create_jwt_token(company_id, user1_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+
+    # Mock Guardian service response
+    mock_response = mock.Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"roles": ["viewer"]}
+
+    with mock.patch('requests.get', return_value=mock_response):
+        with mock.patch.dict('os.environ', {'GUARDIAN_SERVICE_URL': 'http://guardian:8000'}):
+            response = client.get(f'/users/{user2.id}/roles')
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "roles" in data
+            assert data["roles"] == ["viewer"]
