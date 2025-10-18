@@ -231,7 +231,7 @@ def check_access(user_id, resource_name, operation):
     try:
         timeout = float(os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5"))
         response = requests.post(
-            f"{guardian_service_url}/check_access",
+            f"{guardian_service_url}/check-access",
             json={
                 "user_id": user_id,
                 "service": "identity",
@@ -240,13 +240,34 @@ def check_access(user_id, resource_name, operation):
             },
             timeout=timeout,
         )
-        response.raise_for_status()
-        response_data = response.json()
-        return (
-            response_data.get("access_granted", False),
-            response_data.get("reason", "Unknown error"),
-            response_data.get("status", 500),
-        )
+        
+        # Don't raise_for_status() immediately - check the response first
+        if response.status_code == 200:
+            response_data = response.json()
+            logger.debug(f"Guardian service response: {response_data}")
+            return (
+                response_data.get("access_granted", False),
+                response_data.get("reason", "Unknown error"),
+                response_data.get("status", 200),
+            )
+        elif response.status_code == 400:
+            # Guardian service returned a 400 with detailed error message
+            try:
+                response_data = response.json()
+                logger.warning(f"Guardian service returned 400: {response_data}")
+                return (
+                    response_data.get("access_granted", False),
+                    response_data.get("reason", "Bad request"),
+                    400,
+                )
+            except Exception as json_error:
+                logger.error(f"Failed to parse Guardian 400 response as JSON: {json_error}")
+                return False, f"Guardian service error: {response.text}", 400
+        else:
+            # Other error status codes
+            logger.error(f"Guardian service returned status {response.status_code}: {response.text}")
+            return False, f"Guardian service error (status {response.status_code})", response.status_code
+            
     except requests.exceptions.Timeout:
         logger.error("Timeout when checking access with guardian service")
         return False, "Guardian service timeout", 504
