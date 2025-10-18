@@ -5,7 +5,6 @@ import uuid
 import os
 import jwt
 from app.models.user import User
-from app.schemas.user_schema import UserSchema
 from app.models.company import Company
 
 
@@ -49,8 +48,23 @@ def create_jwt_token(company_id, user_id):
 ##################################################
 def test_get_users_empty(client, session):
     """
-    Test GET /users when there are no users.
+    Test GET /users when there are no other users in the company.
     """
+    # Create a company and user for authentication, but no other users
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
+    # Remove the user that was created by init-db to test empty state
+    user = User.get_by_id(user_id)
+    session.delete(user)
+    session.commit()
+    
     response = client.get('/users')
     assert response.status_code == 200
     data = response.get_json()
@@ -71,6 +85,11 @@ def test_get_users_single(client, session):
     )
     session.add(user)
     session.commit()
+    
+    # Create JWT token for authentication
+    jwt_token = create_jwt_token(company_id, str(user.id))
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     response = client.get('/users')
     assert response.status_code == 200
     data = response.get_json()
@@ -103,6 +122,11 @@ def test_get_users_multiple(client, session):
     )
     session.add_all([user1, user2])
     session.commit()
+    
+    # Create JWT token for authentication using the first user
+    jwt_token = create_jwt_token(company_id, str(user1.id))
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     response = client.get('/users')
     assert response.status_code == 200
     data = response.get_json()

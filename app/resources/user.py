@@ -12,7 +12,7 @@ gracefully.
 """
 
 import os
-from flask import request
+from flask import request, g
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from flask_restful import Resource
@@ -21,6 +21,7 @@ import jwt
 
 from app.models import db
 from app.logger import logger
+from app.utils import require_jwt_auth
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
 from app.models.company import Company
@@ -37,17 +38,26 @@ class UserListResource(Resource):
         post():
             Create a new user with the provided data.
     """
-
+    @require_jwt_auth(extract_company_id=True)
     def get(self):
         """
-        Get all users.
+        Get all users from the authenticated user's company.
 
         Returns:
             tuple: List of serialized users and HTTP status code 200.
         """
         logger.info("Fetching all users")
         try:
-            users = User.query.all()
+            # Get company_id from JWT data stored in g by the decorator
+            jwt_data = getattr(g, 'jwt_data', {})
+            company_id = jwt_data.get('company_id')
+            
+            if not company_id:
+                logger.error("company_id missing in JWT")
+                return {"message": "company_id missing in JWT"}, 400
+                
+            # Filter users by company_id to only return users from the same company
+            users = User.query.filter_by(company_id=company_id).all()
             schema = UserSchema(many=True)
             return schema.dump(users), 200
         except SQLAlchemyError as e:
