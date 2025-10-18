@@ -2,9 +2,47 @@
 Test cases for the UserResource class in the PM Identity API.
 """
 import uuid
+import os
+import jwt
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
 from app.models.company import Company
+
+
+def get_init_db_payload():
+    """
+	Generate a valid payload for full database initialization via /init-db.
+	Returns a dictionary containing data for company, organization_unit, position, and user.
+	"""
+    return {
+		"company": {
+			"name": "TestCorp",
+			"description": "A test company"
+		},
+		"organization_unit": {
+			"name": "Direction",
+			"description": "Direction générale"
+		},
+		"position": {
+			"title": "CEO",
+			"description": "Chief Executive Officer"
+		},
+		"user": {
+			"email": "admin@testcorp.com",
+			"first_name": "Alice",
+			"last_name": "Admin",
+			"password": "supersecret"
+		}
+	}
+
+def create_jwt_token(company_id, user_id):
+    """Helper function to create a JWT token for testing."""
+    jwt_secret = os.environ.get('JWT_SECRET', 'test_secret')
+    payload = {
+        "company_id": company_id,
+        "user_id": user_id
+    }
+    return jwt.encode(payload, jwt_secret, algorithm="HS256")
 
 ##################################################
 # Test cases for GET /users
@@ -79,21 +117,25 @@ def test_get_users_multiple(client, session):
 # Test cases for POST /users
 ##################################################
 
-def test_post_user_success(client, session):
+def test_post_user_success(client):
     """
     Test POST /users with valid data.
     """
-    # Create a company to associate with the user
-    company = Company(name="Test Company")
-    session.add(company)
-    session.commit()
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
 
     payload = {
         "email": "newuser@example.com",
         "password": "MySecret123!",
         "first_name": "John",
         "last_name": "Doe",
-        "company_id": company.id
+        "company_id": company_id
     }
     response = client.post('/users', json=payload)
     assert response.status_code == 201, response.get_json()
@@ -101,13 +143,22 @@ def test_post_user_success(client, session):
     assert data["email"] == "newuser@example.com"
     assert data["first_name"] == "John"
     assert data["last_name"] == "Doe"
-    assert data["company_id"] == str(company.id)
+    assert data["company_id"] == str(company_id)
     assert "id" in data
 
-def test_post_user_missing_required_fields(client, session):
+def test_post_user_missing_required_fields(client):
     """
     Test POST /users with missing required fields.
     """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     payload = {
         "email": "nouser@example.com"
         # missing password, first_name, last_name, company_id
@@ -122,7 +173,15 @@ def test_post_user_duplicate_email(client, session):
     """
     Test POST /users with duplicate email.
     """
-    company_id = str(uuid.uuid4())
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     user = User(
         email="dup@example.com",
         hashed_password="hashedpw",
@@ -148,7 +207,15 @@ def test_post_user_invalid_email(client, session):
     """
     Test POST /users with invalid email format.
     """
-    company_id = str(uuid.uuid4())
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     payload = {
         "email": "not-an-email",
         "password": "Secret123!",

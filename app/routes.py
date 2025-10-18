@@ -58,10 +58,14 @@ def register_routes(app):
     api.add_resource(VersionResource, '/version')
     api.add_resource(ConfigResource, '/config')
     api.add_resource(InitDBResource, '/init-db')
+    api.add_resource(HealthResource, '/health')
+    
     api.add_resource(CompanyListResource, '/companies')
     api.add_resource(CompanyResource, '/companies/<string:company_id>')
+    
     api.add_resource(CustomerListResource, '/customers')
     api.add_resource(CustomerResource, '/customers/<string:customer_id>')
+    
     api.add_resource(OrganizationUnitListResource, '/organization_units')
     api.add_resource(
         OrganizationUnitResource, '/organization_units/<string:unit_id>'
@@ -70,16 +74,19 @@ def register_routes(app):
         OrganizationUnitChildrenResource,
         '/organization_units/<string:unit_id>/children'
     )
+    
     api.add_resource(PositionListResource, '/positions')
     api.add_resource(PositionResource, '/positions/<string:position_id>')
     api.add_resource(
         OrganizationUnitPositionsResource,
         '/organization_units/<string:unit_id>/positions'
     )
+    
     api.add_resource(SubcontractorListResource, '/subcontractors')
     api.add_resource(
         SubcontractorResource, '/subcontractors/<string:subcontractor_id>'
     )
+    
     api.add_resource(UserListResource, '/users')
     api.add_resource(UserResource, '/users/<string:user_id>')
     api.add_resource(SuperUserResource, '/superusers')
@@ -88,6 +95,5 @@ def register_routes(app):
         UserPositionResource, '/positions/<string:position_id>/users'
     )
     api.add_resource(VerifyPasswordResource, '/verify_password')
-    api.add_resource(HealthResource, '/health')
 
     logger.info("Routes registered successfully.")
