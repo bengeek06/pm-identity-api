@@ -260,7 +260,15 @@ def test_get_user_by_id_success(client, session):
     """
     Test GET /users/<id> for an existing user.
     """
-    company_id = str(uuid.uuid4())
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     user = User(
         email="uniqueuser@example.com",
         hashed_password="hashedpw",
@@ -285,6 +293,15 @@ def test_get_user_by_id_not_found(client, session):
     Test GET /users/<id> for a non-existent user.
     """
     fake_id = str(uuid.uuid4())
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     response = client.get(f'/users/{fake_id}')
     assert response.status_code == 404
     data = response.get_json()
@@ -298,15 +315,21 @@ def test_put_user_success(client, session):
     """
     Test PUT /users/<id> for a full update.
     """
-    company = Company(name="Company")
-    session.add(company)
-    session.commit()
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     user = User(
         email="old@example.com",
         hashed_password="oldhash",
         first_name="Old",
         last_name="Name",
-        company_id=str(company.id)
+        company_id=str(company_id)
     )
     session.add(user)
     session.commit()
@@ -316,7 +339,7 @@ def test_put_user_success(client, session):
         "password": "NewSecret123!",
         "first_name": "Updated",
         "last_name": "User",
-        "company_id": str(company.id)  # Keep same company to avoid security violation
+        "company_id": str(company_id)  # Keep same company to avoid security violation
     }
     response = client.put(f'/users/{user.id}', json=payload)
     assert response.status_code == 200, response.get_json()
@@ -325,22 +348,28 @@ def test_put_user_success(client, session):
     assert data["email"] == "updated@example.com"
     assert data["first_name"] == "Updated"
     assert data["last_name"] == "User"
-    assert data["company_id"] == str(company.id)
+    assert data["company_id"] == str(company_id)
 
 def test_put_user_not_found(client, session):
     """
     Test PUT /users/<id> for a non-existent user.
     """
-    company = Company(name="CompanyX")
-    session.add(company)
-    session.commit()
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     fake_id = str(uuid.uuid4())
     payload = {
         "email": "nouser@example.com",
         "password": "Secret123!",
         "first_name": "No",
         "last_name": "User",
-        "company_id": str(company.id)
+        "company_id": str(company_id)
     }
     response = client.put(f'/users/{fake_id}', json=payload)
     assert response.status_code == 404
@@ -351,15 +380,21 @@ def test_put_user_missing_required_fields(client, session):
     """
     Test PUT /users/<id> with missing required fields.
     """
-    company = Company(name="CompanyY")
-    session.add(company)
-    session.commit()
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     user = User(
         email="miss@example.com",
         hashed_password="hash",
         first_name="Miss",
         last_name="Field",
-        company_id=str(company.id)
+        company_id=str(company_id)
     )
     session.add(user)
     session.commit()
@@ -380,15 +415,21 @@ def test_patch_user_success(client, session):
     """
     Test PATCH /users/<id> for a partial update.
     """
-    company = Company(name="PatchCo")
-    session.add(company)
-    session.commit()
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     user = User(
         email="patchme@example.com",
         hashed_password="oldhash",
         first_name="Patch",
         last_name="User",
-        company_id=str(company.id)
+        company_id=str(company_id)
     )
     session.add(user)
     session.commit()
@@ -408,6 +449,15 @@ def test_patch_user_not_found(client, session):
     """
     Test PATCH /users/<id> for a non-existent user.
     """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     fake_id = str(uuid.uuid4())
     payload = {"first_name": "Ghost"}
     response = client.patch(f'/users/{fake_id}', json=payload)
@@ -419,15 +469,21 @@ def test_patch_user_invalid_email(client, session):
     """
     Test PATCH /users/<id> with invalid email format.
     """
-    company = Company(name="PatchMailCo")
-    session.add(company)
-    session.commit()
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     user = User(
         email="patchmail@example.com",
         hashed_password="hash",
         first_name="PatchMail",
         last_name="User",
-        company_id=str(company.id)
+        company_id=str(company_id)
     )
     session.add(user)
     session.commit()
@@ -445,15 +501,21 @@ def test_delete_user_success(client, session):
     """
     Test DELETE /users/<id> for an existing user.
     """
-    company = Company(name="DeleteCo")
-    session.add(company)
-    session.commit()
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     user = User(
         email="delete@example.com",
         hashed_password="hash",
         first_name="Del",
         last_name="User",
-        company_id=str(company.id)
+        company_id=str(company_id)
     )
     session.add(user)
     session.commit()
@@ -469,6 +531,15 @@ def test_delete_user_not_found(client, session):
     """
     Test DELETE /users/<id> for a non-existent user.
     """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie('access_token', jwt_token, domain='localhost')
+    
     fake_id = str(uuid.uuid4())
     response = client.delete(f'/users/{fake_id}')
     assert response.status_code == 404

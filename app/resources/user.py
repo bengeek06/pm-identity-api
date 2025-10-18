@@ -64,6 +64,7 @@ class UserListResource(Resource):
             logger.error("Error fetching users: %s", str(e))
             return {"message": "Error fetching users"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
     def post(self):
         """
         Create a new user.
@@ -161,7 +162,7 @@ class UserResource(Resource):
         delete(user_id):
             Delete a user by ID.
     """
-
+    @require_jwt_auth(extract_company_id=True)
     def get(self, user_id):
         """
         Get a user by ID.
@@ -182,6 +183,7 @@ class UserResource(Resource):
         schema = UserSchema()
         return schema.dump(user), 200
 
+    @require_jwt_auth(extract_company_id=True)
     def put(self, user_id):
         """
         Update a user by ID.
@@ -230,6 +232,7 @@ class UserResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
     def patch(self, user_id):
         """
         Partially update a user by ID.
@@ -283,6 +286,7 @@ class UserResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
     def delete(self, user_id):
         """
         Delete a user by ID.
