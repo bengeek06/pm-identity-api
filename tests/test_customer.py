@@ -3,7 +3,10 @@ Test cases for the Customer resource in the PM Identity API.
 """
 
 import uuid
+
+import pytest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
 from app.models.customer import Customer
 from tests.conftest import create_jwt_token
 
@@ -389,18 +392,18 @@ def test_put_customer_sqlalchemy_error(client, session, monkeypatch):
 ##################################################
 # Test cases for PATCH /customers/<customer_id>
 ##################################################
-import pytest
 
 
 @pytest.fixture
-def customer(session):
-    c = Customer(name="PatchMe", company_id=1)
-    session.add(c)
+def customer_fixture(session):
+    """Fixture to create a customer for PATCH tests."""
+    cust = Customer(name="PatchMe", company_id=1)
+    session.add(cust)
     session.commit()
-    return c
+    return cust
 
 
-def test_patch_customer_success(client, customer):
+def test_patch_customer_success(client, customer_fixture):
     """
     Test PATCH /customers/<customer_id> with valid partial data.
     Should update only the provided fields and return 200.
@@ -411,10 +414,10 @@ def test_patch_customer_success(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     payload = {"contact_person": "Jane Doe"}
-    response = client.patch(f"/customers/{customer.id}", json=payload)
+    response = client.patch(f"/customers/{customer_fixture.id}", json=payload)
     assert response.status_code == 200
     data = response.get_json()
-    assert data["id"] == customer.id
+    assert data["id"] == customer_fixture.id
     assert data["contact_person"] == "Jane Doe"
     assert data["name"] == "PatchMe"  # unchanged
 
@@ -437,7 +440,7 @@ def test_patch_customer_not_found(client):
     assert "not found" in data["error"].lower()
 
 
-def test_patch_customer_unknown_field(client, customer):
+def test_patch_customer_unknown_field(client, customer_fixture):
     """
     Test PATCH /customers/<customer_id> with an unknown field.
     Should return 400 with a validation error.
@@ -448,14 +451,14 @@ def test_patch_customer_unknown_field(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     payload = {"unknown_field": "should fail"}
-    response = client.patch(f"/customers/{customer.id}", json=payload)
+    response = client.patch(f"/customers/{customer_fixture.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "unknown_field" in data["error"]
 
 
-def test_patch_customer_name_too_long(client, customer):
+def test_patch_customer_name_too_long(client, customer_fixture):
     """
     Test PATCH /customers/{id} with name exceeding maximum length.
     """
@@ -470,14 +473,14 @@ def test_patch_customer_name_too_long(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer.id}", json={"name": "a" * 101}
+        f"/customers/{customer_fixture.id}", json={"name": "a" * 101}
     )
     assert response.status_code == 400
     data = response.get_json()
     assert "name" in data["error"]
 
 
-def test_patch_customer_name_empty(client, customer):
+def test_patch_customer_name_empty(client, customer_fixture):
     """
     Test PATCH /customers/{id} with empty name.
     """
@@ -486,13 +489,13 @@ def test_patch_customer_name_empty(client, customer):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    response = client.patch(f"/customers/{customer.id}", json={"name": ""})
+    response = client.patch(f"/customers/{customer_fixture.id}", json={"name": ""})
     assert response.status_code == 400
     data = response.get_json()
     assert "name" in data["error"]
 
 
-def test_patch_customer_email_invalid(client, customer):
+def test_patch_customer_email_invalid(client, customer_fixture):
     """
     Test PATCH /customers/{id} with invalid email format.
     """
@@ -502,14 +505,14 @@ def test_patch_customer_email_invalid(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer.id}", json={"email": "notanemail"}
+        f"/customers/{customer_fixture.id}", json={"email": "notanemail"}
     )
     assert response.status_code == 400
     data = response.get_json()
     assert "email" in data["error"]
 
 
-def test_patch_customer_email_too_long(client, customer):
+def test_patch_customer_email_too_long(client, customer_fixture):
     """
     Test PATCH /customers/{id} with email exceeding maximum length.
     """
@@ -519,14 +522,14 @@ def test_patch_customer_email_too_long(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer.id}", json={"email": "a@" + "b" * 100 + ".com"}
+        f"/customers/{customer_fixture.id}", json={"email": "a@" + "b" * 100 + ".com"}
     )
     assert response.status_code == 400
     data = response.get_json()
     assert "email" in data["error"]
 
 
-def test_patch_customer_contact_person_too_long(client, customer):
+def test_patch_customer_contact_person_too_long(client, customer_fixture):
     """
     Test PATCH /customers/{id} with contact_person exceeding maximum length.
     """
@@ -536,14 +539,14 @@ def test_patch_customer_contact_person_too_long(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer.id}", json={"contact_person": "a" * 101}
+        f"/customers/{customer_fixture.id}", json={"contact_person": "a" * 101}
     )
     assert response.status_code == 400
     data = response.get_json()
     assert "contact_person" in data["error"]
 
 
-def test_patch_customer_phone_number_too_long(client, customer):
+def test_patch_customer_phone_number_too_long(client, customer_fixture):
     """
     Test PATCH /customers/{id} with phone_number exceeding maximum length.
     """
@@ -553,14 +556,14 @@ def test_patch_customer_phone_number_too_long(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer.id}", json={"phone_number": "1" * 51}
+        f"/customers/{customer_fixture.id}", json={"phone_number": "1" * 51}
     )
     assert response.status_code == 400
     data = response.get_json()
     assert "phone_number" in data["error"]
 
 
-def test_patch_customer_phone_number_not_digits(client, customer):
+def test_patch_customer_phone_number_not_digits(client, customer_fixture):
     """
     Test PATCH /customers/{id} with phone_number containing non-digit characters.
     """
@@ -570,14 +573,14 @@ def test_patch_customer_phone_number_not_digits(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer.id}", json={"phone_number": "abc123"}
+        f"/customers/{customer_fixture.id}", json={"phone_number": "abc123"}
     )
     assert response.status_code == 400
     data = response.get_json()
     assert "phone_number" in data["error"]
 
 
-def test_patch_customer_address_too_long(client, customer):
+def test_patch_customer_address_too_long(client, customer_fixture):
     """
     Test PATCH /customers/{id} with address exceeding maximum length.
     """
@@ -587,14 +590,14 @@ def test_patch_customer_address_too_long(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer.id}", json={"address": "a" * 256}
+        f"/customers/{customer_fixture.id}", json={"address": "a" * 256}
     )
     assert response.status_code == 400
     data = response.get_json()
     assert "address" in data["error"]
 
 
-def test_patch_customer_company_id_invalid(client, customer):
+def test_patch_customer_company_id_invalid(client, customer_fixture):
     """
     Test PATCH /customers/{id} with invalid company_id.
     """
@@ -604,14 +607,14 @@ def test_patch_customer_company_id_invalid(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer.id}", json={"company_id": 0}
+        f"/customers/{customer_fixture.id}", json={"company_id": 0}
     )
     assert response.status_code == 400
     data = response.get_json()
     assert "company_id" in data["error"]
 
 
-def test_patch_customer_company_id_not_int(client, customer):
+def test_patch_customer_company_id_not_int(client, customer_fixture):
     """
     Test PATCH /customers/{id} with non-integer company_id.
     """
@@ -621,7 +624,7 @@ def test_patch_customer_company_id_not_int(client, customer):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer.id}", json={"company_id": "notanint"}
+        f"/customers/{customer_fixture.id}", json={"company_id": "notanint"}
     )
     assert response.status_code == 400
     data = response.get_json()
@@ -822,7 +825,10 @@ def test_get_by_company_id_sqlalchemy_error(client, monkeypatch):
 
     # On crée une instance factice avec une méthode all qui lève l'exception
     class FakeQuery:
+        """Fake query object that raises SQLAlchemyError on all()."""
+
         def all(self):
+            """Return all results, but raises SQLAlchemyError."""
             raise_sqlalchemy_error()
 
     monkeypatch.setattr(
@@ -844,7 +850,10 @@ def test_get_by_name_sqlalchemy_error(client, monkeypatch):
 
     # On crée une instance factice avec une méthode first qui lève l'exception
     class FakeQuery:
+        """Fake query object that raises SQLAlchemyError on first()."""
+
         def first(self):
+            """Return first result, but raises SQLAlchemyError."""
             raise_sqlalchemy_error()
 
     monkeypatch.setattr(
