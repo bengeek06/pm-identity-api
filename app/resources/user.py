@@ -16,8 +16,9 @@ from flask import request, g
 from marshmallow import ValidationError
 from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from flask_restful import Resource
 from werkzeug.security import generate_password_hash
+from flask_restful import Resource
+
 import jwt
 import requests
 
@@ -501,7 +502,6 @@ class UserRolesListResource(Resource):
 
         if not json_data:
             logger.error("No JSON data provided")
-            return {"message": "JSON data required"}, 400
             return {"message": "JSON data required"}, 400
 
         # Accept either 'role' (for backward compatibility) or 'role_id'
