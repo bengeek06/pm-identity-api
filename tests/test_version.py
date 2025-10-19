@@ -19,7 +19,7 @@ def test_version_endpoint(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     response = client.get("/version")
     assert response.status_code == 200
 

@@ -19,6 +19,7 @@ from app.models import db
 from app.logger import logger
 from app.models.organization_unit import OrganizationUnit
 from app.schemas.organization_unit_schema import OrganizationUnitSchema
+from app.utils import require_jwt_auth, check_access_required
 
 
 class OrganizationUnitListResource(Resource):
@@ -33,6 +34,8 @@ class OrganizationUnitListResource(Resource):
             Create a new organization unit with the provided data.
     """
 
+    @require_jwt_auth(extract_company_id=False)
+    @check_access_required("list")
     def get(self):
         """
         Retrieve all organization units.
@@ -47,6 +50,8 @@ class OrganizationUnitListResource(Resource):
         org_unit_schema = OrganizationUnitSchema(session=db.session, many=True)
         return org_unit_schema.dump(org_units), 200
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("create")
     def post(self):
         """
         Create a new organization unit.
@@ -105,6 +110,8 @@ class OrganizationUnitResource(Resource):
             descendants.
     """
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("read")
     def get(self, unit_id):
         """
         Retrieve an organization unit by its ID.
@@ -127,6 +134,8 @@ class OrganizationUnitResource(Resource):
         org_unit_schema = OrganizationUnitSchema(session=db.session)
         return org_unit_schema.dump(org_unit), 200
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("update")
     def put(self, unit_id):
         """
         Update an existing organization unit by its ID.
@@ -177,6 +186,8 @@ class OrganizationUnitResource(Resource):
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("update")
     def patch(self, unit_id):
         """
         Partially update an existing organization unit by its ID.
@@ -228,6 +239,8 @@ class OrganizationUnitResource(Resource):
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("delete")
     def delete(self, unit_id):
         """
         Delete an organization unit by its ID, including all its descendants.
@@ -294,6 +307,8 @@ class OrganizationUnitChildrenResource(Resource):
             Retrieve all children of a specific organization unit.
     """
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("list")
     def get(self, unit_id):
         """
         Retrieve all children of a specific organization unit.

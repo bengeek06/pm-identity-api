@@ -258,9 +258,7 @@ class TestHealthEndpoint:
             mock_result.scalar.return_value = 1
             return mock_result
 
-        with patch(
-            "app.models.db.session.execute", side_effect=slow_execute
-        ):
+        with patch("app.models.db.session.execute", side_effect=slow_execute):
             response = client.get("/health")
 
             assert response.status_code == 200

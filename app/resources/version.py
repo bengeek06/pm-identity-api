@@ -1,4 +1,3 @@
-
 """
 version.py
 ----------
@@ -6,6 +5,7 @@ version.py
 This module defines the VersionResource for exposing the current API version
 through a REST endpoint.
 """
+
 import os
 from flask_restful import Resource
 from app.utils import require_jwt_auth, check_access_required
@@ -23,6 +23,7 @@ def _read_version():
         return "unknown"
     except (OSError, UnicodeDecodeError):
         return "unknown"
+
 
 API_VERSION = _read_version()
 

@@ -1,6 +1,11 @@
+"""Test the creation of a new organization unit."""
+
+import uuid
+
 import pytest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.models.organization_unit import OrganizationUnit
+from tests.conftest import create_jwt_token
 
 
 ##################################################
@@ -11,6 +16,11 @@ def test_get_organization_units_empty(client, session):
     Test GET /organization_units when there are no organization units.
     Should return an empty list.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     # Assure-toi que la table est vide
     session.query(OrganizationUnit).delete()
     session.commit()
@@ -25,6 +35,11 @@ def test_get_organization_units_single(client, session):
     """
     Test GET /organization_units with a single organization unit.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     org = OrganizationUnit(name="Root", company_id="c1")
     session.add(org)
     session.commit()
@@ -46,6 +61,11 @@ def test_get_organization_units_hierarchy(client, session):
     """
     Test GET /organization_units with a hierarchy (parent and child).
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     root = OrganizationUnit(name="Root", company_id="c1")
     session.add(root)
     session.commit()
@@ -84,6 +104,11 @@ def test_get_organization_units_multiple_companies(client, session):
     """
     Test GET /organization_units with units from different companies.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     org1 = OrganizationUnit(name="UnitA", company_id="c1")
     org2 = OrganizationUnit(name="UnitB", company_id="c2")
     session.add_all([org1, org2])
@@ -103,6 +128,11 @@ def test_post_organization_unit_success(client, session):
     """
     Test POST /organization_units with minimal valid data (racine).
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {"name": "RootUnit", "company_id": "c1"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 201
@@ -118,6 +148,11 @@ def test_post_organization_unit_with_parent(client, session):
     """
     Test POST /organization_units with a parent_id (enfant).
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     parent = OrganizationUnit(name="Parent", company_id="c1")
     session.add(parent)
     session.commit()
@@ -137,6 +172,11 @@ def test_post_organization_unit_missing_name(client, session):
     """
     Test POST /organization_units with missing required 'name'.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {"company_id": "c1"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
@@ -148,6 +188,11 @@ def test_post_organization_unit_missing_company_id(client, session):
     """
     Test POST /organization_units with missing required 'company_id'.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {"name": "NoCompany"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
@@ -159,6 +204,11 @@ def test_post_organization_unit_name_too_long(client, session):
     """
     Test POST /organization_units with name too long.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {"name": "a" * 101, "company_id": "c1"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
@@ -170,6 +220,11 @@ def test_post_organization_unit_invalid_parent_id(client, session):
     """
     Test POST /organization_units with invalid parent_id format.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {"name": "Unit", "company_id": "c1", "parent_id": "not-a-uuid"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
@@ -181,9 +236,6 @@ def test_post_organization_unit_cycle(client, session):
     """
     Test POST /organization_units with parent_id == self.id (cycle direct).
     """
-    # Simule un id connu (UUID valide)
-    import uuid
-
     fake_id = str(uuid.uuid4())
     payload = {"name": "Cycle", "company_id": "c1", "parent_id": fake_id}
     # On patch le schéma pour simuler current_id == parent_id
@@ -199,6 +251,11 @@ def test_post_organization_unit_unknown_field(client, session):
     """
     Test POST /organization_units with an unknown field.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {"name": "Unit", "company_id": "c1", "unknown": "value"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
@@ -215,6 +272,11 @@ def test_get_organization_unit_by_id_success(client, session):
     """
     Test GET /organization_units/<id> for an existing unit.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     org = OrganizationUnit(name="UnitX", company_id="c1")
     session.add(org)
     session.commit()
@@ -236,6 +298,11 @@ def test_get_organization_unit_by_id_with_parent(client, session):
     """
     Test GET /organization_units/<id> for a child unit with a parent.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     parent = OrganizationUnit(name="Parent", company_id="c1")
     session.add(parent)
     session.commit()
@@ -263,7 +330,10 @@ def test_get_organization_unit_by_id_not_found(client, session):
     """
     Test GET /organization_units/<id> for a non-existent unit.
     """
-    import uuid
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     fake_id = str(uuid.uuid4())
     response = client.get(f"/organization_units/{fake_id}")
@@ -280,6 +350,11 @@ def test_get_organization_unit_children_empty(client, session):
     """
     Test GET /organization_units/<id>/children when the unit has no children.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     parent = OrganizationUnit(name="Parent", company_id="c1")
     session.add(parent)
     session.commit()
@@ -297,6 +372,11 @@ def test_get_organization_unit_children_with_children(client, session):
     """
     Test GET /organization_units/<id>/children when the unit has children.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     parent = OrganizationUnit(name="Parent", company_id="c1")
     session.add(parent)
     session.commit()
@@ -331,7 +411,10 @@ def test_get_organization_unit_children_not_found(client, session):
     """
     Test GET /organization_units/<id>/children for a non-existent unit.
     """
-    import uuid
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     fake_id = str(uuid.uuid4())
     response = client.get(f"/organization_units/{fake_id}/children")
@@ -353,6 +436,11 @@ def test_put_organization_unit_success(client, session):
     """
     Test PUT /organization_units/<id> for a full update.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     org = OrganizationUnit(name="OldName", company_id="c1")
     session.add(org)
     session.commit()
@@ -375,6 +463,11 @@ def test_put_organization_unit_change_parent(client, session):
     """
     Test PUT /organization_units/<id> to change the parent_id.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     parent = OrganizationUnit(name="Parent", company_id="c1")
     child = OrganizationUnit(name="Child", company_id="c1")
     session.add_all([parent, child])
@@ -396,7 +489,10 @@ def test_put_organization_unit_not_found(client, session):
     """
     Test PUT /organization_units/<id> for a non-existent unit.
     """
-    import uuid
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     fake_id = str(uuid.uuid4())
     payload = {"name": "DoesNotExist", "company_id": "c1"}
@@ -411,6 +507,11 @@ def test_put_organization_unit_invalid_parent_id(client, session):
     """
     Test PUT /organization_units/<id> with invalid parent_id format.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     org = OrganizationUnit(name="Unit", company_id="c1")
     session.add(org)
     session.commit()
@@ -428,6 +529,11 @@ def test_put_organization_unit_cycle(client, session):
     """
     Test PUT /organization_units/<id> with parent_id == self.id (cycle direct).
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     org = OrganizationUnit(name="Cycle", company_id="c1")
     session.add(org)
     session.commit()
@@ -448,6 +554,11 @@ def test_patch_organization_unit_success(client, session):
     """
     Test PATCH /organization_units/<id> for a partial update (name only).
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     org = OrganizationUnit(name="PatchMe", company_id="c1")
     session.add(org)
     session.commit()
@@ -468,6 +579,11 @@ def test_patch_organization_unit_change_parent(client, session):
     """
     Test PATCH /organization_units/<id> to change the parent_id only.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     parent = OrganizationUnit(name="Parent", company_id="c1")
     child = OrganizationUnit(name="Child", company_id="c1")
     session.add_all([parent, child])
@@ -489,7 +605,10 @@ def test_patch_organization_unit_not_found(client, session):
     """
     Test PATCH /organization_units/<id> for a non-existent unit.
     """
-    import uuid
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     fake_id = str(uuid.uuid4())
     payload = {"name": "Nope"}
@@ -504,6 +623,11 @@ def test_patch_organization_unit_invalid_parent_id(client, session):
     """
     Test PATCH /organization_units/<id> with invalid parent_id format.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     org = OrganizationUnit(name="PatchUnit", company_id="c1")
     session.add(org)
     session.commit()
@@ -521,6 +645,11 @@ def test_patch_organization_unit_cycle(client, session):
     """
     Test PATCH /organization_units/<id> with parent_id == self.id (cycle direct).
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     org = OrganizationUnit(name="PatchCycle", company_id="c1")
     session.add(org)
     session.commit()
@@ -541,6 +670,10 @@ def test_delete_organization_unit_success(client, session):
     """
     Test DELETE /organization_units/<id> for an existing unit.
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
     org = OrganizationUnit(name="ToDelete", company_id="c1")
     session.add(org)
     session.commit()
@@ -559,6 +692,11 @@ def test_delete_organization_unit_with_children(client, session):
     """
     Test DELETE /organization_units/<id> for a unit with children (suppression récursive).
     """
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     parent = OrganizationUnit(name="ParentToDelete", company_id="c1")
     session.add(parent)
     session.commit()
@@ -587,7 +725,10 @@ def test_delete_organization_unit_not_found(client, session):
     """
     Test DELETE /organization_units/<id> for a non-existent unit.
     """
-    import uuid
+    company_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    jwt_token = create_jwt_token(str(company_id), str(user_id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
 
     fake_id = str(uuid.uuid4())
     response = client.delete(f"/organization_units/{fake_id}")
