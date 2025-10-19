@@ -53,6 +53,7 @@ def register_error_handlers(app):
     Args:
         app (Flask): The Flask application instance.
     """
+
     @app.errorhandler(401)
     def unauthorized(error):
         """
@@ -66,14 +67,14 @@ def register_error_handlers(app):
             error=error,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Unauthorized",
             "path": request.path,
             "method": request.method,
             "request_id": getattr(g, "request_id", None),
-            "exception": str(error)
+            "exception": str(error),
         }
         return response, 401
 
@@ -90,14 +91,14 @@ def register_error_handlers(app):
             error=error,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Forbidden",
             "path": request.path,
             "method": request.method,
             "request_id": getattr(g, "request_id", None),
-            "exception": str(error)
+            "exception": str(error),
         }
         return response, 403
 
@@ -114,14 +115,14 @@ def register_error_handlers(app):
             error=error,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Resource not found",
             "path": request.path,
             "method": request.method,
             "request_id": getattr(g, "request_id", None),
-            "exception": str(error)
+            "exception": str(error),
         }
         return response, 404
 
@@ -138,17 +139,17 @@ def register_error_handlers(app):
             error=error,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Bad request",
             "path": request.path,
             "method": request.method,
             "request_id": getattr(g, "request_id", None),
-            "exception": str(error)
+            "exception": str(error),
         }
         return response, 400
-    
+
     @app.errorhandler(415)
     def unsupported_media_type(error):
         """
@@ -162,14 +163,14 @@ def register_error_handlers(app):
             error=error,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Unsupported media type",
             "path": request.path,
             "method": request.method,
             "request_id": getattr(g, "request_id", None),
-            "exception": str(error)
+            "exception": str(error),
         }
         return response, 415
 
@@ -189,13 +190,13 @@ def register_error_handlers(app):
             exc_info=True,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Internal server error",
             "path": request.path,
             "method": request.method,
-            "request_id": getattr(g, "request_id", None)
+            "request_id": getattr(g, "request_id", None),
         }
         if app.config.get("DEBUG"):
             response["exception"] = str(error)
@@ -214,16 +215,14 @@ def create_app(config_class):
     Returns:
         Flask: The configured and ready-to-use Flask application instance.
     """
-    env = os.getenv('FLASK_ENV')
+    env = os.getenv("FLASK_ENV")
     logger.info("Creating app in %s environment.", env)
     app = Flask(__name__)
     app.config.from_object(config_class)
-    if env in ('development', 'staging'):
+    if env in ("development", "staging"):
         CORS(
-            app,
-            supports_credentials=True,
-            resources={r"/*": {"origins": "*"}}
-            )
+            app, supports_credentials=True, resources={r"/*": {"origins": "*"}}
+        )
 
     register_extensions(app)
     register_error_handlers(app)

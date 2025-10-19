@@ -30,6 +30,6 @@ class ConfigResource(Resource):
         config = {
             "FLASK_ENV": os.getenv("FLASK_ENV"),
             "DEBUG": os.getenv("DEBUG"),
-            "DATABASE_URI": os.getenv("DATABASE_URI")
+            "DATABASE_URI": os.getenv("DATABASE_URI"),
         }
         return config, 200

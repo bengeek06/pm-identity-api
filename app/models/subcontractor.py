@@ -36,18 +36,15 @@ class Subcontractor(db.Model):
         updated_at (datetime): Timestamp when the subcontractor was last
                                updated.
     """
-    __tablename__ = 'subcontractor'
+
+    __tablename__ = "subcontractor"
 
     id = db.Column(
-        db.String(36),
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     name = db.Column(db.String(100), nullable=False)
     company_id = db.Column(
-        db.String(36),
-        db.ForeignKey('company.id'),
-        nullable=False
+        db.String(36), db.ForeignKey("company.id"), nullable=False
     )
     description = db.Column(db.String(255), nullable=True)
     contact_person = db.Column(db.String(100), nullable=True)
@@ -58,7 +55,7 @@ class Subcontractor(db.Model):
     updated_at = db.Column(
         db.DateTime,
         default=db.func.current_timestamp(),
-        onupdate=db.func.current_timestamp()
+        onupdate=db.func.current_timestamp(),
     )
 
     def __repr__(self):
@@ -104,7 +101,8 @@ class Subcontractor(db.Model):
         except SQLAlchemyError as e:
             logger.error(
                 "Error retrieving subcontractor by ID %s: %s",
-                subcontractor_id, e
+                subcontractor_id,
+                e,
             )
             return None
 
@@ -125,7 +123,8 @@ class Subcontractor(db.Model):
         except SQLAlchemyError as e:
             logger.error(
                 "Error retrieving subcontractors by company ID %s: %s",
-                company_id, e
+                company_id,
+                e,
             )
             return []
 
@@ -145,7 +144,6 @@ class Subcontractor(db.Model):
             return cls.query.filter_by(name=name).first()
         except SQLAlchemyError as e:
             logger.error(
-                "Error retrieving subcontractor by name %s: %s",
-                name, e
+                "Error retrieving subcontractor by name %s: %s", name, e
             )
             return None

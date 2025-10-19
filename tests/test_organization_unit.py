@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.models.organization_unit import OrganizationUnit
 
+
 ##################################################
 # Test cases for GET /organization_units
 ##################################################
@@ -13,11 +14,12 @@ def test_get_organization_units_empty(client, session):
     # Assure-toi que la table est vide
     session.query(OrganizationUnit).delete()
     session.commit()
-    response = client.get('/organization_units')
+    response = client.get("/organization_units")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
     assert len(data) == 0
+
 
 def test_get_organization_units_single(client, session):
     """
@@ -26,7 +28,7 @@ def test_get_organization_units_single(client, session):
     org = OrganizationUnit(name="Root", company_id="c1")
     session.add(org)
     session.commit()
-    response = client.get('/organization_units')
+    response = client.get("/organization_units")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
@@ -38,6 +40,7 @@ def test_get_organization_units_single(client, session):
     assert "id" in item
     assert "path" in item
     assert "level" in item
+
 
 def test_get_organization_units_hierarchy(client, session):
     """
@@ -54,7 +57,7 @@ def test_get_organization_units_hierarchy(client, session):
     child.update_path_and_level()
     session.commit()
 
-    response = client.get('/organization_units')
+    response = client.get("/organization_units")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
@@ -76,6 +79,7 @@ def test_get_organization_units_hierarchy(client, session):
     assert child_item["level"] == root_item["level"] + 1
     assert child_item["path"].startswith(root_item["path"])
 
+
 def test_get_organization_units_multiple_companies(client, session):
     """
     Test GET /organization_units with units from different companies.
@@ -84,12 +88,13 @@ def test_get_organization_units_multiple_companies(client, session):
     org2 = OrganizationUnit(name="UnitB", company_id="c2")
     session.add_all([org1, org2])
     session.commit()
-    response = client.get('/organization_units')
+    response = client.get("/organization_units")
     assert response.status_code == 200
     data = response.get_json()
     names = [item["name"] for item in data]
     assert "UnitA" in names
     assert "UnitB" in names
+
 
 ##################################################
 # Test cases for POST /organization_units
@@ -99,7 +104,7 @@ def test_post_organization_unit_success(client, session):
     Test POST /organization_units with minimal valid data (racine).
     """
     payload = {"name": "RootUnit", "company_id": "c1"}
-    response = client.post('/organization_units', json=payload)
+    response = client.post("/organization_units", json=payload)
     assert response.status_code == 201
     data = response.get_json()
     assert data["name"] == "RootUnit"
@@ -107,6 +112,7 @@ def test_post_organization_unit_success(client, session):
     assert data["parent_id"] is None
     assert data["level"] == 0
     assert data["path"] == data["id"]
+
 
 def test_post_organization_unit_with_parent(client, session):
     """
@@ -119,52 +125,57 @@ def test_post_organization_unit_with_parent(client, session):
     session.commit()
 
     payload = {"name": "ChildUnit", "company_id": "c1", "parent_id": parent.id}
-    response = client.post('/organization_units', json=payload)
+    response = client.post("/organization_units", json=payload)
     assert response.status_code == 201
     data = response.get_json()
     assert data["parent_id"] == parent.id
     assert data["level"] == parent.level + 1
     assert data["path"].startswith(parent.path)
 
+
 def test_post_organization_unit_missing_name(client, session):
     """
     Test POST /organization_units with missing required 'name'.
     """
     payload = {"company_id": "c1"}
-    response = client.post('/organization_units', json=payload)
+    response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "name" in data["error"]
+
 
 def test_post_organization_unit_missing_company_id(client, session):
     """
     Test POST /organization_units with missing required 'company_id'.
     """
     payload = {"name": "NoCompany"}
-    response = client.post('/organization_units', json=payload)
+    response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "company_id" in data["error"]
+
 
 def test_post_organization_unit_name_too_long(client, session):
     """
     Test POST /organization_units with name too long.
     """
     payload = {"name": "a" * 101, "company_id": "c1"}
-    response = client.post('/organization_units', json=payload)
+    response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "name" in data["error"]
+
 
 def test_post_organization_unit_invalid_parent_id(client, session):
     """
     Test POST /organization_units with invalid parent_id format.
     """
     payload = {"name": "Unit", "company_id": "c1", "parent_id": "not-a-uuid"}
-    response = client.post('/organization_units', json=payload)
+    response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "parent_id" in data["error"]
+
 
 def test_post_organization_unit_cycle(client, session):
     """
@@ -172,29 +183,33 @@ def test_post_organization_unit_cycle(client, session):
     """
     # Simule un id connu (UUID valide)
     import uuid
+
     fake_id = str(uuid.uuid4())
     payload = {"name": "Cycle", "company_id": "c1", "parent_id": fake_id}
     # On patch le schéma pour simuler current_id == parent_id
     from app.schemas.organization_unit_schema import OrganizationUnitSchema
 
     org_unit_schema = OrganizationUnitSchema()
-    org_unit_schema.context = {'current_id': fake_id}
+    org_unit_schema.context = {"current_id": fake_id}
     with pytest.raises(Exception):
         org_unit_schema.validate_parent_id(fake_id)
+
 
 def test_post_organization_unit_unknown_field(client, session):
     """
     Test POST /organization_units with an unknown field.
     """
     payload = {"name": "Unit", "company_id": "c1", "unknown": "value"}
-    response = client.post('/organization_units', json=payload)
+    response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "unknown" in data["error"]
 
+
 ##################################################
 # Test cases for GET /organization_units/<id>
 ##################################################
+
 
 def test_get_organization_unit_by_id_success(client, session):
     """
@@ -206,7 +221,7 @@ def test_get_organization_unit_by_id_success(client, session):
     org.update_path_and_level()
     session.commit()
 
-    response = client.get(f'/organization_units/{org.id}')
+    response = client.get(f"/organization_units/{org.id}")
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == org.id
@@ -215,6 +230,7 @@ def test_get_organization_unit_by_id_success(client, session):
     assert data["parent_id"] is None
     assert data["level"] == 0
     assert data["path"] == org.id
+
 
 def test_get_organization_unit_by_id_with_parent(client, session):
     """
@@ -226,13 +242,15 @@ def test_get_organization_unit_by_id_with_parent(client, session):
     parent.update_path_and_level()
     session.commit()
 
-    child = OrganizationUnit(name="Child", company_id="c1", parent_id=parent.id)
+    child = OrganizationUnit(
+        name="Child", company_id="c1", parent_id=parent.id
+    )
     session.add(child)
     session.commit()
     child.update_path_and_level()
     session.commit()
 
-    response = client.get(f'/organization_units/{child.id}')
+    response = client.get(f"/organization_units/{child.id}")
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == child.id
@@ -240,17 +258,20 @@ def test_get_organization_unit_by_id_with_parent(client, session):
     assert data["level"] == parent.level + 1
     assert data["path"].startswith(parent.path)
 
+
 def test_get_organization_unit_by_id_not_found(client, session):
     """
     Test GET /organization_units/<id> for a non-existent unit.
     """
     import uuid
+
     fake_id = str(uuid.uuid4())
-    response = client.get(f'/organization_units/{fake_id}')
+    response = client.get(f"/organization_units/{fake_id}")
     assert response.status_code == 404
     data = response.get_json()
     assert "error" in data
     assert data["error"] == "Organization unit not found"
+
 
 ##################################################
 # Test cases for GET /organization_units/<id>/children
@@ -265,11 +286,12 @@ def test_get_organization_unit_children_empty(client, session):
     parent.update_path_and_level()
     session.commit()
 
-    response = client.get(f'/organization_units/{parent.id}/children')
+    response = client.get(f"/organization_units/{parent.id}/children")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
     assert len(data) == 0
+
 
 def test_get_organization_unit_children_with_children(client, session):
     """
@@ -281,15 +303,19 @@ def test_get_organization_unit_children_with_children(client, session):
     parent.update_path_and_level()
     session.commit()
 
-    child1 = OrganizationUnit(name="Child1", company_id="c1", parent_id=parent.id)
-    child2 = OrganizationUnit(name="Child2", company_id="c1", parent_id=parent.id)
+    child1 = OrganizationUnit(
+        name="Child1", company_id="c1", parent_id=parent.id
+    )
+    child2 = OrganizationUnit(
+        name="Child2", company_id="c1", parent_id=parent.id
+    )
     session.add_all([child1, child2])
     session.commit()
     child1.update_path_and_level()
     child2.update_path_and_level()
     session.commit()
 
-    response = client.get(f'/organization_units/{parent.id}/children')
+    response = client.get(f"/organization_units/{parent.id}/children")
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
@@ -300,13 +326,15 @@ def test_get_organization_unit_children_with_children(client, session):
     for item in data:
         assert item["parent_id"] == parent.id
 
+
 def test_get_organization_unit_children_not_found(client, session):
     """
     Test GET /organization_units/<id>/children for a non-existent unit.
     """
     import uuid
+
     fake_id = str(uuid.uuid4())
-    response = client.get(f'/organization_units/{fake_id}/children')
+    response = client.get(f"/organization_units/{fake_id}/children")
     # Selon l'implémentation, peut retourner 200 (liste vide) ou 404
     assert response.status_code in (200, 404)
     if response.status_code == 200:
@@ -316,6 +344,7 @@ def test_get_organization_unit_children_not_found(client, session):
     else:
         data = response.get_json()
         assert "error" in data
+
 
 ##################################################
 # Test cases for PUT /organization_units/<id>
@@ -331,7 +360,7 @@ def test_put_organization_unit_success(client, session):
     session.commit()
 
     payload = {"name": "NewName", "company_id": "c1"}
-    response = client.put(f'/organization_units/{org.id}', json=payload)
+    response = client.put(f"/organization_units/{org.id}", json=payload)
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == org.id
@@ -340,6 +369,7 @@ def test_put_organization_unit_success(client, session):
     assert data["parent_id"] is None
     assert data["level"] == 0
     assert data["path"] == org.id
+
 
 def test_put_organization_unit_change_parent(client, session):
     """
@@ -354,25 +384,28 @@ def test_put_organization_unit_change_parent(client, session):
     session.commit()
 
     payload = {"name": "Child", "company_id": "c1", "parent_id": parent.id}
-    response = client.put(f'/organization_units/{child.id}', json=payload)
+    response = client.put(f"/organization_units/{child.id}", json=payload)
     assert response.status_code == 200
     data = response.get_json()
     assert data["parent_id"] == parent.id
     assert data["level"] == parent.level + 1
     assert data["path"].startswith(parent.path)
 
+
 def test_put_organization_unit_not_found(client, session):
     """
     Test PUT /organization_units/<id> for a non-existent unit.
     """
     import uuid
+
     fake_id = str(uuid.uuid4())
     payload = {"name": "DoesNotExist", "company_id": "c1"}
-    response = client.put(f'/organization_units/{fake_id}', json=payload)
+    response = client.put(f"/organization_units/{fake_id}", json=payload)
     assert response.status_code == 404
     data = response.get_json()
     assert "error" in data
     assert data["error"] == "Organization unit not found"
+
 
 def test_put_organization_unit_invalid_parent_id(client, session):
     """
@@ -385,10 +418,11 @@ def test_put_organization_unit_invalid_parent_id(client, session):
     session.commit()
 
     payload = {"name": "Unit", "company_id": "c1", "parent_id": "not-a-uuid"}
-    response = client.put(f'/organization_units/{org.id}', json=payload)
+    response = client.put(f"/organization_units/{org.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "parent_id" in data["error"]
+
 
 def test_put_organization_unit_cycle(client, session):
     """
@@ -401,10 +435,11 @@ def test_put_organization_unit_cycle(client, session):
     session.commit()
 
     payload = {"name": "Cycle", "company_id": "c1", "parent_id": org.id}
-    response = client.put(f'/organization_units/{org.id}', json=payload)
+    response = client.put(f"/organization_units/{org.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "parent_id" in data["error"]
+
 
 ##################################################
 # Test cases for PATCH /organization_units/<id>
@@ -420,13 +455,14 @@ def test_patch_organization_unit_success(client, session):
     session.commit()
 
     payload = {"name": "PatchedName"}
-    response = client.patch(f'/organization_units/{org.id}', json=payload)
+    response = client.patch(f"/organization_units/{org.id}", json=payload)
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == org.id
     assert data["name"] == "PatchedName"
     assert data["company_id"] == "c1"  # unchanged
     assert data["parent_id"] is None
+
 
 def test_patch_organization_unit_change_parent(client, session):
     """
@@ -441,25 +477,28 @@ def test_patch_organization_unit_change_parent(client, session):
     session.commit()
 
     payload = {"parent_id": parent.id}
-    response = client.patch(f'/organization_units/{child.id}', json=payload)
+    response = client.patch(f"/organization_units/{child.id}", json=payload)
     assert response.status_code == 200
     data = response.get_json()
     assert data["parent_id"] == parent.id
     assert data["level"] == parent.level + 1
     assert data["path"].startswith(parent.path)
 
+
 def test_patch_organization_unit_not_found(client, session):
     """
     Test PATCH /organization_units/<id> for a non-existent unit.
     """
     import uuid
+
     fake_id = str(uuid.uuid4())
     payload = {"name": "Nope"}
-    response = client.patch(f'/organization_units/{fake_id}', json=payload)
+    response = client.patch(f"/organization_units/{fake_id}", json=payload)
     assert response.status_code == 404
     data = response.get_json()
     assert "error" in data
     assert data["error"] == "Organization unit not found"
+
 
 def test_patch_organization_unit_invalid_parent_id(client, session):
     """
@@ -472,10 +511,11 @@ def test_patch_organization_unit_invalid_parent_id(client, session):
     session.commit()
 
     payload = {"parent_id": "not-a-uuid"}
-    response = client.patch(f'/organization_units/{org.id}', json=payload)
+    response = client.patch(f"/organization_units/{org.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "parent_id" in data["error"]
+
 
 def test_patch_organization_unit_cycle(client, session):
     """
@@ -488,10 +528,11 @@ def test_patch_organization_unit_cycle(client, session):
     session.commit()
 
     payload = {"parent_id": org.id}
-    response = client.patch(f'/organization_units/{org.id}', json=payload)
+    response = client.patch(f"/organization_units/{org.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "parent_id" in data["error"]
+
 
 ##################################################
 # Test cases for DELETE /organization_units/<id>
@@ -506,12 +547,13 @@ def test_delete_organization_unit_success(client, session):
     org.update_path_and_level()
     session.commit()
 
-    response = client.delete(f'/organization_units/{org.id}')
+    response = client.delete(f"/organization_units/{org.id}")
     assert response.status_code == 204
 
     # Vérifie que l'unité n'existe plus
-    get_response = client.get(f'/organization_units/{org.id}')
+    get_response = client.get(f"/organization_units/{org.id}")
     assert get_response.status_code == 404
+
 
 def test_delete_organization_unit_with_children(client, session):
     """
@@ -523,28 +565,32 @@ def test_delete_organization_unit_with_children(client, session):
     parent.update_path_and_level()
     session.commit()
 
-    child = OrganizationUnit(name="ChildToDelete", company_id="c1", parent_id=parent.id)
+    child = OrganizationUnit(
+        name="ChildToDelete", company_id="c1", parent_id=parent.id
+    )
     session.add(child)
     session.commit()
     child.update_path_and_level()
     session.commit()
 
-    response = client.delete(f'/organization_units/{parent.id}')
+    response = client.delete(f"/organization_units/{parent.id}")
     assert response.status_code == 204
 
     # Vérifie que le parent et l'enfant sont supprimés
-    get_parent = client.get(f'/organization_units/{parent.id}')
-    get_child = client.get(f'/organization_units/{child.id}')
+    get_parent = client.get(f"/organization_units/{parent.id}")
+    get_child = client.get(f"/organization_units/{child.id}")
     assert get_parent.status_code == 404
     assert get_child.status_code == 404
+
 
 def test_delete_organization_unit_not_found(client, session):
     """
     Test DELETE /organization_units/<id> for a non-existent unit.
     """
     import uuid
+
     fake_id = str(uuid.uuid4())
-    response = client.delete(f'/organization_units/{fake_id}')
+    response = client.delete(f"/organization_units/{fake_id}")
     assert response.status_code == 404
     data = response.get_json()
     assert "error" in data

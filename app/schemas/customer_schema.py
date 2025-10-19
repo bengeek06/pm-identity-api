@@ -32,6 +32,7 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         phone_number (str): Optional. Digits only, max 50 characters.
         address (str): Optional. Max 255 characters.
     """
+
     class Meta:
         """
         Meta options for the Customer schema.
@@ -43,15 +44,15 @@ class CustomerSchema(SQLAlchemyAutoSchema):
             dump_only: Fields that are only used for serialization.
             unknown: Raise error on unknown fields.
         """
+
         model = Customer
         load_instance = True
         include_fk = True
-        dump_only = ('id', 'created_at', 'updated_at')
+        dump_only = ("id", "created_at", "updated_at")
         unknown = RAISE
 
     name = fields.String(
-        required=True,
-        validate=validate.Length(min=1, max=100)
+        required=True, validate=validate.Length(min=1, max=100)
     )
 
     company_id = fields.Integer(
@@ -59,14 +60,10 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         validate=validate.Range(min=1),
     )
 
-    email = fields.Email(
-        allow_none=True,
-        validate=validate.Length(max=100)
-    )
+    email = fields.Email(allow_none=True, validate=validate.Length(max=100))
 
     contact_person = fields.String(
-        allow_none=True,
-        validate=validate.Length(max=100)
+        allow_none=True, validate=validate.Length(max=100)
     )
 
     phone_number = fields.String(
@@ -74,11 +71,9 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         validate=[
             validate.Length(max=50),
             validate.Regexp(
-                r"^\d*$", error="Phone number must contain only digits.")
-        ]
+                r"^\d*$", error="Phone number must contain only digits."
+            ),
+        ],
     )
 
-    address = fields.String(
-        allow_none=True,
-        validate=validate.Length(max=255)
-    )
+    address = fields.String(allow_none=True, validate=validate.Length(max=255))

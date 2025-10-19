@@ -34,22 +34,18 @@ class Position(db.Model):
         created_at (datetime): Timestamp when the position was created.
         updated_at (datetime): Timestamp when the position was last updated.
     """
-    __tablename__ = 'position'
+
+    __tablename__ = "position"
 
     id = db.Column(
-        db.String(36),
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     title = db.Column(db.String(100), nullable=False)
     company_id = db.Column(
-        db.String(36),
-        db.ForeignKey('company.id'),
-        nullable=False)
+        db.String(36), db.ForeignKey("company.id"), nullable=False
+    )
     organization_unit_id = db.Column(
-        db.String(36),
-        db.ForeignKey('organization_unit.id'),
-        nullable=False
+        db.String(36), db.ForeignKey("organization_unit.id"), nullable=False
     )
     description = db.Column(db.String(255), nullable=True)
     level = db.Column(db.Integer, nullable=True)
@@ -57,13 +53,11 @@ class Position(db.Model):
     updated_at = db.Column(
         db.DateTime,
         default=db.func.current_timestamp(),
-        onupdate=db.func.current_timestamp()
+        onupdate=db.func.current_timestamp(),
     )
 
     organization_unit = db.relationship(
-        'OrganizationUnit',
-        back_populates='positions',
-        lazy=True
+        "OrganizationUnit", back_populates="positions", lazy=True
     )
 
     def __repr__(self):
@@ -161,10 +155,12 @@ class Position(db.Model):
         """
         try:
             return cls.query.filter_by(
-                organization_unit_id=organization_unit_id).all()
+                organization_unit_id=organization_unit_id
+            ).all()
         except SQLAlchemyError as e:
             logger.error(
                 "Error retrieving positions for organization unit %s: %s",
-                organization_unit_id, e
+                organization_unit_id,
+                e,
             )
             return []

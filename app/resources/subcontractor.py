@@ -31,6 +31,7 @@ class SubcontractorListResource(Resource):
         post():
             Create a new subcontractor with the provided data.
     """
+
     def get(self):
         """
         Retrieve all subcontractors.
@@ -99,6 +100,7 @@ class SubcontractorResource(Resource):
         delete(subcontractor_id):
             Delete a subcontractor by ID.
     """
+
     def get(self, subcontractor_id):
         """
         Retrieve a subcontractor by ID.
@@ -116,7 +118,8 @@ class SubcontractorResource(Resource):
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
             logger.warning(
-                "Subcontractor with ID %s not found", subcontractor_id)
+                "Subcontractor with ID %s not found", subcontractor_id
+            )
             return {"message": "Subcontractor not found"}, 404
 
         schema = SubcontractorSchema(session=db.session)
@@ -147,11 +150,13 @@ class SubcontractorResource(Resource):
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
                 logger.warning(
-                    "Subcontractor with ID %s not found", subcontractor_id)
+                    "Subcontractor with ID %s not found", subcontractor_id
+                )
                 return {"message": "Subcontractor not found"}, 404
 
             updated_subcontractor = subcontractor_schema.load(
-                json_data, instance=subcontractor)
+                json_data, instance=subcontractor
+            )
             db.session.commit()
             return subcontractor_schema.dump(updated_subcontractor), 200
         except ValidationError as e:
@@ -183,23 +188,25 @@ class SubcontractorResource(Resource):
                    HTTP status code 400 for validation errors.
         """
         logger.info(
-            "Partially updating subcontractor with ID: %s", subcontractor_id)
+            "Partially updating subcontractor with ID: %s", subcontractor_id
+        )
 
         json_data = request.get_json()
         subcontractor_schema = SubcontractorSchema(
-            session=db.session, partial=True)
+            session=db.session, partial=True
+        )
 
         try:
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
                 logger.warning(
-                    "Subcontractor with ID %s not found",
-                    subcontractor_id
+                    "Subcontractor with ID %s not found", subcontractor_id
                 )
                 return {"message": "Subcontractor not found"}, 404
 
             updated_subcontractor = subcontractor_schema.load(
-                json_data, instance=subcontractor, partial=True)
+                json_data, instance=subcontractor, partial=True
+            )
             db.session.commit()
             return subcontractor_schema.dump(updated_subcontractor), 200
         except ValidationError as e:
@@ -228,7 +235,8 @@ class SubcontractorResource(Resource):
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
             logger.warning(
-                "Subcontractor with ID %s not found", subcontractor_id)
+                "Subcontractor with ID %s not found", subcontractor_id
+            )
             return {"message": "Subcontractor not found"}, 404
 
         try:

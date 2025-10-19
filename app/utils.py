@@ -2,6 +2,7 @@
 
 import os
 import re
+import uuid
 from functools import wraps
 import jwt
 from flask import request, g
@@ -69,7 +70,7 @@ def extract_jwt_data():
 def require_jwt_auth(extract_company_id=True):
     """
     Decorator to require JWT authentication and optionally extract company_id.
-    Falls back to header-based authentication for testing environments.
+    Requires a valid JWT token in cookies - no fallback to headers.
 
     Args:
         extract_company_id (bool): Whether to extract and inject company_id into request JSON
@@ -81,46 +82,62 @@ def require_jwt_auth(extract_company_id=True):
     def decorator(view_func):
         @wraps(view_func)
         def wrapped(*args, **kwargs):
-            # Try JWT authentication first
+            # Extract JWT data from cookies only
             jwt_data = extract_jwt_data()
 
-            # Fallback to headers for testing environment
             if not jwt_data:
-                user_id = request.headers.get("X-User-ID")
-                company_id = request.headers.get("X-Company-ID")
+                logger.warning(
+                    "JWT authentication failed - no valid token found"
+                )
+                return {
+                    "message": "Authentication required. Missing or invalid JWT token."
+                }, 401
 
-                if user_id:
-                    # Create mock JWT data from headers (for testing)
-                    jwt_data = {"user_id": user_id, "company_id": company_id}
-                    logger.debug(
-                        "Using headers for authentication (testing mode)"
-                    )
-                else:
-                    return {"message": "Missing or invalid JWT token"}, 401
+            # Extract company_id and user_id from JWT data
+            company_id = jwt_data.get("company_id")
+            user_id = jwt_data.get("user_id")
+
+            if not user_id:
+                logger.error("user_id missing in JWT token")
+                return {"message": "Invalid JWT token: missing user_id"}, 401
+
+            if not company_id:
+                logger.error("company_id missing in JWT token")
+                return {
+                    "message": "Invalid JWT token: missing company_id"
+                }, 401
+
+            # Validate UUID format for company_id
+            try:
+                uuid.UUID(company_id)
+            except (ValueError, TypeError):
+                logger.error(f"Invalid company_id format in JWT: {company_id}")
+                return {
+                    "message": "Invalid JWT token: company_id must be a valid UUID"
+                }, 401
+
+            # Store company_id and user_id in g for all endpoints
+            g.company_id = company_id
+            g.user_id = user_id
 
             if extract_company_id:
-                company_id = jwt_data.get("company_id")
-                if not company_id:
-                    logger.error("company_id missing in JWT/headers")
-                    return {
-                        "message": "company_id missing in JWT/headers"
-                    }, 400
-
-                # Only try to get JSON data for requests that might have a body
-                # GET requests typically don't have JSON payloads
+                # Inject company_id into request JSON data for POST/PUT/PATCH methods
                 try:
-                    json_data = request.get_json(silent=True) or {}
+                    json_data = request.get_json() or {}
                 except Exception:
+                    # For GET requests or requests without JSON body
                     json_data = {}
-
                 json_data["company_id"] = company_id
 
                 # Store modified json_data in g for the view function to use
                 g.json_data = json_data
             else:
-                # Just store original json_data in g if company_id extraction is not needed
+                # Only try to get JSON data if the request has content
                 try:
-                    g.json_data = request.get_json(silent=True)
+                    if request.content_length and request.content_length > 0:
+                        g.json_data = request.get_json()
+                    else:
+                        g.json_data = None
                 except Exception:
                     g.json_data = None
 
@@ -161,9 +178,8 @@ def check_access_required(operation):
             # Normalisation: si resource_name se termine par '_list', on retire ce suffixe
             if resource_name and resource_name.endswith("_list"):
                 resource_name = resource_name[:-5]
-            user_id = getattr(g, "user_id", None) or request.headers.get(
-                "X-User-Id"
-            )
+            user_id = getattr(g, "user_id", None)
+
             # Essayer d'utiliser les données JWT déjà décodées si disponibles
             if not user_id and hasattr(g, "jwt_data") and g.jwt_data:
                 user_id = g.jwt_data.get("user_id")
@@ -219,7 +235,8 @@ def check_access(user_id, resource_name, operation):
         f"resource_name: {resource_name}, operation: {operation}"
     )
 
-    if os.environ.get("FLASK_ENV").lower() in ["testing", "development"]:
+    flask_env = os.environ.get("FLASK_ENV", "production").lower()
+    if flask_env in ["testing", "development"]:
         logger.debug("check_access: testing/development environment")
         return True, "Access granted in testing/development environment.", 200
 
@@ -230,7 +247,7 @@ def check_access(user_id, resource_name, operation):
 
     try:
         timeout = float(os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5"))
-        
+
         # Get JWT token from cookies to forward to Guardian service (if in request context)
         headers = {}
         try:
@@ -240,8 +257,10 @@ def check_access(user_id, resource_name, operation):
                 logger.debug("Forwarding JWT cookie to Guardian service")
         except RuntimeError:
             # No request context available (e.g., during testing without Flask app context)
-            logger.debug("No request context available, skipping JWT cookie forwarding")
-        
+            logger.debug(
+                "No request context available, skipping JWT cookie forwarding"
+            )
+
         response = requests.post(
             f"{guardian_service_url}/check-access",
             json={
@@ -253,7 +272,7 @@ def check_access(user_id, resource_name, operation):
             headers=headers,
             timeout=timeout,
         )
-        
+
         # Don't raise_for_status() immediately - check the response first
         if response.status_code == 200:
             response_data = response.json()
@@ -267,20 +286,30 @@ def check_access(user_id, resource_name, operation):
             # Guardian service returned a 400 with detailed error message
             try:
                 response_data = response.json()
-                logger.warning(f"Guardian service returned 400: {response_data}")
+                logger.warning(
+                    f"Guardian service returned 400: {response_data}"
+                )
                 return (
                     response_data.get("access_granted", False),
                     response_data.get("reason", "Bad request"),
                     400,
                 )
             except Exception as json_error:
-                logger.error(f"Failed to parse Guardian 400 response as JSON: {json_error}")
+                logger.error(
+                    f"Failed to parse Guardian 400 response as JSON: {json_error}"
+                )
                 return False, f"Guardian service error: {response.text}", 400
         else:
             # Other error status codes
-            logger.error(f"Guardian service returned status {response.status_code}: {response.text}")
-            return False, f"Guardian service error (status {response.status_code})", response.status_code
-            
+            logger.error(
+                f"Guardian service returned status {response.status_code}: {response.text}"
+            )
+            return (
+                False,
+                f"Guardian service error (status {response.status_code})",
+                response.status_code,
+            )
+
     except requests.exceptions.Timeout:
         logger.error("Timeout when checking access with guardian service")
         return False, "Guardian service timeout", 504

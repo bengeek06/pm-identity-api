@@ -41,10 +41,11 @@ def test_run_config_mapping(monkeypatch, env, expected_config):
         mock_app = MagicMock()
         mock_create_app.return_value = mock_app
 
-        with patch("run.load_dotenv", mock_load_dotenv), patch(
-            "run.create_app", mock_create_app
-        ), patch("run.logger", mock_logger), patch(
-            "run.os.path.exists", return_value=False
+        with (
+            patch("run.load_dotenv", mock_load_dotenv),
+            patch("run.create_app", mock_create_app),
+            patch("run.logger", mock_logger),
+            patch("run.os.path.exists", return_value=False),
         ):  # No .env file
 
             # Call main function

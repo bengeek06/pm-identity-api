@@ -26,6 +26,7 @@ class Config:
     Attributes:
         SQLALCHEMY_TRACK_MODIFICATIONS (bool): Disable SQLAlchemy event system.
     """
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
@@ -37,8 +38,9 @@ class DevelopmentConfig(Config):
         DEBUG (bool): Enable debug mode.
         SQLALCHEMY_DATABASE_URI (str): Database URI for development.
     """
+
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     if not SQLALCHEMY_DATABASE_URI:
         raise ValueError("DATABASE_URL environment variable is not set.")
 
@@ -51,8 +53,9 @@ class TestingConfig(Config):
         TESTING (bool): Enable testing mode.
         SQLALCHEMY_DATABASE_URI (str): Database URI for testing.
     """
+
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     if not SQLALCHEMY_DATABASE_URI:
         raise ValueError("DATABASE_URL environment variable is not set.")
 
@@ -65,8 +68,9 @@ class StagingConfig(Config):
         DEBUG (bool): Enable debug mode.
         SQLALCHEMY_DATABASE_URI (str): Database URI for staging.
     """
+
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     if not SQLALCHEMY_DATABASE_URI:
         raise ValueError("DATABASE_URL environment variable is not set.")
 
@@ -79,7 +83,8 @@ class ProductionConfig(Config):
         DEBUG (bool): Disable debug mode.
         SQLALCHEMY_DATABASE_URI (str): Database URI for production.
     """
+
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     if not SQLALCHEMY_DATABASE_URI:
         raise ValueError("DATABASE_URL environment variable is not set.")

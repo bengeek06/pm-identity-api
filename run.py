@@ -25,7 +25,9 @@ def main():
 
     # Load .env file ONLY if not running in Docker
     # Docker containers have IN_DOCKER_CONTAINER env var or specific variables
-    if not os.environ.get("IN_DOCKER_CONTAINER") and not os.environ.get("APP_MODE"):
+    if not os.environ.get("IN_DOCKER_CONTAINER") and not os.environ.get(
+        "APP_MODE"
+    ):
         env_file = f".env.{env}"
         if os.path.exists(env_file):
             load_dotenv(env_file)
@@ -33,7 +35,9 @@ def main():
         else:
             logger.warning(f"Environment file {env_file} not found")
     else:
-        logger.info("Running in container - using environment variables directly")
+        logger.info(
+            "Running in container - using environment variables directly"
+        )
 
     logger.info(f"Running in {env} environment")
 

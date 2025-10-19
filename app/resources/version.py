@@ -5,6 +5,7 @@ version.py
 This module defines the VersionResource for exposing the current API version
 through a REST endpoint.
 """
+
 from flask_restful import Resource
 
 API_VERSION = "0.0.1"
@@ -27,4 +28,4 @@ class VersionResource(Resource):
             dict: A dictionary containing the API version and HTTP status
             code 200.
         """
-        return { "version": API_VERSION }, 200
+        return {"version": API_VERSION}, 200

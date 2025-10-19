@@ -33,6 +33,7 @@ class PositionListResource(Resource):
         post():
             Create a new position with the provided data.
     """
+
     def get(self):
         """
         Retrieve all positions.
@@ -65,14 +66,16 @@ class PositionListResource(Resource):
         logger.info("Creating a new position")
 
         json_data = request.get_json()
-        org_unit_id = json_data.get('organization_unit_id')
+        org_unit_id = json_data.get("organization_unit_id")
         if not org_unit_id:
             logger.warning("organization_unit_id is required")
             return {"message": "organization_unit_id is required"}, 400
 
         org_unit = OrganizationUnit.get_by_id(org_unit_id)
         if not org_unit:
-            logger.warning("Organization unit with ID %s not found", org_unit_id)
+            logger.warning(
+                "Organization unit with ID %s not found", org_unit_id
+            )
             return {"message": "Organization unit not found"}, 404
 
         position_schema = PositionSchema(session=db.session)
@@ -114,6 +117,7 @@ class PositionResource(Resource):
         delete(position_id):
             Delete a position by ID.
     """
+
     def get(self, position_id):
         """
         Retrieve a position by ID.
@@ -254,6 +258,7 @@ class OrganizationUnitPositionsResource(Resource):
         post(unit_id):
             Create a new position for a given organization unit.
     """
+
     def get(self, unit_id):
         """
         List all positions for a given organization unit.
@@ -290,7 +295,7 @@ class OrganizationUnitPositionsResource(Resource):
 
         json_data = request.get_json()
         # Renseigne automatiquement organization_unit_id
-        json_data['organization_unit_id'] = unit_id
+        json_data["organization_unit_id"] = unit_id
         position_schema = PositionSchema(session=db.session)
         try:
             position = position_schema.load(json_data)

@@ -146,7 +146,8 @@ class CustomerResource(Resource):
                 return {"error": "Customer not found"}, 404
 
             updated_customer = customer_schema.load(
-                json_data, instance=customer)
+                json_data, instance=customer
+            )
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:
@@ -186,7 +187,8 @@ class CustomerResource(Resource):
                 return {"error": "Customer not found"}, 404
 
             updated_customer = customer_schema.load(
-                json_data, instance=customer, partial=True)
+                json_data, instance=customer, partial=True
+            )
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:
@@ -222,12 +224,13 @@ class CustomerResource(Resource):
         try:
             db.session.delete(customer)
             db.session.commit()
-            return '', 204
+            return "", 204
         except IntegrityError as err:
             db.session.rollback()
             logger.error("Integrity error: %s", str(err))
             return (
-             {"error": "Integrity error, possibly due to FK constraints."}, 400
+                {"error": "Integrity error, possibly due to FK constraints."},
+                400,
             )
         except SQLAlchemyError as err:
             db.session.rollback()

@@ -9,7 +9,7 @@ from unittest import mock
 def test_guardian_direct_list_format(client, session):
     """Test que le service Guardian retourne une liste directe."""
     from tests.test_user import get_init_db_payload, create_jwt_token
-    
+
     # Create test data
     init_db_payload = get_init_db_payload()
     resp = client.post("/init-db", json=init_db_payload)
@@ -23,15 +23,19 @@ def test_guardian_direct_list_format(client, session):
     # Mock Guardian service response as direct list (comme dans l'erreur)
     roles_list = [
         {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": "admin"},
-        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": "user"}
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": "user"},
     ]
-    
+
     mock_response = mock.Mock()
     mock_response.status_code = 200
-    mock_response.json.return_value = roles_list  # Liste directe comme Guardian renvoie
+    mock_response.json.return_value = (
+        roles_list  # Liste directe comme Guardian renvoie
+    )
 
     with mock.patch("requests.get", return_value=mock_response):
-        with mock.patch.dict("os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
+        ):
             response = client.get(f"/users/{user_id}/roles")
 
             # Verify no error occurs
@@ -42,7 +46,7 @@ def test_guardian_direct_list_format(client, session):
             assert len(data["roles"]) == 2
             assert data["roles"][0]["role_id"] == "admin"
             assert data["roles"][1]["role_id"] == "user"
-            
+
             print("✅ Guardian direct list format handled successfully!")
             print(f"Response: {data}")
 
@@ -52,29 +56,28 @@ if __name__ == "__main__":
     test_cases = [
         # Cas 1: Liste directe (comme Guardian renvoie selon l'erreur)
         [{"id": "role1", "role_id": "admin"}],
-        
         # Cas 2: Objet avec clé roles (ancien format)
         {"roles": [{"id": "role1", "role_id": "admin"}]},
-        
         # Cas 3: Liste vide
         [],
-        
         # Cas 4: Objet avec liste vide
         {"roles": []},
     ]
-    
+
     for i, response_data in enumerate(test_cases, 1):
         print(f"\nTest case {i}: {response_data}")
-        
+
         # Logique de notre correction
         if isinstance(response_data, list):
             roles = response_data
             print(f"  -> Détecté comme liste directe: {len(roles)} rôles")
         elif isinstance(response_data, dict) and "roles" in response_data:
             roles = response_data.get("roles", [])
-            print(f"  -> Détecté comme objet avec clé 'roles': {len(roles)} rôles")
+            print(
+                f"  -> Détecté comme objet avec clé 'roles': {len(roles)} rôles"
+            )
         else:
             print("  -> ❌ Format non supporté")
             continue
-            
+
         print(f"  -> Roles extraits: {roles}")

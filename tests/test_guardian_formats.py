@@ -7,7 +7,6 @@ from unittest import mock
 from tests.conftest import get_init_db_payload, create_jwt_token
 
 
-
 def test_get_user_roles_with_direct_list_response(client, session):
     """
     Test GET /users/<user_id>/roles when Guardian returns a direct list.
@@ -25,14 +24,16 @@ def test_get_user_roles_with_direct_list_response(client, session):
     # Mock Guardian service response as direct list
     roles_data = [
         {"id": "role1", "user_id": user_id, "role_id": "admin"},
-        {"id": "role2", "user_id": user_id, "role_id": "user"}
+        {"id": "role2", "user_id": user_id, "role_id": "user"},
     ]
     mock_response = mock.Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = roles_data  # Direct list
 
     with mock.patch("requests.get", return_value=mock_response):
-        with mock.patch.dict("os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
+        ):
             response = client.get(f"/users/{user_id}/roles")
 
             # Verify the response
@@ -60,14 +61,18 @@ def test_get_user_roles_with_object_response(client, session):
     # Mock Guardian service response as object with roles key
     roles_data = [
         {"id": "role1", "user_id": user_id, "role_id": "admin"},
-        {"id": "role2", "user_id": user_id, "role_id": "user"}
+        {"id": "role2", "user_id": user_id, "role_id": "user"},
     ]
     mock_response = mock.Mock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"roles": roles_data}  # Object with roles key
+    mock_response.json.return_value = {
+        "roles": roles_data
+    }  # Object with roles key
 
     with mock.patch("requests.get", return_value=mock_response):
-        with mock.patch.dict("os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
+        ):
             response = client.get(f"/users/{user_id}/roles")
 
             # Verify the response
@@ -96,10 +101,14 @@ def test_get_user_roles_with_invalid_response_format(client, session):
     # Mock Guardian service response with unexpected format
     mock_response = mock.Mock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"unexpected": "format"}  # Invalid format
+    mock_response.json.return_value = {
+        "unexpected": "format"
+    }  # Invalid format
 
     with mock.patch("requests.get", return_value=mock_response):
-        with mock.patch.dict("os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
+        ):
             response = client.get(f"/users/{user_id}/roles")
 
             # Verify graceful handling: returns 200 with empty roles list
@@ -107,7 +116,9 @@ def test_get_user_roles_with_invalid_response_format(client, session):
             data = response.get_json()
             assert "roles" in data
             assert data["roles"] == []  # Should default to empty list
-            print("✅ Invalid response format handled gracefully with empty roles")
+            print(
+                "✅ Invalid response format handled gracefully with empty roles"
+            )
 
 
 def test_get_user_roles_empty_list(client, session):
@@ -130,7 +141,9 @@ def test_get_user_roles_empty_list(client, session):
     mock_response.json.return_value = []  # Empty list
 
     with mock.patch("requests.get", return_value=mock_response):
-        with mock.patch.dict("os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
+        ):
             response = client.get(f"/users/{user_id}/roles")
 
             # Verify the response

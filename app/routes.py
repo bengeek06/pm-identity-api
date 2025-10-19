@@ -36,7 +36,7 @@ from app.resources.user import (
     UserPositionResource,
     VerifyPasswordResource,
     UserRolesListResource,
-    UserRolesResource
+    UserRolesResource,
 )
 from app.resources.init_db import InitDBResource
 from app.resources.health import HealthResource
@@ -95,7 +95,7 @@ def register_routes(app):
         UserRolesResource,
         "/users/<string:user_id>/roles/<string:user_role_id>",
     )
-    
+
     api.add_resource(
         UserPositionResource, "/positions/<string:position_id>/users"
     )

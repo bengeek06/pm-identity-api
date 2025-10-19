@@ -28,7 +28,7 @@ def test_wsgi_forces_production_config(monkeypatch):
 
         class DummyApp:
             """Dummy Flask application for testing."""
-            
+
             def run(self):
                 """Mock run method to prevent actual server startup."""
                 pass
