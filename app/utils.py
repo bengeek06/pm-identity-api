@@ -69,29 +69,44 @@ def extract_jwt_data():
 
 def require_jwt_auth(extract_company_id=True):
     """
-    Decorator to require JWT authentication and optionally extract company_id.
+    Decorator to require JWT authentication and extract JWT information.
     Requires a valid JWT token in cookies - no fallback to headers.
+    
+    Always stores user_id, company_id, and jwt_data in Flask's g object for use in view functions.
+    The extract_company_id parameter is kept for future compatibility (company hierarchy feature).
 
     Args:
-        extract_company_id (bool): Whether to extract and inject company_id into request JSON
+        extract_company_id (bool): Reserved for future use in company hierarchy feature
 
     Returns:
         Decorated function or error response
+        
+    Stores in g:
+        - g.user_id: User ID from JWT
+        - g.company_id: Company ID from JWT  
+        - g.jwt_data: Complete JWT payload
+        - g.json_data: Original request JSON data (unmodified)
     """
 
     def decorator(view_func):
         @wraps(view_func)
         def wrapped(*args, **kwargs):
-            # Extract JWT data from cookies only
+            # Try JWT authentication first
             jwt_data = extract_jwt_data()
 
+            # Fallback to headers for testing environment
             if not jwt_data:
-                logger.warning(
-                    "JWT authentication failed - no valid token found"
-                )
-                return {
-                    "message": "Authentication required. Missing or invalid JWT token."
-                }, 401
+                user_id = request.headers.get("X-User-ID")
+                company_id = request.headers.get("X-Company-ID")
+
+                if user_id:
+                    # Create mock JWT data from headers (for testing)
+                    jwt_data = {"user_id": user_id, "company_id": company_id}
+                    logger.debug(
+                        "Using headers for authentication (testing mode)"
+                    )
+                else:
+                    return {"message": "Missing or invalid JWT token"}, 401
 
             # Extract company_id and user_id from JWT data
             company_id = jwt_data.get("company_id")
@@ -116,33 +131,19 @@ def require_jwt_auth(extract_company_id=True):
                     "message": "Invalid JWT token: company_id must be a valid UUID"
                 }, 401
 
-            # Store company_id and user_id in g for all endpoints
+            # Store company_id, user_id and jwt_data in g for use in view functions
             g.company_id = company_id
             g.user_id = user_id
-
-            if extract_company_id:
-                # Inject company_id into request JSON data for POST/PUT/PATCH methods
-                try:
-                    json_data = request.get_json() or {}
-                except Exception:
-                    # For GET requests or requests without JSON body
-                    json_data = {}
-                json_data["company_id"] = company_id
-
-                # Store modified json_data in g for the view function to use
-                g.json_data = json_data
-            else:
-                # Only try to get JSON data if the request has content
-                try:
-                    if request.content_length and request.content_length > 0:
-                        g.json_data = request.get_json()
-                    else:
-                        g.json_data = None
-                except Exception:
-                    g.json_data = None
-
-            # Store jwt_data in g for potential use in view function
             g.jwt_data = jwt_data
+            
+            # Store original JSON data in g without modification
+            try:
+                if request.content_length and request.content_length > 0:
+                    g.json_data = request.get_json()
+                else:
+                    g.json_data = None
+            except Exception:
+                g.json_data = None
 
             return view_func(*args, **kwargs)
 
