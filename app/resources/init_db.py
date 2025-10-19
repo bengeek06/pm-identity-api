@@ -100,21 +100,33 @@ class InitDBResource(Resource):
 
         if not company_data or not user_data:
             logger.error("Initialization data missing required fields.")
-            return None, None, (
-                {"message": "'company' and 'user' data are required."},
-                400,
+            return (
+                None,
+                None,
+                (
+                    {"message": "'company' and 'user' data are required."},
+                    400,
+                ),
             )
         if not isinstance(company_data, dict):
             logger.error("'company' must be a JSON object.")
-            return None, None, (
-                {"message": "'company' must be a JSON object."},
-                400,
+            return (
+                None,
+                None,
+                (
+                    {"message": "'company' must be a JSON object."},
+                    400,
+                ),
             )
         if not isinstance(user_data, dict):
             logger.error("'user' must be a JSON object.")
-            return None, None, (
-                {"message": "'user' must be a JSON object."},
-                400,
+            return (
+                None,
+                None,
+                (
+                    {"message": "'user' must be a JSON object."},
+                    400,
+                ),
             )
 
         return company_data, user_data, None
@@ -309,7 +321,9 @@ class InitDBResource(Resource):
         try:
             with db.session.begin_nested():
                 # Create all entities in order
-                new_company = self._create_company(company_data, company_schema)
+                new_company = self._create_company(
+                    company_data, company_schema
+                )
                 new_org_unit = self._create_organization_unit(
                     new_company.id, org_unit_schema
                 )
