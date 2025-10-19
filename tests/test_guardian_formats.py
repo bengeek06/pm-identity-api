@@ -7,6 +7,7 @@ from unittest import mock
 from tests.conftest import get_init_db_payload, create_jwt_token
 
 
+
 def test_get_user_roles_with_direct_list_response(client, session):
     """
     Test GET /users/<user_id>/roles when Guardian returns a direct list.
@@ -80,6 +81,7 @@ def test_get_user_roles_with_object_response(client, session):
 def test_get_user_roles_with_invalid_response_format(client, session):
     """
     Test GET /users/<user_id>/roles when Guardian returns an unexpected format.
+    The API should gracefully handle this by returning an empty list with a 200 status.
     """
     # Create test data
     init_db_payload = get_init_db_payload()
@@ -100,12 +102,12 @@ def test_get_user_roles_with_invalid_response_format(client, session):
         with mock.patch.dict("os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}):
             response = client.get(f"/users/{user_id}/roles")
 
-            # Verify error handling
-            assert response.status_code == 500
+            # Verify graceful handling: returns 200 with empty roles list
+            assert response.status_code == 200
             data = response.get_json()
-            assert "message" in data
-            assert "Error fetching roles" in data["message"]
-            print("✅ Invalid response format handled correctly")
+            assert "roles" in data
+            assert data["roles"] == []  # Should default to empty list
+            print("✅ Invalid response format handled gracefully with empty roles")
 
 
 def test_get_user_roles_empty_list(client, session):

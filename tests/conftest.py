@@ -5,6 +5,8 @@
 import os
 from pytest import fixture
 from dotenv import load_dotenv
+import jwt
+import uuid
 
 os.environ['FLASK_ENV'] = 'testing'
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env.test'))
@@ -32,3 +34,30 @@ def client(app):
 def session(app):
     with app.app_context():
         yield db.session
+
+def get_init_db_payload():
+    """
+    Generate a valid payload for full database initialization via /init-db.
+    Returns a dictionary containing data for company, organization_unit, position, and user.
+    """
+    return {
+        "company": {"name": "TestCorp", "description": "A test company"},
+        "organization_unit": {
+            "name": "Direction",
+            "description": "Direction générale",
+        },
+        "position": {"title": "CEO", "description": "Chief Executive Officer"},
+        "user": {
+            "email": "admin@testcorp.com",
+            "first_name": "Alice",
+            "last_name": "Admin",
+            "password": "supersecret",
+        },
+    }
+
+
+def create_jwt_token(company_id, user_id):
+    """Helper function to create a JWT token for testing."""
+    jwt_secret = os.environ.get("JWT_SECRET", "test_secret")
+    payload = {"company_id": company_id, "user_id": user_id}
+    return jwt.encode(payload, jwt_secret, algorithm="HS256")
