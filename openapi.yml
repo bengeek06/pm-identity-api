@@ -20,7 +20,7 @@ info:
       email: bengeek06@gmail.com
   license:
     name: AGPL v3 / Commercial
-    url: https://github.com/bengeek06/pm-identity-api/blob/guardian_staging/LICENSE.md
+    url: https://github.com/bengeek06/pm-identity-api/blob/identity_staging/LICENSE.md
 
 servers:
   - url: http://localhost:5002
@@ -41,6 +41,97 @@ components:
 
 
   schemas:
+    OrganizationUnit:
+      type: object
+      required:
+        - name
+        - company_id
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier of the organization unit
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the organization unit
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the organization unit
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional parent organization unit identifier
+        path:
+          type: string
+          readOnly: true
+          description: Hierarchical path of the organization unit
+        level:
+          type: integer
+          readOnly: true
+          description: Hierarchy level of the organization unit
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Creation date
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Last update date
+
+    OrganizationUnitCreate:
+      type: object
+      required:
+        - name
+        - company_id
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the organization unit
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the organization unit
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional parent organization unit identifier
+
+    OrganizationUnitUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the organization unit
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the organization unit
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional parent organization unit identifier
     Company:
       type: object
       required:
@@ -221,7 +312,7 @@ components:
           enum: [healthy, unhealthy]
         service:
           type: string
-          example: guardian_service
+          example: identity_service
         timestamp:
           type: string
           format: date-time
@@ -478,6 +569,46 @@ components:
 
 
   responses:
+    OrganizationUnitCreated:
+      description: Organization unit created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OrganizationUnit'
+
+    OrganizationUnitList:
+      description: List of organization units
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/OrganizationUnit'
+
+    OrganizationUnitDetails:
+      description: Organization unit details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OrganizationUnit'
+
+    OrganizationUnitUpdated:
+      description: Organization unit updated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OrganizationUnit'
+
+    OrganizationUnitDeleted:
+      description: Organization unit deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Organization unit deleted successfully"
     CompanyCreated:
       description: Company created successfully
       content:
@@ -646,6 +777,164 @@ components:
                 $ref: '#/components/schemas/User'
    
 paths:
+  /organization_units:
+    get:
+      tags: [Organizations]
+      summary: List all organization units
+      description: Returns the list of all organization units
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Organizations]
+      summary: Create a new organization unit
+      description: Creates a new organization unit with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUnitCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/OrganizationUnitCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organization_units/{unit_id}:
+    parameters:
+      - name: unit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the organization unit
+
+    get:
+      tags: [Organizations]
+      summary: Get an organization unit by ID
+      description: Returns details of a specific organization unit
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Organizations]
+      summary: Update an organization unit
+      description: Fully updates an existing organization unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUnitUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Organizations]
+      summary: Partially update an organization unit
+      description: Partially updates an existing organization unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUnitUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Organizations]
+      summary: Delete an organization unit
+      description: Deletes an existing organization unit
+      responses:
+        '204':
+          $ref: '#/components/responses/OrganizationUnitDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organization_units/{unit_id}/children:
+    parameters:
+      - name: unit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the organization unit
+
+    get:
+      tags: [Organizations]
+      summary: List children of an organization unit
+      description: Returns the list of child organization units for the given parent organization unit
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /companies:
     get:
       tags: [Companies]
@@ -802,7 +1091,7 @@ paths:
     get:
       tags: [System]
       summary: Get API version
-      description: Returns the current version of the Guardian Service API
+      description: Returns the current version of the identity Service API
       responses:
         '200':
           description: API version information
@@ -836,7 +1125,7 @@ paths:
     get:
       tags: [System]
       summary: Check database initialization status
-      description: Returns whether the Guardian Service has been initialized
+      description: Returns whether the identity Service has been initialized
       security: []
       responses:
         '200':
