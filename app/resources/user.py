@@ -376,6 +376,97 @@ class UserRolesListResource(Resource):
             Add a new role for a specific user.
     """
 
+    @staticmethod
+    def _validate_user_access(user_id, company_id):
+        """
+        Validate that the target user exists and belongs to the same company.
+
+        Args:
+            user_id (str): The ID of the user to validate.
+            company_id (str): The company ID from JWT.
+
+        Returns:
+            tuple: (User, error_response)
+                - If valid: (User, None)
+                - If invalid: (None, (dict, int))
+        """
+        target_user = User.get_by_id(user_id)
+        if not target_user:
+            logger.warning("User with ID %s not found", user_id)
+            return None, ({"message": "User not found"}, 404)
+
+        if target_user.company_id != company_id:
+            logger.warning(
+                "Attempted to access user %s from different company", user_id
+            )
+            return None, ({"message": "Access denied"}, 403)
+
+        return target_user, None
+
+    @staticmethod
+    def _extract_role_id(json_data):
+        """
+        Extract and validate role_id from request JSON.
+
+        Args:
+            json_data (dict): The JSON data from the request.
+
+        Returns:
+            tuple: (role_id, error_response)
+                - If valid: (str, None)
+                - If invalid: (None, (dict, int))
+        """
+        if not json_data:
+            logger.error("No JSON data provided")
+            return None, ({"message": "JSON data required"}, 400)
+
+        # Accept either 'role' (for backward compatibility) or 'role_id'
+        role_id = json_data.get("role_id") or json_data.get("role")
+        if not role_id:
+            logger.error("Role ID field missing in request")
+            return None, ({"message": "Role ID field is required"}, 400)
+
+        if not isinstance(role_id, str) or not role_id.strip():
+            logger.error("Invalid role ID format: %s", role_id)
+            return None, (
+                {"message": "Role ID must be a non-empty string"},
+                400,
+            )
+
+        return role_id.strip(), None
+
+    @staticmethod
+    def _handle_guardian_response(response, role_id, user_id):
+        """
+        Handle the Guardian service response for role assignment.
+
+        Args:
+            response: The response from Guardian service.
+            role_id (str): The role ID being assigned.
+            user_id (str): The user ID receiving the role.
+
+        Returns:
+            tuple: (dict, int) - Response data and status code
+        """
+        if response.status_code == 409:
+            logger.warning(
+                "Role ID %s already assigned to user %s", role_id, user_id
+            )
+            return {
+                "message": f"Role '{role_id}' already assigned to user"
+            }, 409
+        if response.status_code == 400:
+            logger.error("Bad request to Guardian: %s", response.text)
+            return {"message": "Invalid role or request data"}, 400
+        if response.status_code != 201:
+            logger.error("Error assigning role in Guardian: %s", response.text)
+            return {"message": "Error assigning role"}, 500
+
+        logger.info(
+            "Successfully assigned role ID %s to user %s", role_id, user_id
+        )
+        return response.json(), 201
+
     @require_jwt_auth()
     @check_access_required("list")
     def get(self, user_id):
@@ -487,39 +578,19 @@ class UserRolesListResource(Resource):
             return {"message": "user_id missing in JWT"}, 400
 
         # Verify that the requested user belongs to the same company
-        target_user = User.get_by_id(user_id)
-        if not target_user:
-            logger.warning("User with ID %s not found", user_id)
-            return {"message": "User not found"}, 404
-
-        if target_user.company_id != company_id:
-            logger.warning(
-                "User %s attempted to assign role for user %s from different company",
-                requesting_user_id,
-                user_id,
-            )
-            return {"message": "Access denied"}, 403
+        target_user, error = self._validate_user_access(user_id, company_id)
+        if error:
+            return error
 
         try:
             json_data = request.get_json(force=True)
         except BadRequest:
             json_data = None
 
-        if not json_data:
-            logger.error("No JSON data provided")
-            return {"message": "JSON data required"}, 400
-
-        # Accept either 'role' (for backward compatibility) or 'role_id'
-        role_id = json_data.get("role_id") or json_data.get("role")
-        if not role_id:
-            logger.error("Role ID field missing in request")
-            return {"message": "Role ID field is required"}, 400
-
-        if not isinstance(role_id, str) or not role_id.strip():
-            logger.error("Invalid role ID format: %s", role_id)
-            return {"message": "Role ID must be a non-empty string"}, 400
-
-        role_id = role_id.strip()
+        # Extract and validate role_id
+        role_id, error = self._extract_role_id(json_data)
+        if error:
+            return error
 
         guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
         if not guardian_url:
@@ -544,26 +615,7 @@ class UserRolesListResource(Resource):
             logger.error("Error contacting Guardian service: %s", str(e))
             return {"message": "Error assigning role"}, 500
 
-        if response.status_code == 409:
-            # Role already exists for this user
-            logger.warning(
-                "Role ID %s already assigned to user %s", role_id, user_id
-            )
-            return {
-                "message": f"Role '{role_id}' already assigned to user"
-            }, 409
-        elif response.status_code == 400:
-            # Bad request from Guardian (invalid role, etc.)
-            logger.error("Bad request to Guardian: %s", response.text)
-            return {"message": "Invalid role or request data"}, 400
-        elif response.status_code != 201:
-            logger.error("Error assigning role in Guardian: %s", response.text)
-            return {"message": "Error assigning role"}, 500
-
-        logger.info(
-            "Successfully assigned role ID %s to user %s", role_id, user_id
-        )
-        return response.json(), 201
+        return self._handle_guardian_response(response, role_id, user_id)
 
 
 class UserRolesResource(Resource):
@@ -636,7 +688,7 @@ class UserRolesResource(Resource):
         if response.status_code == 404:
             logger.warning("Role assignment %s not found", user_role_id)
             return {"message": "Role assignment not found"}, 404
-        elif response.status_code != 200:
+        if response.status_code != 200:
             logger.error(
                 "Error retrieving role from Guardian: %s", response.text
             )
@@ -719,7 +771,7 @@ class UserRolesResource(Resource):
         if get_response.status_code == 404:
             logger.warning("Role assignment %s not found", user_role_id)
             return {"message": "Role assignment not found"}, 404
-        elif get_response.status_code != 200:
+        if get_response.status_code != 200:
             logger.error(
                 "Error checking role in Guardian: %s", get_response.text
             )
@@ -752,7 +804,7 @@ class UserRolesResource(Resource):
                 "Role assignment %s not found for deletion", user_role_id
             )
             return {"message": "Role assignment not found"}, 404
-        elif response.status_code not in [204, 200]:
+        if response.status_code not in [204, 200]:
             logger.error(
                 "Error removing role from Guardian: %s", response.text
             )
