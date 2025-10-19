@@ -38,7 +38,7 @@ class ConfigResource(Resource):
             "LOG_LEVEL": os.getenv("LOG_LEVEL"),
             "DATABASE_URI": os.getenv("DATABASE_URI"),
             "GUARDIAN_SERVICE_URL": os.getenv("GUARDIAN_SERVICE_URL"),
-            "JWT_SECRET_KEY_SET": jwt_secret_is_set,
-            "INTERNAL_SECRET_KEY_SET": internal_secret_is_set,
+            "JWT_SECRET": jwt_secret_is_set,
+            "INTERNAL_AUTH_TOKEN": internal_secret_is_set,
         }
         return config, 200
