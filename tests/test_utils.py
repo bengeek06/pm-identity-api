@@ -2,9 +2,8 @@
 Tests for utility functions in app.utils module.
 """
 
-import os
-import pytest
 from unittest import mock
+
 import requests
 
 from app.utils import check_access

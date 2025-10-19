@@ -7,14 +7,13 @@ import os
 from pytest import fixture
 from dotenv import load_dotenv
 import jwt
-import uuid
+from app import create_app
+from app.models import db
 
 os.environ["FLASK_ENV"] = "testing"
 load_dotenv(
     dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env.test")
 )
-from app import create_app
-from app.models import db
 
 
 @fixture
@@ -33,11 +32,20 @@ def app():
 
 @fixture
 def client(app):
+    """
+    Fixture to create a test client for the Flask application.
+    This client can be used to simulate HTTP requests to the application.
+    """
     return app.test_client()
 
 
 @fixture
 def session(app):
+    """
+    Fixture to provide a database session for tests.
+    This session is scoped to the application context and can be used
+    to interact with the database during tests.
+    """
     with app.app_context():
         yield db.session
 

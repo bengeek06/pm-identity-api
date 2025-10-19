@@ -2,8 +2,8 @@
 Test to verify handling of different Guardian service response formats.
 """
 
-import uuid
 from unittest import mock
+
 from tests.conftest import get_init_db_payload, create_jwt_token
 
 

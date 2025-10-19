@@ -317,7 +317,7 @@ class TestHealthEndpoint:
             try:
                 response = client.get("/health")
                 results.append(response.status_code)
-            except Exception as e:
+            except RuntimeError as e:  # pylint: disable=broad-exception-caught
                 errors.append(str(e))
 
         # Start multiple threads making concurrent requests

@@ -3,7 +3,8 @@
 import uuid
 
 import pytest
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from marshmallow import ValidationError
+
 from app.models.organization_unit import OrganizationUnit
 from tests.conftest import create_jwt_token
 
@@ -232,18 +233,17 @@ def test_post_organization_unit_invalid_parent_id(client):
     assert "parent_id" in data["error"]
 
 
-def test_post_organization_unit_cycle(client):
+def test_post_organization_unit_cycle():
     """
     Test POST /organization_units with parent_id == self.id (cycle direct).
     """
-    fake_id = str(uuid.uuid4())
-    payload = {"name": "Cycle", "company_id": "c1", "parent_id": fake_id}
-    # On patch le schéma pour simuler current_id == parent_id
     from app.schemas.organization_unit_schema import OrganizationUnitSchema
 
+    fake_id = str(uuid.uuid4())
+    # On patch le schéma pour simuler current_id == parent_id
     org_unit_schema = OrganizationUnitSchema()
     org_unit_schema.context = {"current_id": fake_id}
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         org_unit_schema.validate_parent_id(fake_id)
 
 

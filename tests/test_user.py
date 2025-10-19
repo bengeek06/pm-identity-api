@@ -2,15 +2,15 @@
 Test cases for the UserResource class in the PM Identity API.
 """
 
-import uuid
 import os
-import unittest.mock as mock
+import uuid
+from unittest import mock
 
 import jwt
 import requests
+from werkzeug.security import generate_password_hash
 
 from app.models.user import User
-
 from tests.conftest import get_init_db_payload, create_jwt_token
 
 
@@ -651,8 +651,6 @@ def test_get_users_by_position_not_found(client):
 ##################################################
 # Test cases for POST /verify_password
 ##################################################
-
-from werkzeug.security import generate_password_hash
 
 
 def test_verify_password_success(client, session):
@@ -1635,7 +1633,7 @@ def test_get_user_role_not_found(client):
 
     user_role_id = str(uuid.uuid4())
 
-    with mock.patch("requests.get", return_value=mock_response) as mock_get:
+    with mock.patch("requests.get", return_value=mock_response):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
         ):
@@ -1672,7 +1670,7 @@ def test_get_user_role_wrong_user(client):
         "role_id": mock_role_id,
     }
 
-    with mock.patch("requests.get", return_value=mock_response) as mock_get:
+    with mock.patch("requests.get", return_value=mock_response):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
         ):
@@ -1807,7 +1805,7 @@ def test_delete_user_role_not_found(client):
 
     user_role_id = str(uuid.uuid4())
 
-    with mock.patch("requests.get", return_value=mock_response) as mock_get:
+    with mock.patch("requests.get", return_value=mock_response):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
         ):
@@ -1844,9 +1842,7 @@ def test_delete_user_role_wrong_user(client):
         "role_id": mock_role_id,
     }
 
-    with mock.patch(
-        "requests.get", return_value=mock_get_response
-    ) as mock_get:
+    with mock.patch("requests.get", return_value=mock_get_response):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
         ):

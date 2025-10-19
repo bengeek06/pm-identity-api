@@ -3,7 +3,7 @@ Test cases for the Position model and its associated endpoints.
 """
 
 import uuid
-import pytest
+
 from app.models.position import Position
 from app.models.organization_unit import OrganizationUnit
 from tests.conftest import create_jwt_token
@@ -402,7 +402,8 @@ def test_post_position_for_unit_invalid_unit_id(client):
 
 def test_post_position_for_unit_duplicate_title(client, session):
     """
-    Test POST /organization_units/<id>/positions with duplicate title in the same unit if unique constraint exists.
+    Test POST /organization_units/<id>/positions with duplicate title.
+    Checks if unique constraint exists in the same unit.
     """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())

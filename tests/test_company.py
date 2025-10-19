@@ -1015,7 +1015,10 @@ def test_get_by_name_sqlalchemy_error(client, monkeypatch):
 
     # On crée une instance factice avec une méthode first qui lève l'exception
     class FakeQuery:
+        """Fake query object that raises SQLAlchemyError on first()."""
+
         def first(self):
+            """Return first result, but raises SQLAlchemyError."""
             raise_sqlalchemy_error()
 
     monkeypatch.setattr(

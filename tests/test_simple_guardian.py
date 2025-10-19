@@ -5,11 +5,11 @@ Test simple pour vérifier le format de réponse Guardian.
 import uuid
 from unittest import mock
 
+from tests.test_user import get_init_db_payload, create_jwt_token
+
 
 def test_guardian_direct_list_format(client):
     """Test que le service Guardian retourne une liste directe."""
-    from tests.test_user import get_init_db_payload, create_jwt_token
-
     # Create test data
     init_db_payload = get_init_db_payload()
     resp = client.post("/init-db", json=init_db_payload)

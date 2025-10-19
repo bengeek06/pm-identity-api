@@ -194,5 +194,6 @@ def test_individual_role_jwt_forwarding(client):
                     timeout=5,
                 )
                 print(
-                    "✅ JWT forwarded in individual role DELETE (both GET verification and DELETE calls)"
+                    "✅ JWT forwarded in individual role DELETE "
+                    "(both GET verification and DELETE calls)"
                 )

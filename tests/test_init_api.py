@@ -16,7 +16,7 @@ def test_main_runs(monkeypatch):
     """
     called = {}
 
-    def fake_run(self, debug):
+    def fake_run(self, debug):  # pylint: disable=unused-argument
         called["run"] = True
         called["debug"] = debug
 
@@ -72,7 +72,7 @@ def test_error_handler_500(client):
 
     @client.application.route("/fail")
     def fail():
-        raise Exception("fail!")
+        raise RuntimeError("fail!")  # pylint: disable=broad-exception-raised
 
     response = client.get("/fail")
     assert response.status_code == 500

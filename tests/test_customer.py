@@ -489,7 +489,9 @@ def test_patch_customer_name_empty(client, customer_fixture):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    response = client.patch(f"/customers/{customer_fixture.id}", json={"name": ""})
+    response = client.patch(
+        f"/customers/{customer_fixture.id}", json={"name": ""}
+    )
     assert response.status_code == 400
     data = response.get_json()
     assert "name" in data["error"]
@@ -522,7 +524,8 @@ def test_patch_customer_email_too_long(client, customer_fixture):
     client.set_cookie("access_token", token, domain="localhost")
 
     response = client.patch(
-        f"/customers/{customer_fixture.id}", json={"email": "a@" + "b" * 100 + ".com"}
+        f"/customers/{customer_fixture.id}",
+        json={"email": "a@" + "b" * 100 + ".com"},
     )
     assert response.status_code == 400
     data = response.get_json()

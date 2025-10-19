@@ -31,7 +31,6 @@ def test_wsgi_forces_production_config(monkeypatch):
 
             def run(self):
                 """Mock run method to prevent actual server startup."""
-                pass
 
         return DummyApp()
 
