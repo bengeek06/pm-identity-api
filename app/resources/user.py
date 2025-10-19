@@ -12,11 +12,16 @@ gracefully.
 """
 
 import os
+
 from flask import request, g
+
 from marshmallow import ValidationError
+
 from werkzeug.exceptions import BadRequest
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import generate_password_hash
+
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
 from flask_restful import Resource
 
 import jwt
