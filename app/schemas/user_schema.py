@@ -75,7 +75,7 @@ class UserSchema(SQLAlchemyAutoSchema):
         LanguageEnum,
         by_value=True,
         load_default=LanguageEnum.EN,
-        dump_default=LanguageEnum.EN
+        dump_default=LanguageEnum.EN,
     )
     phone_number = fields.String(
         validate=validate.Length(max=50), allow_none=True

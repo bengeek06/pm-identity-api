@@ -18,11 +18,13 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app.models import db
 from app.logger import logger
 
+
 class LanguageEnum(enum.Enum):
     """Enumeration for supported user languages."""
 
     EN = "en"
     FR = "fr"
+
 
 class User(db.Model):
     """
