@@ -8,6 +8,7 @@ configuration through a REST endpoint.
 
 import os
 from flask_restful import Resource
+from app.utils import require_jwt_auth, check_access_required
 
 
 class ConfigResource(Resource):
@@ -19,6 +20,8 @@ class ConfigResource(Resource):
             Retrieve the current application configuration.
     """
 
+    @require_jwt_auth(extract_company_id=False)
+    @check_access_required("read")
     def get(self):
         """
         Retrieve the current application configuration.
