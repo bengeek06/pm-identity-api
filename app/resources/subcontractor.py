@@ -33,7 +33,7 @@ class SubcontractorListResource(Resource):
             Create a new subcontractor with the provided data.
     """
 
-    @require_jwt_auth(extract_company_id=False)
+    @require_jwt_auth()
     @check_access_required("list")
     def get(self):
         """
@@ -51,7 +51,7 @@ class SubcontractorListResource(Resource):
             logger.error("Error fetching subcontractors: %s", str(e))
             return {"message": "Error fetching subcontractors"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("create")
     def post(self):
         """
@@ -106,7 +106,7 @@ class SubcontractorResource(Resource):
             Delete a subcontractor by ID.
     """
 
-    @require_jwt_auth(extract_company_id=False)
+    @require_jwt_auth()
     @check_access_required("read")
     def get(self, subcontractor_id):
         """
@@ -132,7 +132,7 @@ class SubcontractorResource(Resource):
         schema = SubcontractorSchema(session=db.session)
         return schema.dump(subcontractor), 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def put(self, subcontractor_id):
         """
@@ -180,7 +180,7 @@ class SubcontractorResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def patch(self, subcontractor_id):
         """
@@ -232,7 +232,7 @@ class SubcontractorResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("delete")
     def delete(self, subcontractor_id):
         """

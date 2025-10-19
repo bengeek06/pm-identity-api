@@ -8,13 +8,11 @@ attributes, relationships, and utility methods for CRUD operations.
 The User model represents an individual user account within a company.
 """
 
-import os
 import uuid
 import enum
 
-import requests
 from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 from app.models import db
 from app.logger import logger
 
@@ -250,55 +248,3 @@ class User(db.Model):
         except SQLAlchemyError as e:
             logger.error("Error retrieving superusers: %s", str(e))
             return []
-
-    @classmethod
-    def ensure_superuser_exists(cls):
-        """
-        Ensure that at least one superuser exists in the database.
-
-        If the user table is completely empty, create a default superuser
-        with a generated UUID and a placeholder password.
-        """
-        try:
-            # Check if the user table is empty
-            user_count = cls.query.count()
-            if user_count == 0:
-                # TODO: Send request to guardian API to get superadmin role ID
-                guardian = os.getenv("GUARDIAN_SERVICE_URL")
-                response = requests.get(f"{guardian}/roles")
-                if response.status_code == 200:
-                    roles = response.json()
-                    superadmin_role = next(
-                        (
-                            role
-                            for role in roles
-                            if role["name"] == "superadmin"
-                        ),
-                        None,
-                    )
-                    if not superadmin_role:
-                        logger.error(
-                            "Superadmin role not found in Guardian API."
-                        )
-                        return None
-
-                superuser = cls(
-                    email="superuser@example.com",
-                    first_name="Super",
-                    last_name="User",
-                    role_id=superadmin_role["id"],
-                    hashed_password=generate_password_hash("SuperUser123!"),
-                )
-                db.session.add(superuser)
-                db.session.commit()
-                logger.info("Created default superuser (table was empty).")
-                return superuser
-
-            logger.info(
-                "User table is not empty, no need to create superuser."
-            )
-            return None
-        except Exception as e:
-            logger.error("Error creating default superuser: %s", str(e))
-            db.session.rollback()
-            return None

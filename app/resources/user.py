@@ -47,7 +47,7 @@ class UserListResource(Resource):
             Create a new user with the provided data.
     """
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("list")
     def get(self):
         """
@@ -74,7 +74,7 @@ class UserListResource(Resource):
             logger.error("Error fetching users: %s", str(e))
             return {"message": "Error fetching users"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("create")
     def post(self):
         """
@@ -174,7 +174,7 @@ class UserResource(Resource):
             Delete a user by ID.
     """
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("read")
     def get(self, user_id):
         """
@@ -196,7 +196,7 @@ class UserResource(Resource):
         schema = UserSchema()
         return schema.dump(user), 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def put(self, user_id):
         """
@@ -246,7 +246,7 @@ class UserResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def patch(self, user_id):
         """
@@ -301,7 +301,7 @@ class UserResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("delete")
     def delete(self, user_id):
         """
@@ -340,7 +340,7 @@ class UserPositionResource(Resource):
             Retrieve all users for a specific position.
     """
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("read")
     def get(self, position_id):
         """
@@ -376,7 +376,7 @@ class UserRolesListResource(Resource):
             Add a new role for a specific user.
     """
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("list")
     def get(self, user_id):
         """
@@ -460,7 +460,7 @@ class UserRolesListResource(Resource):
 
         return {"roles": roles}, 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("create")
     def post(self, user_id):
         """
@@ -577,7 +577,7 @@ class UserRolesResource(Resource):
             Remove a specific role assignment from a user.
     """
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("read")
     def get(self, user_id, user_role_id):
         """
@@ -660,7 +660,7 @@ class UserRolesResource(Resource):
         )
         return role_data, 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("delete")
     def delete(self, user_id, user_role_id):
         """

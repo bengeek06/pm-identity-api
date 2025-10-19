@@ -62,21 +62,18 @@ def extract_jwt_data():
     except jwt.InvalidTokenError as e:
         logger.warning(f"Invalid JWT token: {e}")
         return None
-    except Exception as e:
+    except (ValueError, KeyError) as e:
         logger.warning(f"JWT decode failed: {e}")
         return None
 
 
-def require_jwt_auth(extract_company_id=True):
+def require_jwt_auth():
     """
     Decorator to require JWT authentication and extract JWT information.
     Requires a valid JWT token in cookies - no fallback to headers.
 
-    Always stores user_id, company_id, and jwt_data in Flask's g object for use in view functions.
-    The extract_company_id parameter is kept for future compatibility (company hierarchy feature).
-
-    Args:
-        extract_company_id (bool): Reserved for future use in company hierarchy feature
+    Always extracts and stores user_id, company_id, and jwt_data in Flask's g object
+    for use in view functions. This ensures the JWT is decoded only once per request.
 
     Returns:
         Decorated function or error response
@@ -142,7 +139,7 @@ def require_jwt_auth(extract_company_id=True):
                     g.json_data = request.get_json()
                 else:
                     g.json_data = None
-            except Exception:
+            except (ValueError, TypeError, RuntimeError):
                 g.json_data = None
 
             return view_func(*args, **kwargs)
@@ -283,7 +280,7 @@ def check_access(user_id, resource_name, operation):
                 response_data.get("reason", "Unknown error"),
                 response_data.get("status", 200),
             )
-        elif response.status_code == 400:
+        if response.status_code == 400:
             # Guardian service returned a 400 with detailed error message
             try:
                 response_data = response.json()
@@ -295,21 +292,20 @@ def check_access(user_id, resource_name, operation):
                     response_data.get("reason", "Bad request"),
                     400,
                 )
-            except Exception as json_error:
+            except (ValueError, KeyError) as json_error:
                 logger.error(
                     f"Failed to parse Guardian 400 response as JSON: {json_error}"
                 )
                 return False, f"Guardian service error: {response.text}", 400
-        else:
-            # Other error status codes
-            logger.error(
-                f"Guardian service returned status {response.status_code}: {response.text}"
-            )
-            return (
-                False,
-                f"Guardian service error (status {response.status_code})",
-                response.status_code,
-            )
+        # Other error status codes
+        logger.error(
+            f"Guardian service returned status {response.status_code}: {response.text}"
+        )
+        return (
+            False,
+            f"Guardian service error (status {response.status_code})",
+            response.status_code,
+        )
 
     except requests.exceptions.Timeout:
         logger.error("Timeout when checking access with guardian service")
@@ -317,6 +313,6 @@ def check_access(user_id, resource_name, operation):
     except requests.exceptions.RequestException as e:
         logger.error(f"Error checking access: {e}")
         return False, "Internal server error", 500
-    except Exception as e:
+    except (ValueError, KeyError) as e:
         logger.error(f"Unexpected error checking access: {e}")
         return False, "Internal server error", 500

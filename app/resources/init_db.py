@@ -81,6 +81,154 @@ class InitDBResource(Resource):
         logger.debug("Database initialized: users found.")
         return {"initialized": True}, 200
 
+    @staticmethod
+    def _validate_init_data(json_data):
+        """
+        Validate the initialization data structure.
+
+        Args:
+            json_data (dict): The JSON payload from the request.
+
+        Returns:
+            tuple: (company_data, user_data, error_response)
+                - If valid: (dict, dict, None)
+                - If invalid: (None, None, (dict, int))
+        """
+        company_data = json_data.get("company")
+        user_data = json_data.get("user")
+        logger.info(f"user_data content: {user_data}")
+
+        if not company_data or not user_data:
+            logger.error("Initialization data missing required fields.")
+            return None, None, (
+                {"message": "'company' and 'user' data are required."},
+                400,
+            )
+        if not isinstance(company_data, dict):
+            logger.error("'company' must be a JSON object.")
+            return None, None, (
+                {"message": "'company' must be a JSON object."},
+                400,
+            )
+        if not isinstance(user_data, dict):
+            logger.error("'user' must be a JSON object.")
+            return None, None, (
+                {"message": "'user' must be a JSON object."},
+                400,
+            )
+
+        return company_data, user_data, None
+
+    @staticmethod
+    def _create_company(company_data, company_schema):
+        """
+        Create and persist a new company.
+
+        Args:
+            company_data (dict): Company data to create.
+            company_schema (CompanySchema): Schema for validation.
+
+        Returns:
+            Company: The created company instance.
+        """
+        logger.info(f"company_data type: {type(company_data)}")
+        logger.info("Starting identity database initialization.")
+        new_company = company_schema.load(company_data)
+        db.session.add(new_company)
+        db.session.flush()  # get new_company.id
+        return new_company
+
+    @staticmethod
+    def _create_organization_unit(company_id, org_unit_schema):
+        """
+        Create a default organization unit for the company.
+
+        Args:
+            company_id (str): ID of the parent company.
+            org_unit_schema (OrganizationUnitSchema): Schema for validation.
+
+        Returns:
+            OrganizationUnit: The created organization unit instance.
+        """
+        default_org_unit_data = {
+            "name": "default organization",
+            "company_id": company_id,
+        }
+        logger.info(
+            f"default_org_unit_data type: {type(default_org_unit_data)}"
+        )
+        logger.info("Creating default organization unit.")
+        new_org_unit = org_unit_schema.load(default_org_unit_data)
+        db.session.add(new_org_unit)
+        db.session.flush()  # get new_org_unit.id
+        return new_org_unit
+
+    @staticmethod
+    def _create_position(company_id, org_unit_id, position_schema):
+        """
+        Create a default administrator position.
+
+        Args:
+            company_id (str): ID of the parent company.
+            org_unit_id (str): ID of the organization unit.
+            position_schema (PositionSchema): Schema for validation.
+
+        Returns:
+            Position: The created position instance.
+        """
+        default_position_data = {
+            "title": "Administrator",
+            "company_id": company_id,
+            "organization_unit_id": org_unit_id,
+        }
+        logger.info(
+            f"default_position_data type: {type(default_position_data)}"
+        )
+        logger.info("Creating default position.")
+        new_position = position_schema.load(default_position_data)
+        db.session.add(new_position)
+        db.session.flush()  # get new_position.id
+        return new_position
+
+    @staticmethod
+    def _create_user(user_data, company_id, position_id, user_schema):
+        """
+        Create and persist the admin user.
+
+        Args:
+            user_data (dict): User data including password.
+            company_id (str): ID of the parent company.
+            position_id (str): ID of the user's position.
+            user_schema (UserSchema): Schema for validation.
+
+        Returns:
+            User: The created user instance.
+
+        Raises:
+            ValidationError: If password is missing.
+        """
+        logger.info(f"user_data type: {type(user_data)}")
+        logger.info("Creating user.")
+        user_data["company_id"] = company_id
+        user_data["position_id"] = position_id
+
+        if "password" in user_data:
+            user_data["hashed_password"] = generate_password_hash(
+                user_data["password"]
+            )
+            del user_data["password"]
+        else:
+            logger.error("User data missing 'password' field.")
+            raise ValidationError(
+                {"password": ["Missing data for required field."]}
+            )
+
+        new_user = user_schema.load(user_data)
+        new_user.company_id = company_id
+        new_user.position_id = position_id
+        db.session.add(new_user)
+        return new_user
+
     def post(self):
         """
         Initialize the database with a company, a default organization unit,
@@ -146,82 +294,31 @@ class InitDBResource(Resource):
             return {"message": "Identity already initialized"}, 403
 
         json_data = request.get_json()
+
+        # Validate input data
+        company_data, user_data, error = self._validate_init_data(json_data)
+        if error:
+            return error
+
+        # Create schemas
         company_schema = CompanySchema(session=db.session)
         org_unit_schema = OrganizationUnitSchema(session=db.session)
         position_schema = PositionSchema(session=db.session)
         user_schema = UserSchema(session=db.session)
 
-        # Extract and validate data
-        company_data = json_data.get("company")
-        user_data = json_data.get("user")
-        logger.info(f"user_data content: {user_data}")
-        if not company_data or not user_data:
-            logger.error("Initialization data missing required fields.")
-            return {
-                "message": ("'company' and 'user' data are required.")
-            }, 400
-        if not isinstance(company_data, dict):
-            logger.error("'company' must be a JSON object.")
-            return {"message": "'company' must be a JSON object."}, 400
-        if not isinstance(user_data, dict):
-            logger.error("'user' must be a JSON object.")
-            return {"message": "'user' must be a JSON object."}, 400
-
         try:
             with db.session.begin_nested():
-                # Create company
-                logger.info(f"company_data type: {type(company_data)}")
-                logger.info("Starting identity database initialization.")
-                new_company = company_schema.load(company_data)
-                db.session.add(new_company)
-                db.session.flush()  # get new_company.id
-
-                # Create default organization unit
-                default_org_unit_data = {
-                    "name": "default organization",
-                    "company_id": new_company.id,
-                }
-                logger.info(
-                    f"default_org_unit_data type: {type(default_org_unit_data)}"
+                # Create all entities in order
+                new_company = self._create_company(company_data, company_schema)
+                new_org_unit = self._create_organization_unit(
+                    new_company.id, org_unit_schema
                 )
-                logger.info("Creating default organization unit.")
-                new_org_unit = org_unit_schema.load(default_org_unit_data)
-                db.session.add(new_org_unit)
-                db.session.flush()  # get new_org_unit.id
-
-                # Create default position
-                default_position_data = {
-                    "title": "Administrator",
-                    "company_id": new_company.id,
-                    "organization_unit_id": new_org_unit.id,
-                }
-                logger.info(
-                    f"default_position_data type: {type(default_position_data)}"
+                new_position = self._create_position(
+                    new_company.id, new_org_unit.id, position_schema
                 )
-                logger.info("Creating default position.")
-                new_position = position_schema.load(default_position_data)
-                db.session.add(new_position)
-                db.session.flush()  # get new_position.id
-
-                # Prepare user data
-                logger.info(f"user_data type: {type(user_data)}")
-                logger.info("Creating user.")
-                user_data["company_id"] = new_company.id
-                user_data["position_id"] = new_position.id
-                if "password" in user_data:
-                    user_data["hashed_password"] = generate_password_hash(
-                        user_data["password"]
-                    )
-                    del user_data["password"]
-                else:
-                    logger.error("User data missing 'password' field.")
-                    raise ValidationError(
-                        {"password": ["Missing data for required field."]}
-                    )
-                new_user = user_schema.load(user_data)
-                new_user.company_id = new_company.id
-                new_user.position_id = new_position.id
-                db.session.add(new_user)
+                new_user = self._create_user(
+                    user_data, new_company.id, new_position.id, user_schema
+                )
 
             db.session.commit()
             return {

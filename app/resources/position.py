@@ -35,7 +35,7 @@ class PositionListResource(Resource):
             Create a new position with the provided data.
     """
 
-    @require_jwt_auth(extract_company_id=False)
+    @require_jwt_auth()
     @check_access_required("list")
     def get(self):
         """
@@ -53,7 +53,7 @@ class PositionListResource(Resource):
             logger.error("Error fetching positions: %s", str(e))
             return {"message": "Error fetching positions"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("create")
     def post(self):
         """
@@ -123,7 +123,7 @@ class PositionResource(Resource):
             Delete a position by ID.
     """
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("read")
     def get(self, position_id):
         """
@@ -146,7 +146,7 @@ class PositionResource(Resource):
         schema = PositionSchema(session=db.session)
         return schema.dump(position), 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def put(self, position_id):
         """
@@ -189,7 +189,7 @@ class PositionResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def patch(self, position_id):
         """
@@ -232,7 +232,7 @@ class PositionResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("delete")
     def delete(self, position_id):
         """
@@ -272,7 +272,7 @@ class OrganizationUnitPositionsResource(Resource):
             Create a new position for a given organization unit.
     """
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("list")
     def get(self, unit_id):
         """
@@ -290,7 +290,7 @@ class OrganizationUnitPositionsResource(Resource):
         schema = PositionSchema(many=True)
         return schema.dump(positions), 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("create")
     def post(self, unit_id):
         """

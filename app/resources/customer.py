@@ -34,7 +34,7 @@ class CustomerListResource(Resource):
             Create a new customer with the provided data.
     """
 
-    @require_jwt_auth(extract_company_id=False)
+    @require_jwt_auth()
     @check_access_required("list")
     def get(self):
         """
@@ -50,7 +50,7 @@ class CustomerListResource(Resource):
         customer_schema = CustomerSchema(session=db.session, many=True)
         return customer_schema.dump(customers), 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("create")
     def post(self):
         """
@@ -105,7 +105,7 @@ class CustomerResource(Resource):
             Delete a customer by ID.
     """
 
-    @require_jwt_auth(extract_company_id=False)
+    @require_jwt_auth()
     @check_access_required("read")
     def get(self, customer_id):
         """
@@ -128,7 +128,7 @@ class CustomerResource(Resource):
         customer_schema = CustomerSchema(session=db.session)
         return customer_schema.dump(customer), 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def put(self, customer_id):
         """
@@ -171,7 +171,7 @@ class CustomerResource(Resource):
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def patch(self, customer_id):
         """
@@ -214,7 +214,7 @@ class CustomerResource(Resource):
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("delete")
     def delete(self, customer_id):
         """

@@ -112,14 +112,15 @@ Database URL and secrets are configured via environment variables (see `env.exam
 
 The service reads the following variables (see env.example):
 
-| Variable              | Description |
-|-----------------------|-------------|
-| FLASK_ENV             | Environment (development, testing, staging, production) |
-| LOG_LEVEL             | Logging level (DEBUG, INFO, etc.) |
-| DATABASE_URL          | SQLAlchemy database URL |
-| GUARDIAN_SERVICE_URL  | External guardian service base URL (for RBAC verification) |
-| JWT_SECRET            | Secret used to sign JWTs |
-| INTERNAL_AUTH_TOKEN   | Shared secret with auth service |
+| Variable                  | Description |
+|---------------------------|-------------|
+| FLASK_ENV                 | Environment (development, testing, staging, production) |
+| LOG_LEVEL                 | Logging level (DEBUG, INFO, etc.) |
+| DATABASE_URL              | SQLAlchemy database URL |
+| GUARDIAN_SERVICE_URL      | External guardian service base URL (for RBAC verification) |
+| GUARDIAN_SERVICE_TIMEOUT  | Timeout in seconds for Guardian service API calls (default: 5) |
+| JWT_SECRET                | Secret used to sign JWTs |
+| INTERNAL_AUTH_TOKEN       | Shared secret with auth service |
 
 ---
 

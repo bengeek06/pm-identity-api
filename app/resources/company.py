@@ -34,7 +34,7 @@ class CompanyListResource(Resource):
             Create a new company with the provided data.
     """
 
-    @require_jwt_auth(extract_company_id=False)
+    @require_jwt_auth()
     @check_access_required("list")
     def get(self):
         """
@@ -54,7 +54,7 @@ class CompanyListResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("create")
     def post(self):
         """
@@ -109,7 +109,7 @@ class CompanyResource(Resource):
             Delete a specific company by its ID.
     """
 
-    @require_jwt_auth(extract_company_id=False)
+    @require_jwt_auth()
     @check_access_required("read")
     def get(self, company_id):
         """
@@ -132,7 +132,7 @@ class CompanyResource(Resource):
         company_schema = CompanySchema(session=db.session)
         return company_schema.dump(company), 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def put(self, company_id):
         """
@@ -177,7 +177,7 @@ class CompanyResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def patch(self, company_id):
         """
@@ -222,7 +222,7 @@ class CompanyResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("delete")
     def delete(self, company_id):
         """

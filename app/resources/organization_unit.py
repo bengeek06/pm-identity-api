@@ -34,7 +34,7 @@ class OrganizationUnitListResource(Resource):
             Create a new organization unit with the provided data.
     """
 
-    @require_jwt_auth(extract_company_id=False)
+    @require_jwt_auth()
     @check_access_required("list")
     def get(self):
         """
@@ -50,7 +50,7 @@ class OrganizationUnitListResource(Resource):
         org_unit_schema = OrganizationUnitSchema(session=db.session, many=True)
         return org_unit_schema.dump(org_units), 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("create")
     def post(self):
         """
@@ -110,7 +110,7 @@ class OrganizationUnitResource(Resource):
             descendants.
     """
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("read")
     def get(self, unit_id):
         """
@@ -134,7 +134,7 @@ class OrganizationUnitResource(Resource):
         org_unit_schema = OrganizationUnitSchema(session=db.session)
         return org_unit_schema.dump(org_unit), 200
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def put(self, unit_id):
         """
@@ -186,7 +186,7 @@ class OrganizationUnitResource(Resource):
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("update")
     def patch(self, unit_id):
         """
@@ -239,7 +239,7 @@ class OrganizationUnitResource(Resource):
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("delete")
     def delete(self, unit_id):
         """
@@ -307,7 +307,7 @@ class OrganizationUnitChildrenResource(Resource):
             Retrieve all children of a specific organization unit.
     """
 
-    @require_jwt_auth(extract_company_id=True)
+    @require_jwt_auth()
     @check_access_required("list")
     def get(self, unit_id):
         """
