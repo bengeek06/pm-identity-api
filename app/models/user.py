@@ -10,6 +10,7 @@ The User model represents an individual user account within a company.
 
 import os
 import uuid
+import enum
 
 import requests
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,6 +18,11 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app.models import db
 from app.logger import logger
 
+class LanguageEnum(enum.Enum):
+    """Enumeration for supported user languages."""
+
+    EN = "en"
+    FR = "fr"
 
 class User(db.Model):
     """
@@ -32,6 +38,7 @@ class User(db.Model):
         hashed_password (str): Hashed password for authentication.
         first_name (str): Optional first name of the user.
         last_name (str): Optional last name of the user.
+        language (LanguageEnum): Preferred language of the user.
         phone_number (str): Optional phone number of the user.
         avatar_url (str): Optional URL to the user's avatar.
         is_active (bool): Whether the user account is active.
@@ -52,6 +59,9 @@ class User(db.Model):
     hashed_password = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
+    language = db.Column(
+        db.Enum(LanguageEnum), default=LanguageEnum.EN, nullable=False
+    )
     phone_number = db.Column(db.String(50), nullable=True)
     avatar_url = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
@@ -59,7 +69,7 @@ class User(db.Model):
     last_login_at = db.Column(db.DateTime, nullable=True)
     # Allow nullable company_id for superuser creation
     company_id = db.Column(
-        db.String(36), db.ForeignKey("company.id"), nullable=True
+        db.String(36), db.ForeignKey("company.id"), nullable=True, index=True
     )
     position_id = db.Column(
         db.String(36), db.ForeignKey("position.id"), nullable=True

@@ -13,7 +13,7 @@ and output.
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow import ValidationError, validates, fields, validate
 
-from app.models.user import User
+from app.models.user import User, LanguageEnum
 from app.logger import logger
 
 
@@ -31,10 +31,11 @@ class UserSchema(SQLAlchemyAutoSchema):
         hashed_password (str): Hashed password for authentication (load only).
         first_name (str, optional): First name of the user.
         last_name (str, optional): Last name of the user.
+        language (str): Preferred language of the user (en or fr).
         phone_number (str, optional): Phone number of the user.
         avatar_url (str, optional): URL to the user's avatar.
         is_active (bool): Whether the user account is active.
-        is_verified (bool): Whether the user's email is verified.
+        is_verifed (bool): Whether the user's email is verified.
         last_login_at (datetime, optional): Timestamp of the user's last login.
         company_id (str): Foreign key referencing the associated company (UUID).
         position_id (str, optional): Foreign key referencing the user's position (UUID).
@@ -70,6 +71,12 @@ class UserSchema(SQLAlchemyAutoSchema):
     )
     first_name = fields.String(validate=validate.Length(max=50))
     last_name = fields.String(validate=validate.Length(max=50))
+    language = fields.Enum(
+        LanguageEnum,
+        by_value=True,
+        load_default=LanguageEnum.EN,
+        dump_default=LanguageEnum.EN
+    )
     phone_number = fields.String(
         validate=validate.Length(max=50), allow_none=True
     )
@@ -77,7 +84,7 @@ class UserSchema(SQLAlchemyAutoSchema):
         validate=validate.Length(max=255), allow_none=True
     )
     is_active = fields.Boolean(load_default=True, dump_default=True)
-    is_verified = fields.Boolean(load_default=False, dump_default=False)
+    is_verifed = fields.Boolean(load_default=False, dump_default=False)
     last_login_at = fields.DateTime(allow_none=True)
     # Allow nullable company_id for superuser creation
     company_id = fields.String(
