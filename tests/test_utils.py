@@ -67,6 +67,7 @@ class TestCheckAccess:
                         'resource_name': 'user',
                         'operation': 'list'
                     },
+                    headers={},
                     timeout=5.0
                 )
 
@@ -199,5 +200,76 @@ class TestCheckAccess:
                         'resource_name': 'user',
                         'operation': 'list'
                     },
+                    headers={},
                     timeout=10.0
                 )
+
+    def test_check_access_forwards_jwt_cookie(self):
+        """Test that check_access forwards JWT cookie to Guardian service."""
+        mock_response = mock.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_granted": True,
+            "reason": "Success",
+            "status": 200
+        }
+
+        # Mock Flask request context with JWT cookie
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context('/', headers={'Cookie': 'access_token=test-jwt-token'}):
+            with mock.patch('requests.post', return_value=mock_response) as mock_post:
+                with mock.patch.dict('os.environ', {
+                    'FLASK_ENV': 'production',
+                    'GUARDIAN_SERVICE_URL': 'http://guardian:5000'
+                }):
+                    check_access('user123', 'user', 'list')
+                    
+                    # Verify the JWT cookie was forwarded in headers
+                    mock_post.assert_called_once_with(
+                        'http://guardian:5000/check-access',
+                        json={
+                            'user_id': 'user123',
+                            'service': 'identity',
+                            'resource_name': 'user',
+                            'operation': 'list'
+                        },
+                        headers={'Cookie': 'access_token=test-jwt-token'},
+                        timeout=5.0
+                    )
+
+    def test_check_access_without_jwt_cookie(self):
+        """Test that check_access works without JWT cookie (no headers added)."""
+        mock_response = mock.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_granted": True,
+            "reason": "Success",
+            "status": 200
+        }
+
+        # Mock Flask request context without JWT cookie
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context('/'):
+            with mock.patch('requests.post', return_value=mock_response) as mock_post:
+                with mock.patch.dict('os.environ', {
+                    'FLASK_ENV': 'production',
+                    'GUARDIAN_SERVICE_URL': 'http://guardian:5000'
+                }):
+                    check_access('user123', 'user', 'list')
+                    
+                    # Verify no Cookie header was added when JWT token is missing
+                    mock_post.assert_called_once_with(
+                        'http://guardian:5000/check-access',
+                        json={
+                            'user_id': 'user123',
+                            'service': 'identity',
+                            'resource_name': 'user',
+                            'operation': 'list'
+                        },
+                        headers={},
+                        timeout=5.0
+                    )

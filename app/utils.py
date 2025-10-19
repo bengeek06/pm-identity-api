@@ -230,6 +230,18 @@ def check_access(user_id, resource_name, operation):
 
     try:
         timeout = float(os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5"))
+        
+        # Get JWT token from cookies to forward to Guardian service (if in request context)
+        headers = {}
+        try:
+            jwt_token = request.cookies.get("access_token")
+            if jwt_token:
+                headers["Cookie"] = f"access_token={jwt_token}"
+                logger.debug("Forwarding JWT cookie to Guardian service")
+        except RuntimeError:
+            # No request context available (e.g., during testing without Flask app context)
+            logger.debug("No request context available, skipping JWT cookie forwarding")
+        
         response = requests.post(
             f"{guardian_service_url}/check-access",
             json={
@@ -238,6 +250,7 @@ def check_access(user_id, resource_name, operation):
                 "resource_name": resource_name,
                 "operation": operation,
             },
+            headers=headers,
             timeout=timeout,
         )
         
