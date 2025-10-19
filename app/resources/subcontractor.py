@@ -18,6 +18,7 @@ from app.models import db
 from app.logger import logger
 from app.models.subcontractor import Subcontractor
 from app.schemas.subcontractor_schema import SubcontractorSchema
+from app.utils import require_jwt_auth, check_access_required
 
 
 class SubcontractorListResource(Resource):
@@ -32,6 +33,8 @@ class SubcontractorListResource(Resource):
             Create a new subcontractor with the provided data.
     """
 
+    @require_jwt_auth(extract_company_id=False)
+    @check_access_required("list")
     def get(self):
         """
         Retrieve all subcontractors.
@@ -48,6 +51,8 @@ class SubcontractorListResource(Resource):
             logger.error("Error fetching subcontractors: %s", str(e))
             return {"message": "Error fetching subcontractors"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("create")
     def post(self):
         """
         Create a new subcontractor.
@@ -101,6 +106,8 @@ class SubcontractorResource(Resource):
             Delete a subcontractor by ID.
     """
 
+    @require_jwt_auth(extract_company_id=False)
+    @check_access_required("read")
     def get(self, subcontractor_id):
         """
         Retrieve a subcontractor by ID.
@@ -125,6 +132,8 @@ class SubcontractorResource(Resource):
         schema = SubcontractorSchema(session=db.session)
         return schema.dump(subcontractor), 200
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("update")
     def put(self, subcontractor_id):
         """
         Update a subcontractor by ID.
@@ -171,6 +180,8 @@ class SubcontractorResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("update")
     def patch(self, subcontractor_id):
         """
         Partially update a subcontractor by ID.
@@ -221,6 +232,8 @@ class SubcontractorResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("delete")
     def delete(self, subcontractor_id):
         """
         Delete a subcontractor by ID.

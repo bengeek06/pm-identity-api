@@ -4,7 +4,7 @@ Tesst cases for the Subcontractor resource in the PM Identity API.
 
 import uuid
 from app.models.subcontractor import Subcontractor
-from app.schemas.subcontractor_schema import SubcontractorSchema
+from tests.conftest import create_jwt_token
 
 ##################################################
 # Test cases for GET /subcontractors
@@ -15,6 +15,11 @@ def test_get_subcontractors_empty(client, session):
     """
     Test GET /subcontractors when there are no subcontractors.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     response = client.get("/subcontractors")
     assert response.status_code == 200
     data = response.get_json()
@@ -24,6 +29,10 @@ def test_get_subcontractors_empty(client, session):
 
 def test_get_subcontractors_single(client, session):
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     sub = Subcontractor(name="SubA", company_id=company_id)
     session.add(sub)
     session.commit()
@@ -41,6 +50,10 @@ def test_get_subcontractors_multiple(client, session):
     Test GET /subcontractors with multiple subcontractors.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     sub1 = Subcontractor(name="SubA", company_id=company_id)
     sub2 = Subcontractor(name="SubB", company_id=company_id)
     session.add_all([sub1, sub2])
@@ -63,6 +76,10 @@ def test_post_subcontractor_success(client, session):
     Test POST /subcontractors with valid data.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {"name": "NewSub", "company_id": company_id}
     response = client.post("/subcontractors", json=payload)
     assert response.status_code == 201, response.get_json()
@@ -77,6 +94,10 @@ def test_post_subcontractor_missing_name(client, session):
     Test POST /subcontractors with missing required 'name'.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {"company_id": company_id}
     response = client.post("/subcontractors", json=payload)
     assert response.status_code == 400
@@ -89,6 +110,10 @@ def test_post_subcontractor_duplicate_name(client, session):
     Test POST /subcontractors with duplicate name if unique constraint exists.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     sub = Subcontractor(name="DupSub", company_id=company_id)
     session.add(sub)
     session.commit()
@@ -108,6 +133,10 @@ def test_get_subcontractor_by_id_success(client, session):
     Test GET /subcontractors/<id> for an existing subcontractor.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     sub = Subcontractor(name="SubGet", company_id=company_id)
     session.add(sub)
     session.commit()
@@ -123,6 +152,11 @@ def test_get_subcontractor_by_id_not_found(client, session):
     """
     Test GET /subcontractors/<id> for a non-existent subcontractor.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     response = client.get(f"/subcontractors/{fake_id}")
     assert response.status_code == 404
@@ -140,6 +174,10 @@ def test_put_subcontractor_success(client, session):
     Test PUT /subcontractors/<id> for a full update.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     sub = Subcontractor(name="OldSub", company_id=company_id)
     session.add(sub)
     session.commit()
@@ -155,6 +193,11 @@ def test_put_subcontractor_not_found(client, session):
     """
     Test PUT /subcontractors/<id> for a non-existent subcontractor.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     payload = {"name": "NoSub"}
     response = client.put(f"/subcontractors/{fake_id}", json=payload)
@@ -168,6 +211,10 @@ def test_put_subcontractor_missing_name(client, session):
     Test PUT /subcontractors/<id> with missing required 'name'.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     sub = Subcontractor(name="ToBeUpdated", company_id=company_id)
     session.add(sub)
     session.commit()
@@ -188,6 +235,10 @@ def test_patch_subcontractor_success(client, session):
     Test PATCH /subcontractors/<id> for a partial update (name only).
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     sub = Subcontractor(name="PatchSub", company_id=company_id)
     session.add(sub)
     session.commit()
@@ -203,6 +254,11 @@ def test_patch_subcontractor_not_found(client, session):
     """
     Test PATCH /subcontractors/<id> for a non-existent subcontractor.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     payload = {"name": "NoPatch"}
     response = client.patch(f"/subcontractors/{fake_id}", json=payload)
@@ -216,6 +272,10 @@ def test_patch_subcontractor_missing_name(client, session):
     Test PATCH /subcontractors/<id> with missing required 'name'.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     sub = Subcontractor(name="PatchMissing", company_id=company_id)
     session.add(sub)
     session.commit()
@@ -238,6 +298,10 @@ def test_delete_subcontractor_success(client, session):
     Test DELETE /subcontractors/<id> for an existing subcontractor.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     sub = Subcontractor(name="ToDelete", company_id=company_id)
     session.add(sub)
     session.commit()
@@ -254,6 +318,11 @@ def test_delete_subcontractor_not_found(client, session):
     """
     Test DELETE /subcontractors/<id> for a non-existent subcontractor.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     response = client.delete(f"/subcontractors/{fake_id}")
     assert response.status_code == 404
