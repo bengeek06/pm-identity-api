@@ -71,7 +71,7 @@ def require_jwt_auth(extract_company_id=True):
     """
     Decorator to require JWT authentication and extract JWT information.
     Requires a valid JWT token in cookies - no fallback to headers.
-    
+
     Always stores user_id, company_id, and jwt_data in Flask's g object for use in view functions.
     The extract_company_id parameter is kept for future compatibility (company hierarchy feature).
 
@@ -80,10 +80,10 @@ def require_jwt_auth(extract_company_id=True):
 
     Returns:
         Decorated function or error response
-        
+
     Stores in g:
         - g.user_id: User ID from JWT
-        - g.company_id: Company ID from JWT  
+        - g.company_id: Company ID from JWT
         - g.jwt_data: Complete JWT payload
         - g.json_data: Original request JSON data (unmodified)
     """
@@ -135,7 +135,7 @@ def require_jwt_auth(extract_company_id=True):
             g.company_id = company_id
             g.user_id = user_id
             g.jwt_data = jwt_data
-            
+
             # Store original JSON data in g without modification
             try:
                 if request.content_length and request.content_length > 0:

@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.models.company import Company
 from tests.conftest import create_jwt_token
 
+
 ##################################################
 # Test cases for GET /companies
 ##################################################
@@ -22,7 +23,7 @@ def test_get_companies_empty(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     response = client.get("/companies")
     assert response.status_code == 200
     assert response.is_json
@@ -39,7 +40,7 @@ def test_get_companies_single(client, session):
     )
     session.add(company)
     session.commit()
-    
+
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -68,7 +69,7 @@ def test_get_companies_multiple(client, session):
     ]
     session.add_all(companies)
     session.commit()
-    
+
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -94,7 +95,7 @@ def test_get_companies_content_type(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     response = client.get("/companies")
     assert response.status_code == 200
     assert response.headers["Content-Type"].startswith("application/json")
@@ -112,13 +113,13 @@ def test_post_company_success(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     payload = {
         "name": "Nouvelle Société",
         "description": "Entreprise de test",
         "city": "Paris",
     }
-    
+
     response = client.post("/companies", json=payload)
     assert response.status_code == 201
     data = response.get_json()
@@ -137,7 +138,7 @@ def test_post_company_missing_name(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     payload = {"description": "Entreprise sans nom"}
     response = client.post("/companies", json=payload)
     assert response.status_code == 400
@@ -155,7 +156,7 @@ def test_post_company_unknown_field(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     payload = {"name": "Société Mystère", "unknown_field": "valeur"}
     response = client.post("/companies", json=payload)
     assert response.status_code == 400
@@ -173,7 +174,7 @@ def test_post_company_duplicate_name(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="UniqueName")
     session.add(company)
     session.commit()
@@ -204,7 +205,7 @@ def test_post_integrity_error(client, monkeypatch):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     response = client.post("/companies", json={"name": "Test Company"})
     assert response.status_code == 400
 
@@ -241,7 +242,7 @@ def test_get_company_by_id_success(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="FindMe", description="To be found")
     session.add(company)
     session.commit()
@@ -263,7 +264,7 @@ def test_get_company_by_id_not_found(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     response = client.get("/companies/doesnotexist")
     assert response.status_code == 404
     data = response.get_json()
@@ -283,7 +284,7 @@ def test_put_company_success(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="OldName", description="Old desc")
     session.add(company)
     session.commit()
@@ -311,7 +312,7 @@ def test_put_company_not_found(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     payload = {"name": "DoesNotExist"}
     response = client.put("/companies/doesnotexist", json=payload)
     assert response.status_code == 404
@@ -329,7 +330,7 @@ def test_put_company_missing_name(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ToBeUpdated")
     session.add(company)
     session.commit()
@@ -351,7 +352,7 @@ def test_put_company_unknown_field(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ToBeUpdated")
     session.add(company)
     session.commit()
@@ -373,7 +374,7 @@ def test_put_company_duplicate_name(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company1 = Company(name="FirstCompany")
     company2 = Company(name="SecondCompany")
     session.add_all([company1, company2])
@@ -395,7 +396,7 @@ def test_put_company_integrity_error(client, session, monkeypatch):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ToBeUpdated")
     session.add(company)
     session.commit()
@@ -419,7 +420,7 @@ def test_put_company_sqlalchemy_error(client, session, monkeypatch):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ToBeUpdated")
     session.add(company)
     session.commit()
@@ -446,7 +447,7 @@ def test_patch_company_success(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="PatchMe", description="Old desc", city="Paris")
     session.add(company)
     session.commit()
@@ -470,7 +471,7 @@ def test_patch_company_not_found(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     payload = {"description": "Does not matter"}
     response = client.patch("/companies/doesnotexist", json=payload)
     assert response.status_code == 404
@@ -488,7 +489,7 @@ def test_patch_company_unknown_field(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="PatchMe")
     session.add(company)
     session.commit()
@@ -510,7 +511,7 @@ def test_patch_company_integrity_error(client, session, monkeypatch):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="PatchMe")
     session.add(company)
     session.commit()
@@ -534,7 +535,7 @@ def test_patch_company_sqlalchemy_error(client, session, monkeypatch):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="PatchMe")
     session.add(company)
     session.commit()
@@ -558,7 +559,7 @@ def test_patch_company_name_unique(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company1 = Company(name="UniqueName")
     company2 = Company(name="OtherName")
     session.add_all([company1, company2])
@@ -578,7 +579,7 @@ def test_patch_company_name_empty(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -594,7 +595,7 @@ def test_patch_company_description_too_long(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -612,7 +613,7 @@ def test_patch_company_logo_url_invalid(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -630,7 +631,7 @@ def test_patch_company_logo_url_too_long(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -650,7 +651,7 @@ def test_patch_company_website_invalid(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -668,7 +669,7 @@ def test_patch_company_website_too_long(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -707,7 +708,7 @@ def test_patch_company_phone_number_too_long(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -728,7 +729,7 @@ def test_patch_company_email_invalid(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -746,7 +747,7 @@ def test_patch_company_email_too_long(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -768,7 +769,7 @@ def test_patch_company_address_too_long(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -786,7 +787,7 @@ def test_patch_company_postal_code_too_long(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -807,7 +808,7 @@ def test_patch_company_city_too_long(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -825,7 +826,7 @@ def test_patch_company_country_too_long(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="ValidName")
     session.add(company)
     session.commit()
@@ -850,7 +851,7 @@ def test_delete_company_success(client, session):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="DeleteMe")
     session.add(company)
     session.commit()
@@ -871,7 +872,7 @@ def test_delete_company_not_found(client):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     response = client.delete("/companies/doesnotexist")
     assert response.status_code == 404
     data = response.get_json()
@@ -888,7 +889,7 @@ def test_delete_company_integrity_error(client, session, monkeypatch):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="DeleteMe")
     session.add(company)
     session.commit()
@@ -911,7 +912,7 @@ def test_delete_company_sqlalchemy_error(client, session, monkeypatch):
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
-    
+
     company = Company(name="DeleteMe")
     session.add(company)
     session.commit()
