@@ -456,6 +456,9 @@ def test_patch_customer_unknown_field(client, session, customer):
 
 
 def test_patch_customer_name_too_long(client, session, customer):
+    """
+    Test PATCH /customers/{id} with name exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -475,6 +478,9 @@ def test_patch_customer_name_too_long(client, session, customer):
 
 
 def test_patch_customer_name_empty(client, session, customer):
+    """
+    Test PATCH /customers/{id} with empty name.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -487,6 +493,9 @@ def test_patch_customer_name_empty(client, session, customer):
 
 
 def test_patch_customer_email_invalid(client, session, customer):
+    """
+    Test PATCH /customers/{id} with invalid email format.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -501,6 +510,9 @@ def test_patch_customer_email_invalid(client, session, customer):
 
 
 def test_patch_customer_email_too_long(client, session, customer):
+    """
+    Test PATCH /customers/{id} with email exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -515,6 +527,9 @@ def test_patch_customer_email_too_long(client, session, customer):
 
 
 def test_patch_customer_contact_person_too_long(client, session, customer):
+    """
+    Test PATCH /customers/{id} with contact_person exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -529,6 +544,9 @@ def test_patch_customer_contact_person_too_long(client, session, customer):
 
 
 def test_patch_customer_phone_number_too_long(client, session, customer):
+    """
+    Test PATCH /customers/{id} with phone_number exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -543,6 +561,9 @@ def test_patch_customer_phone_number_too_long(client, session, customer):
 
 
 def test_patch_customer_phone_number_not_digits(client, session, customer):
+    """
+    Test PATCH /customers/{id} with phone_number containing non-digit characters.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -557,6 +578,9 @@ def test_patch_customer_phone_number_not_digits(client, session, customer):
 
 
 def test_patch_customer_address_too_long(client, session, customer):
+    """
+    Test PATCH /customers/{id} with address exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -571,6 +595,9 @@ def test_patch_customer_address_too_long(client, session, customer):
 
 
 def test_patch_customer_company_id_invalid(client, session, customer):
+    """
+    Test PATCH /customers/{id} with invalid company_id.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -585,6 +612,9 @@ def test_patch_customer_company_id_invalid(client, session, customer):
 
 
 def test_patch_customer_company_id_not_int(client, session, customer):
+    """
+    Test PATCH /customers/{id} with non-integer company_id.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)

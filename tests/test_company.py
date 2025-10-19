@@ -575,6 +575,9 @@ def test_patch_company_name_unique(client, session):
 
 
 def test_patch_company_name_empty(client, session):
+    """
+    Test PATCH /companies/{id} with empty name.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -591,6 +594,9 @@ def test_patch_company_name_empty(client, session):
 
 
 def test_patch_company_description_too_long(client, session):
+    """
+    Test PATCH /companies/{id} with description exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -609,6 +615,9 @@ def test_patch_company_description_too_long(client, session):
 
 
 def test_patch_company_logo_url_invalid(client, session):
+    """
+    Test PATCH /companies/{id} with invalid logo URL format.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -627,6 +636,9 @@ def test_patch_company_logo_url_invalid(client, session):
 
 
 def test_patch_company_logo_url_too_long(client, session):
+    """
+    Test PATCH /companies/{id} with logo_url exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -647,6 +659,9 @@ def test_patch_company_logo_url_too_long(client, session):
 
 
 def test_patch_company_website_invalid(client, session):
+    """
+    Test PATCH /companies/{id} with invalid website URL format.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -665,6 +680,9 @@ def test_patch_company_website_invalid(client, session):
 
 
 def test_patch_company_website_too_long(client, session):
+    """
+    Test PATCH /companies/{id} with website URL exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -685,6 +703,9 @@ def test_patch_company_website_too_long(client, session):
 
 
 def test_patch_company_phone_number_not_digits(client, session):
+    """
+    Test PATCH /companies/{id} with phone_number containing non-digit characters.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -704,6 +725,9 @@ def test_patch_company_phone_number_not_digits(client, session):
 
 
 def test_patch_company_phone_number_too_long(client, session):
+    """
+    Test PATCH /companies/{id} with phone_number exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -725,6 +749,9 @@ def test_patch_company_phone_number_too_long(client, session):
 
 
 def test_patch_company_email_invalid(client, session):
+    """
+    Test PATCH /companies/{id} with invalid email format.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -743,6 +770,9 @@ def test_patch_company_email_invalid(client, session):
 
 
 def test_patch_company_email_too_long(client, session):
+    """
+    Test PATCH /companies/{id} with email exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -765,6 +795,9 @@ def test_patch_company_email_too_long(client, session):
 
 
 def test_patch_company_address_too_long(client, session):
+    """
+    Test PATCH /companies/{id} with address exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -783,6 +816,9 @@ def test_patch_company_address_too_long(client, session):
 
 
 def test_patch_company_postal_code_too_long(client, session):
+    """
+    Test PATCH /companies/{id} with postal_code exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -804,6 +840,9 @@ def test_patch_company_postal_code_too_long(client, session):
 
 
 def test_patch_company_city_too_long(client, session):
+    """
+    Test PATCH /companies/{id} with city exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
@@ -822,6 +861,9 @@ def test_patch_company_city_too_long(client, session):
 
 
 def test_patch_company_country_too_long(client, session):
+    """
+    Test PATCH /companies/{id} with country exceeding maximum length.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)

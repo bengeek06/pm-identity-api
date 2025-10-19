@@ -28,6 +28,9 @@ def test_get_subcontractors_empty(client, session):
 
 
 def test_get_subcontractors_single(client, session):
+    """
+    Test GET /subcontractors with a single subcontractor.
+    """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     jwt_token = create_jwt_token(company_id, user_id)
