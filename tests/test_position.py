@@ -6,6 +6,7 @@ import uuid
 import pytest
 from app.models.position import Position
 from app.models.organization_unit import OrganizationUnit
+from tests.conftest import create_jwt_token
 
 
 ##################################################
@@ -15,6 +16,11 @@ def test_get_positions_empty(client, session):
     """
     Test GET /positions when there are no positions.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     response = client.get("/positions")
     assert response.status_code == 200
     data = response.get_json()
@@ -26,11 +32,16 @@ def test_get_positions_single(client, session):
     """
     Test GET /positions with a single position.
     """
-    unit = OrganizationUnit(name="Unit1", company_id="c1")
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    unit = OrganizationUnit(name="Unit1", company_id=company_id)
     session.add(unit)
     session.commit()
     pos = Position(
-        title="Manager", company_id="c1", organization_unit_id=unit.id
+        title="Manager", company_id=company_id, organization_unit_id=unit.id
     )
     session.add(pos)
     session.commit()
@@ -41,7 +52,7 @@ def test_get_positions_single(client, session):
     assert len(data) == 1
     item = data[0]
     assert item["title"] == "Manager"
-    assert item["company_id"] == "c1"
+    assert item["company_id"] == company_id
     assert item["organization_unit_id"] == unit.id
     assert "id" in item
 
@@ -50,6 +61,11 @@ def test_get_positions_multiple(client, session):
     """
     Test GET /positions with multiple positions.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit1 = OrganizationUnit(name="UnitA", company_id="c1")
     unit2 = OrganizationUnit(name="UnitB", company_id="c2")
     session.add_all([unit1, unit2])
@@ -76,10 +92,13 @@ def test_get_positions_multiple(client, session):
 ##################################################
 # Test cases for POST /positions
 ##################################################
-
-
 def test_post_position_success(client, session):
+    """Test POST /positions with valid data."""
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitPost", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -101,6 +120,11 @@ def test_post_position_missing_title(client, session):
     """
     Test POST /positions with missing required 'title'.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitPost2", company_id="c1")
     session.add(unit)
     session.commit()
@@ -115,6 +139,11 @@ def test_post_position_missing_organization_unit_id(client, session):
     """
     Test POST /positions with missing required 'organization_unit_id'.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {"title": "NoUnit", "company_id": "c1"}
     response = client.post("/positions", json=payload)
     assert response.status_code == 400
@@ -126,6 +155,11 @@ def test_post_position_invalid_organization_unit_id(client, session):
     """
     Test POST /positions with invalid organization_unit_id (not found).
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     payload = {
         "title": "Ghost",
         "company_id": "c1",
@@ -139,6 +173,11 @@ def test_post_position_duplicate_title(client, session):
     """
     Test POST /positions with duplicate title in the same unit if unique constraint exists.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitDup", company_id="c1")
     session.add(unit)
     session.commit()
@@ -167,6 +206,10 @@ def test_get_position_by_id_success(client, session):
     Test GET /positions/<id> for an existing position.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitGet", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -189,6 +232,11 @@ def test_get_position_by_id_not_found(client, session):
     """
     Test GET /positions/<id> for a non-existent position.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     response = client.get(f"/positions/{fake_id}")
     assert response.status_code == 404
@@ -206,6 +254,10 @@ def test_get_positions_by_organization_unit_empty(client, session):
     Test GET /organization_units/<id>/positions when the unit has no positions.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitNoPos", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -222,6 +274,10 @@ def test_get_positions_by_organization_unit_with_positions(client, session):
     Test GET /organization_units/<id>/positions when the unit has positions.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitWithPos", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -250,6 +306,11 @@ def test_get_positions_by_organization_unit_not_found(client, session):
     """
     Test GET /organization_units/<id>/positions for a non-existent unit.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     response = client.get(f"/organization_units/{fake_id}/positions")
     # Selon l'implémentation, peut retourner 200 (liste vide) ou 404
@@ -272,6 +333,10 @@ def test_post_position_for_unit_success(client, session):
     Test POST /organization_units/<id>/positions with valid data.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitForPost", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -296,6 +361,10 @@ def test_post_position_for_unit_missing_title(client, session):
     Test POST /organization_units/<id>/positions with missing required 'title'.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitForPost2", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -313,6 +382,10 @@ def test_post_position_for_unit_invalid_unit_id(client, session):
     Test POST /organization_units/<id>/positions with an invalid unit id.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     payload = {"title": "Ghost", "company_id": company_id}
     response = client.post(
@@ -332,6 +405,10 @@ def test_post_position_for_unit_duplicate_title(client, session):
     Test POST /organization_units/<id>/positions with duplicate title in the same unit if unique constraint exists.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitForDup", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -358,6 +435,10 @@ def test_put_position_success(client, session):
     Test PUT /positions/<id> for a full update.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit1 = OrganizationUnit(name="UnitPut1", company_id=company_id)
     unit2 = OrganizationUnit(name="UnitPut2", company_id=company_id)
     session.add_all([unit1, unit2])
@@ -387,6 +468,10 @@ def test_put_position_not_found(client, session):
     Test PUT /positions/<id> for a non-existent position.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitPutNF", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -407,6 +492,10 @@ def test_put_position_missing_title(client, session):
     Test PUT /positions/<id> with missing required 'title'.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitPutMiss", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -429,6 +518,10 @@ def test_put_position_invalid_organization_unit_id(client, session):
     Test PUT /positions/<id> with invalid organization_unit_id.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitPutInv", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -458,6 +551,10 @@ def test_patch_position_success(client, session):
     Test PATCH /positions/<id> for a partial update (title only).
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitPatch", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -482,6 +579,10 @@ def test_patch_position_change_organization_unit(client, session):
     Test PATCH /positions/<id> to change only the organization_unit_id.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit1 = OrganizationUnit(name="UnitPatch1", company_id=company_id)
     unit2 = OrganizationUnit(name="UnitPatch2", company_id=company_id)
     session.add_all([unit1, unit2])
@@ -504,6 +605,10 @@ def test_patch_position_not_found(client, session):
     Test PATCH /positions/<id> for a non-existent position.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     payload = {"title": "NoPatch"}
     response = client.patch(f"/positions/{fake_id}", json=payload)
@@ -517,6 +622,10 @@ def test_patch_position_invalid_organization_unit_id(client, session):
     Test PATCH /positions/<id> with invalid organization_unit_id.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitPatchInv", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -540,6 +649,10 @@ def test_delete_position_success(client, session):
     Test DELETE /positions/<id> for an existing position.
     """
     company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     unit = OrganizationUnit(name="UnitDel", company_id=company_id)
     session.add(unit)
     session.commit()
@@ -561,6 +674,11 @@ def test_delete_position_not_found(client, session):
     """
     Test DELETE /positions/<id> for a non-existent position.
     """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
     fake_id = str(uuid.uuid4())
     response = client.delete(f"/positions/{fake_id}")
     assert response.status_code == 404

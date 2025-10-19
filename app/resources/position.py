@@ -20,6 +20,7 @@ from app.logger import logger
 from app.models.position import Position
 from app.schemas.position_schema import PositionSchema
 from app.models.organization_unit import OrganizationUnit
+from app.utils import require_jwt_auth, check_access_required
 
 
 class PositionListResource(Resource):
@@ -34,6 +35,8 @@ class PositionListResource(Resource):
             Create a new position with the provided data.
     """
 
+    @require_jwt_auth(extract_company_id=False)
+    @check_access_required("list")
     def get(self):
         """
         Retrieve all positions.
@@ -50,6 +53,8 @@ class PositionListResource(Resource):
             logger.error("Error fetching positions: %s", str(e))
             return {"message": "Error fetching positions"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("create")
     def post(self):
         """
         Create a new position.
@@ -118,6 +123,8 @@ class PositionResource(Resource):
             Delete a position by ID.
     """
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("read")
     def get(self, position_id):
         """
         Retrieve a position by ID.
@@ -139,6 +146,8 @@ class PositionResource(Resource):
         schema = PositionSchema(session=db.session)
         return schema.dump(position), 200
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("update")
     def put(self, position_id):
         """
         Update an existing position with the provided data.
@@ -180,6 +189,8 @@ class PositionResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("update")
     def patch(self, position_id):
         """
         Partially update an existing position with the provided data.
@@ -221,6 +232,8 @@ class PositionResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("delete")
     def delete(self, position_id):
         """
         Delete a position by ID.
@@ -259,6 +272,8 @@ class OrganizationUnitPositionsResource(Resource):
             Create a new position for a given organization unit.
     """
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("list")
     def get(self, unit_id):
         """
         List all positions for a given organization unit.
@@ -275,6 +290,8 @@ class OrganizationUnitPositionsResource(Resource):
         schema = PositionSchema(many=True)
         return schema.dump(positions), 200
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("create")
     def post(self, unit_id):
         """
         Create a new position for a given organization unit.
