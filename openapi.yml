@@ -41,6 +41,165 @@ components:
 
 
   schemas:
+    Company:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier of the company
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the company
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the company
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL to the company's logo
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Website URL of the company
+        phone_number:
+          type: string
+          maxLength: 20
+          description: Phone number of the company (digits only)
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Email address of the company
+        address:
+          type: string
+          maxLength: 255
+          description: Address of the company
+        postal_code:
+          type: string
+          maxLength: 20
+          description: Postal code of the company
+        city:
+          type: string
+          maxLength: 100
+          description: City where the company is located
+        country:
+          type: string
+          maxLength: 100
+          description: Country where the company is located
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Creation date
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Last update date
+
+    CompanyCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the company
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the company
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL to the company's logo
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Website URL of the company
+        phone_number:
+          type: string
+          maxLength: 20
+          description: Phone number of the company (digits only)
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Email address of the company
+        address:
+          type: string
+          maxLength: 255
+          description: Address of the company
+        postal_code:
+          type: string
+          maxLength: 20
+          description: Postal code of the company
+        city:
+          type: string
+          maxLength: 100
+          description: City where the company is located
+        country:
+          type: string
+          maxLength: 100
+          description: Country where the company is located
+
+    CompanyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the company
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the company
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL to the company's logo
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Website URL of the company
+        phone_number:
+          type: string
+          maxLength: 20
+          description: Phone number of the company (digits only)
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Email address of the company
+        address:
+          type: string
+          maxLength: 255
+          description: Address of the company
+        postal_code:
+          type: string
+          maxLength: 20
+          description: Postal code of the company
+        city:
+          type: string
+          maxLength: 100
+          description: City where the company is located
+        country:
+          type: string
+          maxLength: 100
+          description: Country where the company is located
     ErrorResponse:
       type: object
       properties:
@@ -126,64 +285,68 @@ components:
           type: string
           format: uuid
           readOnly: true
-          description: Identifiant unique de l'utilisateur
+          description: Unique identifier of the user
         email:
           type: string
           format: email
           maxLength: 100
-          description: Adresse email de l'utilisateur
+          description: User's email address
         hashed_password:
           type: string
           maxLength: 255
           writeOnly: true
-          description: Mot de passe haché
+          description: Hashed password
         first_name:
           type: string
           maxLength: 50
-          description: Prénom de l'utilisateur
+          description: User's first name
         last_name:
           type: string
           maxLength: 50
-          description: Nom de famille de l'utilisateur
+          description: User's last name
         phone_number:
           type: string
           maxLength: 50
-          description: Numéro de téléphone
+          description: Phone number
         avatar_url:
           type: string
           format: uri
           maxLength: 255
-          description: URL de l'avatar
+          description: Avatar URL
         is_active:
           type: boolean
           default: true
-          description: Indique si le compte utilisateur est actif
+          description: Indicates if the user account is active
         is_verified:
           type: boolean
           default: false
-          description: Indique si l'email est vérifié
+          description: Indicates if the email is verified
         last_login_at:
           type: string
           format: date-time
-          description: Date de dernière connexion
+          description: Last login date
         company_id:
           type: string
           format: uuid
-          description: Identifiant de l'entreprise associée
+          description: Associated company identifier
         position_id:
           type: string
           format: uuid
-          description: Identifiant de la position associée
+          description: Associated position identifier
         created_at:
           type: string
           format: date-time
           readOnly: true
-          description: Date de création
+          description: Creation date
         updated_at:
           type: string
           format: date-time
           readOnly: true
-          description: Date de dernière mise à jour
+          description: Last update date
+        language:
+          type: string
+          enum: [en, fr]
+          description: User language (en, fr)
 
     UserCreate:
       type: object
@@ -195,39 +358,43 @@ components:
           type: string
           format: email
           maxLength: 100
-          description: Adresse email de l'utilisateur
+          description: User's email address
         password:
           type: string
-          description: Mot de passe en clair (sera haché automatiquement)
+          description: Plain password (will be hashed automatically)
         first_name:
           type: string
           maxLength: 50
-          description: Prénom de l'utilisateur
+          description: User's first name
         last_name:
           type: string
           maxLength: 50
-          description: Nom de famille de l'utilisateur
+          description: User's last name
         phone_number:
           type: string
           maxLength: 50
-          description: Numéro de téléphone
+          description: Phone number
         avatar_url:
           type: string
           format: uri
           maxLength: 255
-          description: URL de l'avatar
+          description: Avatar URL
         is_active:
           type: boolean
           default: true
-          description: Indique si le compte utilisateur est actif
+          description: Indicates if the user account is active
         is_verified:
           type: boolean
           default: false
-          description: Indique si l'email est vérifié
+          description: Indicates if the email is verified
         position_id:
           type: string
           format: uuid
-          description: Identifiant de la position associée
+          description: Associated position identifier
+        language:
+          type: string
+          enum: [en, fr]
+          description: User language (en, fr)
 
     UserUpdate:
       type: object
@@ -236,37 +403,41 @@ components:
           type: string
           format: email
           maxLength: 100
-          description: Adresse email de l'utilisateur
+          description: User's email address
         password:
           type: string
-          description: Nouveau mot de passe en clair (sera haché automatiquement)
+          description: New plain password (will be hashed automatically)
         first_name:
           type: string
           maxLength: 50
-          description: Prénom de l'utilisateur
+          description: User's first name
         last_name:
           type: string
           maxLength: 50
-          description: Nom de famille de l'utilisateur
+          description: User's last name
         phone_number:
           type: string
           maxLength: 50
-          description: Numéro de téléphone
+          description: Phone number
         avatar_url:
           type: string
           format: uri
           maxLength: 255
-          description: URL de l'avatar
+          description: Avatar URL
         is_active:
           type: boolean
-          description: Indique si le compte utilisateur est actif
+          description: Indicates if the user account is active
         is_verified:
           type: boolean
-          description: Indique si l'email est vérifié
+          description: Indicates if the email is verified
         position_id:
           type: string
           format: uuid
-          description: Identifiant de la position associée
+          description: Associated position identifier
+        language:
+          type: string
+          enum: [en, fr]
+          description: User language (en, fr)
 
     UserRole:
       type: object
@@ -307,6 +478,46 @@ components:
 
 
   responses:
+    CompanyCreated:
+      description: Company created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Company'
+
+    CompanyList:
+      description: List of companies
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Company'
+
+    CompanyDetails:
+      description: Company details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Company'
+
+    CompanyUpdated:
+      description: Company updated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Company'
+
+    CompanyDeleted:
+      description: Company deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Company deleted successfully"
     Unauthorized:
       description: Missing, invalid, or expired JWT token
       content:
@@ -435,6 +646,138 @@ components:
                 $ref: '#/components/schemas/User'
    
 paths:
+  /companies:
+    get:
+      tags: [Companies]
+      summary: List all companies
+      description: Returns the list of all companies
+      responses:
+        '200':
+          $ref: '#/components/responses/CompanyList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Companies]
+      summary: Create a new company
+      description: Creates a new company with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/CompanyCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /companies/{company_id}:
+    parameters:
+      - name: company_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the company
+
+    get:
+      tags: [Companies]
+      summary: Get a company by ID
+      description: Returns details of a specific company
+      responses:
+        '200':
+          $ref: '#/components/responses/CompanyDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Companies]
+      summary: Update a company
+      description: Fully updates an existing company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/CompanyUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Companies]
+      summary: Partially update a company
+      description: Partially updates an existing company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/CompanyUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Companies]
+      summary: Delete a company
+      description: Deletes an existing company
+      responses:
+        '204':
+          $ref: '#/components/responses/CompanyDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /health:
     get:
       tags: [System]
@@ -529,8 +872,8 @@ paths:
   /users:
     get:
       tags: [Users]
-      summary: Lister tous les utilisateurs
-      description: Retourne la liste de tous les utilisateurs de l'entreprise authentifiée
+      summary: List all users
+      description: Returns the list of all users for the authenticated company
       responses:
         '200':
           $ref: '#/components/responses/UserList'
@@ -543,8 +886,8 @@ paths:
 
     post:
       tags: [Users]
-      summary: Créer un nouvel utilisateur
-      description: Crée un nouvel utilisateur avec les données fournies
+      summary: Create a new user
+      description: Creates a new user with the provided data
       requestBody:
         required: true
         content:
@@ -577,8 +920,8 @@ paths:
 
     get:
       tags: [Users]
-      summary: Obtenir un utilisateur par ID
-      description: Retourne les détails d'un utilisateur spécifique
+      summary: Get a user by ID
+      description: Returns details of a specific user
       responses:
         '200':
           $ref: '#/components/responses/UserDetails'
@@ -593,8 +936,8 @@ paths:
 
     put:
       tags: [Users]
-      summary: Mettre à jour un utilisateur
-      description: Met à jour complètement un utilisateur existant
+      summary: Update a user
+      description: Fully updates an existing user
       requestBody:
         required: true
         content:
@@ -619,8 +962,8 @@ paths:
 
     patch:
       tags: [Users]
-      summary: Mettre à jour partiellement un utilisateur
-      description: Met à jour partiellement un utilisateur existant
+      summary: Partially update a user
+      description: Partially updates an existing user
       requestBody:
         required: true
         content:
@@ -645,8 +988,8 @@ paths:
 
     delete:
       tags: [Users]
-      summary: Supprimer un utilisateur
-      description: Supprime un utilisateur existant
+      summary: Delete a user
+      description: Deletes an existing user
       responses:
         '204':
           $ref: '#/components/responses/UserDeleted'
@@ -671,8 +1014,8 @@ paths:
 
     get:
       tags: [Users]
-      summary: Obtenir les rôles d'un utilisateur
-      description: Retourne la liste des rôles assignés à un utilisateur via le service Guardian
+      summary: Get user roles
+      description: Returns the list of roles assigned to a user via the Guardian service
       responses:
         '200':
           $ref: '#/components/responses/UserRoles'
@@ -687,8 +1030,8 @@ paths:
 
     post:
       tags: [Users]
-      summary: Assigner un rôle à un utilisateur
-      description: Assigne un nouveau rôle à un utilisateur via le service Guardian
+      summary: Assign a role to a user
+      description: Assigns a new role to a user via the Guardian service
       requestBody:
         required: true
         content:
@@ -729,8 +1072,8 @@ paths:
 
     get:
       tags: [Users]
-      summary: Obtenir un rôle utilisateur spécifique
-      description: Retourne les détails d'un rôle assigné à un utilisateur
+      summary: Get a specific user role
+      description: Returns details of a role assigned to a user
       responses:
         '200':
           description: Détails du rôle utilisateur
@@ -749,8 +1092,8 @@ paths:
 
     delete:
       tags: [Users]
-      summary: Retirer un rôle d'un utilisateur
-      description: Retire un rôle spécifique d'un utilisateur via le service Guardian
+      summary: Remove a role from a user
+      description: Removes a specific role from a user via the Guardian service
       responses:
         '204':
           description: Rôle retiré avec succès
@@ -775,8 +1118,8 @@ paths:
 
     get:
       tags: [Users]
-      summary: Obtenir les utilisateurs d'une position
-      description: Retourne la liste des utilisateurs associés à une position spécifique
+      summary: Get users for a position
+      description: Returns the list of users associated with a specific position
       responses:
         '200':
           $ref: '#/components/responses/UserList'
