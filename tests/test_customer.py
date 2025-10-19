@@ -400,7 +400,7 @@ def customer(session):
     return c
 
 
-def test_patch_customer_success(client, session, customer):
+def test_patch_customer_success(client, customer):
     """
     Test PATCH /customers/<customer_id> with valid partial data.
     Should update only the provided fields and return 200.
@@ -437,7 +437,7 @@ def test_patch_customer_not_found(client):
     assert "not found" in data["error"].lower()
 
 
-def test_patch_customer_unknown_field(client, session, customer):
+def test_patch_customer_unknown_field(client, customer):
     """
     Test PATCH /customers/<customer_id> with an unknown field.
     Should return 400 with a validation error.
@@ -455,7 +455,7 @@ def test_patch_customer_unknown_field(client, session, customer):
     assert "unknown_field" in data["error"]
 
 
-def test_patch_customer_name_too_long(client, session, customer):
+def test_patch_customer_name_too_long(client, customer):
     """
     Test PATCH /customers/{id} with name exceeding maximum length.
     """
@@ -477,7 +477,7 @@ def test_patch_customer_name_too_long(client, session, customer):
     assert "name" in data["error"]
 
 
-def test_patch_customer_name_empty(client, session, customer):
+def test_patch_customer_name_empty(client, customer):
     """
     Test PATCH /customers/{id} with empty name.
     """
@@ -492,7 +492,7 @@ def test_patch_customer_name_empty(client, session, customer):
     assert "name" in data["error"]
 
 
-def test_patch_customer_email_invalid(client, session, customer):
+def test_patch_customer_email_invalid(client, customer):
     """
     Test PATCH /customers/{id} with invalid email format.
     """
@@ -509,7 +509,7 @@ def test_patch_customer_email_invalid(client, session, customer):
     assert "email" in data["error"]
 
 
-def test_patch_customer_email_too_long(client, session, customer):
+def test_patch_customer_email_too_long(client, customer):
     """
     Test PATCH /customers/{id} with email exceeding maximum length.
     """
@@ -526,7 +526,7 @@ def test_patch_customer_email_too_long(client, session, customer):
     assert "email" in data["error"]
 
 
-def test_patch_customer_contact_person_too_long(client, session, customer):
+def test_patch_customer_contact_person_too_long(client, customer):
     """
     Test PATCH /customers/{id} with contact_person exceeding maximum length.
     """
@@ -543,7 +543,7 @@ def test_patch_customer_contact_person_too_long(client, session, customer):
     assert "contact_person" in data["error"]
 
 
-def test_patch_customer_phone_number_too_long(client, session, customer):
+def test_patch_customer_phone_number_too_long(client, customer):
     """
     Test PATCH /customers/{id} with phone_number exceeding maximum length.
     """
@@ -560,7 +560,7 @@ def test_patch_customer_phone_number_too_long(client, session, customer):
     assert "phone_number" in data["error"]
 
 
-def test_patch_customer_phone_number_not_digits(client, session, customer):
+def test_patch_customer_phone_number_not_digits(client, customer):
     """
     Test PATCH /customers/{id} with phone_number containing non-digit characters.
     """
@@ -577,7 +577,7 @@ def test_patch_customer_phone_number_not_digits(client, session, customer):
     assert "phone_number" in data["error"]
 
 
-def test_patch_customer_address_too_long(client, session, customer):
+def test_patch_customer_address_too_long(client, customer):
     """
     Test PATCH /customers/{id} with address exceeding maximum length.
     """
@@ -594,7 +594,7 @@ def test_patch_customer_address_too_long(client, session, customer):
     assert "address" in data["error"]
 
 
-def test_patch_customer_company_id_invalid(client, session, customer):
+def test_patch_customer_company_id_invalid(client, customer):
     """
     Test PATCH /customers/{id} with invalid company_id.
     """
@@ -611,7 +611,7 @@ def test_patch_customer_company_id_invalid(client, session, customer):
     assert "company_id" in data["error"]
 
 
-def test_patch_customer_company_id_not_int(client, session, customer):
+def test_patch_customer_company_id_not_int(client, customer):
     """
     Test PATCH /customers/{id} with non-integer company_id.
     """

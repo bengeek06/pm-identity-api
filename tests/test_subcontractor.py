@@ -11,7 +11,7 @@ from tests.conftest import create_jwt_token
 ##################################################
 
 
-def test_get_subcontractors_empty(client, session):
+def test_get_subcontractors_empty(client):
     """
     Test GET /subcontractors when there are no subcontractors.
     """
@@ -74,7 +74,7 @@ def test_get_subcontractors_multiple(client, session):
 ##################################################
 
 
-def test_post_subcontractor_success(client, session):
+def test_post_subcontractor_success(client):
     """
     Test POST /subcontractors with valid data.
     """
@@ -92,7 +92,7 @@ def test_post_subcontractor_success(client, session):
     assert "id" in data
 
 
-def test_post_subcontractor_missing_name(client, session):
+def test_post_subcontractor_missing_name(client):
     """
     Test POST /subcontractors with missing required 'name'.
     """
@@ -151,7 +151,7 @@ def test_get_subcontractor_by_id_success(client, session):
     assert data["name"] == "SubGet"
 
 
-def test_get_subcontractor_by_id_not_found(client, session):
+def test_get_subcontractor_by_id_not_found(client):
     """
     Test GET /subcontractors/<id> for a non-existent subcontractor.
     """
@@ -192,7 +192,7 @@ def test_put_subcontractor_success(client, session):
     assert data["name"] == "UpdatedSub"
 
 
-def test_put_subcontractor_not_found(client, session):
+def test_put_subcontractor_not_found(client):
     """
     Test PUT /subcontractors/<id> for a non-existent subcontractor.
     """
@@ -253,7 +253,7 @@ def test_patch_subcontractor_success(client, session):
     assert data["name"] == "PatchedSub"
 
 
-def test_patch_subcontractor_not_found(client, session):
+def test_patch_subcontractor_not_found(client):
     """
     Test PATCH /subcontractors/<id> for a non-existent subcontractor.
     """
@@ -317,7 +317,7 @@ def test_delete_subcontractor_success(client, session):
     assert get_response.status_code == 404
 
 
-def test_delete_subcontractor_not_found(client, session):
+def test_delete_subcontractor_not_found(client):
     """
     Test DELETE /subcontractors/<id> for a non-existent subcontractor.
     """

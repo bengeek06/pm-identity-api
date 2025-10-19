@@ -12,7 +12,7 @@ from tests.conftest import create_jwt_token
 ##################################################
 # Test cases for GET /positions
 ##################################################
-def test_get_positions_empty(client, session):
+def test_get_positions_empty(client):
     """
     Test GET /positions when there are no positions.
     """
@@ -135,7 +135,7 @@ def test_post_position_missing_title(client, session):
     assert "title" in str(data).lower()
 
 
-def test_post_position_missing_organization_unit_id(client, session):
+def test_post_position_missing_organization_unit_id(client):
     """
     Test POST /positions with missing required 'organization_unit_id'.
     """
@@ -151,7 +151,7 @@ def test_post_position_missing_organization_unit_id(client, session):
     assert "organization_unit_id" in str(data).lower()
 
 
-def test_post_position_invalid_organization_unit_id(client, session):
+def test_post_position_invalid_organization_unit_id(client):
     """
     Test POST /positions with invalid organization_unit_id (not found).
     """
@@ -228,7 +228,7 @@ def test_get_position_by_id_success(client, session):
     assert data["organization_unit_id"] == unit.id
 
 
-def test_get_position_by_id_not_found(client, session):
+def test_get_position_by_id_not_found(client):
     """
     Test GET /positions/<id> for a non-existent position.
     """
@@ -302,7 +302,7 @@ def test_get_positions_by_organization_unit_with_positions(client, session):
         assert item["organization_unit_id"] == unit.id
 
 
-def test_get_positions_by_organization_unit_not_found(client, session):
+def test_get_positions_by_organization_unit_not_found(client):
     """
     Test GET /organization_units/<id>/positions for a non-existent unit.
     """
@@ -377,7 +377,7 @@ def test_post_position_for_unit_missing_title(client, session):
     assert "title" in str(data).lower()
 
 
-def test_post_position_for_unit_invalid_unit_id(client, session):
+def test_post_position_for_unit_invalid_unit_id(client):
     """
     Test POST /organization_units/<id>/positions with an invalid unit id.
     """
@@ -600,7 +600,7 @@ def test_patch_position_change_organization_unit(client, session):
     assert data["organization_unit_id"] == unit2.id
 
 
-def test_patch_position_not_found(client, session):
+def test_patch_position_not_found(client):
     """
     Test PATCH /positions/<id> for a non-existent position.
     """
@@ -670,7 +670,7 @@ def test_delete_position_success(client, session):
     assert get_response.status_code == 404
 
 
-def test_delete_position_not_found(client, session):
+def test_delete_position_not_found(client):
     """
     Test DELETE /positions/<id> for a non-existent position.
     """

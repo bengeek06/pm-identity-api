@@ -210,7 +210,7 @@ def test_post_user_duplicate_email(client, session):
     assert "email" in str(data).lower()
 
 
-def test_post_user_invalid_email(client, session):
+def test_post_user_invalid_email(client):
     """
     Test POST /users with invalid email format.
     """
@@ -274,7 +274,7 @@ def test_get_user_by_id_success(client, session):
     assert data["company_id"] == company_id
 
 
-def test_get_user_by_id_not_found(client, session):
+def test_get_user_by_id_not_found(client):
     """
     Test GET /users/<id> for a non-existent user.
     """
@@ -345,7 +345,7 @@ def test_put_user_success(client, session):
     assert data["company_id"] == str(company_id)
 
 
-def test_put_user_not_found(client, session):
+def test_put_user_not_found(client):
     """
     Test PUT /users/<id> for a non-existent user.
     """
@@ -450,7 +450,7 @@ def test_patch_user_success(client, session):
     assert data["email"] == "patchme@example.com"
 
 
-def test_patch_user_not_found(client, session):
+def test_patch_user_not_found(client):
     """
     Test PATCH /users/<id> for a non-existent user.
     """
@@ -540,7 +540,7 @@ def test_delete_user_success(client, session):
     assert get_response.status_code == 404
 
 
-def test_delete_user_not_found(client, session):
+def test_delete_user_not_found(client):
     """
     Test DELETE /users/<id> for a non-existent user.
     """
@@ -700,7 +700,7 @@ def test_verify_password_wrong_password(client, session):
     assert "invalid" in str(data).lower()
 
 
-def test_verify_password_user_not_found(client, session):
+def test_verify_password_user_not_found(client):
     """
     Test POST /verify_password with non-existent user.
     """
@@ -738,7 +738,7 @@ def test_verify_password_missing_password(client, session):
 ##################################################
 
 
-def test_get_user_roles_success(client, session):
+def test_get_user_roles_success(client):
     """
     Test GET /users/<user_id>/roles with successful response from Guardian service.
     """
@@ -778,7 +778,7 @@ def test_get_user_roles_success(client, session):
         )
 
 
-def test_get_user_roles_missing_jwt(client, session):
+def test_get_user_roles_missing_jwt(client):
     """
     Test GET /users/<user_id>/roles without JWT authentication.
     """
@@ -789,7 +789,7 @@ def test_get_user_roles_missing_jwt(client, session):
     assert "jwt" in str(data).lower() or "token" in str(data).lower()
 
 
-def test_get_user_roles_missing_user_id_in_jwt(client, session):
+def test_get_user_roles_missing_user_id_in_jwt(client):
     """
     Test GET /users/<user_id>/roles with JWT that doesn't contain user_id.
     """
@@ -809,7 +809,7 @@ def test_get_user_roles_missing_user_id_in_jwt(client, session):
     assert "missing user_id" in str(data).lower()
 
 
-def test_get_user_roles_missing_guardian_url(client, session):
+def test_get_user_roles_missing_guardian_url(client):
     """
     Test GET /users/<user_id>/roles when GUARDIAN_SERVICE_URL is not set.
     """
@@ -833,7 +833,7 @@ def test_get_user_roles_missing_guardian_url(client, session):
         assert "internal server error" in str(data).lower()
 
 
-def test_get_user_roles_guardian_request_exception(client, session):
+def test_get_user_roles_guardian_request_exception(client):
     """
     Test GET /users/<user_id>/roles when Guardian service is unreachable.
     """
@@ -861,7 +861,7 @@ def test_get_user_roles_guardian_request_exception(client, session):
             assert "error fetching roles" in str(data).lower()
 
 
-def test_get_user_roles_guardian_non_200_response(client, session):
+def test_get_user_roles_guardian_non_200_response(client):
     """
     Test GET /users/<user_id>/roles when Guardian service returns non-200 status.
     """
@@ -890,7 +890,7 @@ def test_get_user_roles_guardian_non_200_response(client, session):
             assert "error fetching roles" in str(data).lower()
 
 
-def test_get_user_roles_empty_roles(client, session):
+def test_get_user_roles_empty_roles(client):
     """
     Test GET /users/<user_id>/roles when Guardian returns empty roles.
     """
@@ -920,7 +920,7 @@ def test_get_user_roles_empty_roles(client, session):
             assert data["roles"] == []
 
 
-def test_get_user_roles_guardian_response_missing_roles_key(client, session):
+def test_get_user_roles_guardian_response_missing_roles_key(client):
     """
     Test GET /users/<user_id>/roles when Guardian response doesn't contain 'roles' key.
     """
@@ -950,7 +950,7 @@ def test_get_user_roles_guardian_response_missing_roles_key(client, session):
             assert data["roles"] == []  # Should default to empty list
 
 
-def test_get_user_roles_user_not_found(client, session):
+def test_get_user_roles_user_not_found(client):
     """
     Test GET /users/<user_id>/roles when the requested user doesn't exist.
     """
@@ -1052,7 +1052,7 @@ def test_get_user_roles_same_company_allowed(client, session):
 ##################################################
 
 
-def test_post_user_role_success(client, session):
+def test_post_user_role_success(client):
     """
     Test POST /users/<user_id>/roles with successful role assignment.
     """
@@ -1103,7 +1103,7 @@ def test_post_user_role_success(client, session):
             )
 
 
-def test_post_user_role_missing_jwt(client, session):
+def test_post_user_role_missing_jwt(client):
     """
     Test POST /users/<user_id>/roles without JWT authentication.
     """
@@ -1115,7 +1115,7 @@ def test_post_user_role_missing_jwt(client, session):
     assert "jwt" in str(data).lower() or "token" in str(data).lower()
 
 
-def test_post_user_role_missing_user_id_in_jwt(client, session):
+def test_post_user_role_missing_user_id_in_jwt(client):
     """
     Test POST /users/<user_id>/roles with JWT that doesn't contain user_id.
     """
@@ -1136,7 +1136,7 @@ def test_post_user_role_missing_user_id_in_jwt(client, session):
     assert "missing user_id" in str(data).lower()
 
 
-def test_post_user_role_user_not_found(client, session):
+def test_post_user_role_user_not_found(client):
     """
     Test POST /users/<user_id>/roles when the target user doesn't exist.
     """
@@ -1193,7 +1193,7 @@ def test_post_user_role_different_company_access_denied(client, session):
     assert "access denied" in str(data).lower()
 
 
-def test_post_user_role_missing_json_data(client, session):
+def test_post_user_role_missing_json_data(client):
     """
     Test POST /users/<user_id>/roles without JSON payload.
     """
@@ -1213,7 +1213,7 @@ def test_post_user_role_missing_json_data(client, session):
     assert "json data required" in str(data).lower()
 
 
-def test_post_user_role_missing_role_field(client, session):
+def test_post_user_role_missing_role_field(client):
     """
     Test POST /users/<user_id>/roles with JSON payload missing 'role' field.
     """
@@ -1234,7 +1234,7 @@ def test_post_user_role_missing_role_field(client, session):
     assert "role id field is required" in str(data).lower()
 
 
-def test_post_user_role_invalid_role_format(client, session):
+def test_post_user_role_invalid_role_format(client):
     """
     Test POST /users/<user_id>/roles with invalid role format.
     """
@@ -1270,7 +1270,7 @@ def test_post_user_role_invalid_role_format(client, session):
     assert "role id must be a non-empty string" in str(data).lower()
 
 
-def test_post_user_role_missing_guardian_url(client, session):
+def test_post_user_role_missing_guardian_url(client):
     """
     Test POST /users/<user_id>/roles when GUARDIAN_SERVICE_URL is not set.
     """
@@ -1295,7 +1295,7 @@ def test_post_user_role_missing_guardian_url(client, session):
         assert "internal server error" in str(data).lower()
 
 
-def test_post_user_role_guardian_request_exception(client, session):
+def test_post_user_role_guardian_request_exception(client):
     """
     Test POST /users/<user_id>/roles when Guardian service is unreachable.
     """
@@ -1324,7 +1324,7 @@ def test_post_user_role_guardian_request_exception(client, session):
             assert "error assigning role" in str(data).lower()
 
 
-def test_post_user_role_guardian_conflict_response(client, session):
+def test_post_user_role_guardian_conflict_response(client):
     """
     Test POST /users/<user_id>/roles when Guardian returns 409 (role already exists).
     """
@@ -1353,7 +1353,7 @@ def test_post_user_role_guardian_conflict_response(client, session):
             assert "already assigned" in str(data).lower()
 
 
-def test_post_user_role_guardian_bad_request_response(client, session):
+def test_post_user_role_guardian_bad_request_response(client):
     """
     Test POST /users/<user_id>/roles when Guardian returns 400 (bad request).
     """
@@ -1383,7 +1383,7 @@ def test_post_user_role_guardian_bad_request_response(client, session):
             assert "invalid role" in str(data).lower()
 
 
-def test_post_user_role_guardian_server_error(client, session):
+def test_post_user_role_guardian_server_error(client):
     """
     Test POST /users/<user_id>/roles when Guardian returns 500 (server error).
     """
@@ -1466,7 +1466,7 @@ def test_post_user_role_same_company_allowed(client, session):
             assert data["role_id"] == mock_role_id
 
 
-def test_post_user_role_backward_compatibility(client, session):
+def test_post_user_role_backward_compatibility(client):
     """
     Test POST /users/<user_id>/roles with 'role' field for backward compatibility.
     """
@@ -1525,7 +1525,7 @@ def test_post_user_role_backward_compatibility(client, session):
 # =============================================================================
 
 
-def test_get_user_role_success(client, session):
+def test_get_user_role_success(client):
     """
     Test GET /users/<user_id>/roles/<user_role_id> with successful retrieval.
     """
@@ -1573,7 +1573,7 @@ def test_get_user_role_success(client, session):
             )
 
 
-def test_get_user_role_missing_jwt(client, session):
+def test_get_user_role_missing_jwt(client):
     """
     Test GET /users/<user_id>/roles/<user_role_id> without JWT authentication.
     """
@@ -1586,7 +1586,7 @@ def test_get_user_role_missing_jwt(client, session):
     assert "jwt token" in str(data).lower()
 
 
-def test_get_user_role_user_not_found(client, session):
+def test_get_user_role_user_not_found(client):
     """
     Test GET /users/<user_id>/roles/<user_role_id> when user doesn't exist.
     """
@@ -1615,7 +1615,7 @@ def test_get_user_role_user_not_found(client, session):
     )
 
 
-def test_get_user_role_not_found(client, session):
+def test_get_user_role_not_found(client):
     """
     Test GET /users/<user_id>/roles/<user_role_id> when role assignment doesn't exist.
     """
@@ -1646,7 +1646,7 @@ def test_get_user_role_not_found(client, session):
             assert "not found" in str(data).lower()
 
 
-def test_get_user_role_wrong_user(client, session):
+def test_get_user_role_wrong_user(client):
     """
     Test GET /users/<user_id>/roles/<user_role_id> when role belongs to different user.
     """
@@ -1685,7 +1685,7 @@ def test_get_user_role_wrong_user(client, session):
             assert "not found" in str(data).lower()
 
 
-def test_delete_user_role_success(client, session):
+def test_delete_user_role_success(client):
     """
     Test DELETE /users/<user_id>/roles/<user_role_id> with successful deletion.
     """
@@ -1745,7 +1745,7 @@ def test_delete_user_role_success(client, session):
                 )
 
 
-def test_delete_user_role_missing_jwt(client, session):
+def test_delete_user_role_missing_jwt(client):
     """
     Test DELETE /users/<user_id>/roles/<user_role_id> without JWT authentication.
     """
@@ -1758,7 +1758,7 @@ def test_delete_user_role_missing_jwt(client, session):
     assert "jwt token" in str(data).lower()
 
 
-def test_delete_user_role_user_not_found(client, session):
+def test_delete_user_role_user_not_found(client):
     """
     Test DELETE /users/<user_id>/roles/<user_role_id> when user doesn't exist.
     """
@@ -1787,7 +1787,7 @@ def test_delete_user_role_user_not_found(client, session):
     )
 
 
-def test_delete_user_role_not_found(client, session):
+def test_delete_user_role_not_found(client):
     """
     Test DELETE /users/<user_id>/roles/<user_role_id> when role assignment doesn't exist.
     """
@@ -1818,7 +1818,7 @@ def test_delete_user_role_not_found(client, session):
             assert "not found" in str(data).lower()
 
 
-def test_delete_user_role_wrong_user(client, session):
+def test_delete_user_role_wrong_user(client):
     """
     Test DELETE /users/<user_id>/roles/<user_role_id> when role belongs to different user.
     """

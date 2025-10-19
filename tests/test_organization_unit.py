@@ -124,7 +124,7 @@ def test_get_organization_units_multiple_companies(client, session):
 ##################################################
 # Test cases for POST /organization_units
 ##################################################
-def test_post_organization_unit_success(client, session):
+def test_post_organization_unit_success(client):
     """
     Test POST /organization_units with minimal valid data (racine).
     """
@@ -168,7 +168,7 @@ def test_post_organization_unit_with_parent(client, session):
     assert data["path"].startswith(parent.path)
 
 
-def test_post_organization_unit_missing_name(client, session):
+def test_post_organization_unit_missing_name(client):
     """
     Test POST /organization_units with missing required 'name'.
     """
@@ -184,7 +184,7 @@ def test_post_organization_unit_missing_name(client, session):
     assert "name" in data["error"]
 
 
-def test_post_organization_unit_missing_company_id(client, session):
+def test_post_organization_unit_missing_company_id(client):
     """
     Test POST /organization_units with missing required 'company_id'.
     """
@@ -200,7 +200,7 @@ def test_post_organization_unit_missing_company_id(client, session):
     assert "company_id" in data["error"]
 
 
-def test_post_organization_unit_name_too_long(client, session):
+def test_post_organization_unit_name_too_long(client):
     """
     Test POST /organization_units with name too long.
     """
@@ -216,7 +216,7 @@ def test_post_organization_unit_name_too_long(client, session):
     assert "name" in data["error"]
 
 
-def test_post_organization_unit_invalid_parent_id(client, session):
+def test_post_organization_unit_invalid_parent_id(client):
     """
     Test POST /organization_units with invalid parent_id format.
     """
@@ -232,7 +232,7 @@ def test_post_organization_unit_invalid_parent_id(client, session):
     assert "parent_id" in data["error"]
 
 
-def test_post_organization_unit_cycle(client, session):
+def test_post_organization_unit_cycle(client):
     """
     Test POST /organization_units with parent_id == self.id (cycle direct).
     """
@@ -247,7 +247,7 @@ def test_post_organization_unit_cycle(client, session):
         org_unit_schema.validate_parent_id(fake_id)
 
 
-def test_post_organization_unit_unknown_field(client, session):
+def test_post_organization_unit_unknown_field(client):
     """
     Test POST /organization_units with an unknown field.
     """
@@ -326,7 +326,7 @@ def test_get_organization_unit_by_id_with_parent(client, session):
     assert data["path"].startswith(parent.path)
 
 
-def test_get_organization_unit_by_id_not_found(client, session):
+def test_get_organization_unit_by_id_not_found(client):
     """
     Test GET /organization_units/<id> for a non-existent unit.
     """
@@ -407,7 +407,7 @@ def test_get_organization_unit_children_with_children(client, session):
         assert item["parent_id"] == parent.id
 
 
-def test_get_organization_unit_children_not_found(client, session):
+def test_get_organization_unit_children_not_found(client):
     """
     Test GET /organization_units/<id>/children for a non-existent unit.
     """
@@ -485,7 +485,7 @@ def test_put_organization_unit_change_parent(client, session):
     assert data["path"].startswith(parent.path)
 
 
-def test_put_organization_unit_not_found(client, session):
+def test_put_organization_unit_not_found(client):
     """
     Test PUT /organization_units/<id> for a non-existent unit.
     """
@@ -601,7 +601,7 @@ def test_patch_organization_unit_change_parent(client, session):
     assert data["path"].startswith(parent.path)
 
 
-def test_patch_organization_unit_not_found(client, session):
+def test_patch_organization_unit_not_found(client):
     """
     Test PATCH /organization_units/<id> for a non-existent unit.
     """
@@ -721,7 +721,7 @@ def test_delete_organization_unit_with_children(client, session):
     assert get_child.status_code == 404
 
 
-def test_delete_organization_unit_not_found(client, session):
+def test_delete_organization_unit_not_found(client):
     """
     Test DELETE /organization_units/<id> for a non-existent unit.
     """

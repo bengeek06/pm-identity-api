@@ -8,7 +8,7 @@ import uuid
 from tests.test_user import get_init_db_payload, create_jwt_token
 
 
-def test_jwt_cookie_forwarding_to_guardian(client, session):
+def test_jwt_cookie_forwarding_to_guardian(client):
     """
     Test that JWT cookies are properly forwarded to Guardian service calls.
     """
@@ -57,7 +57,7 @@ def test_jwt_cookie_forwarding_to_guardian(client, session):
             )
 
 
-def test_post_role_jwt_cookie_forwarding(client, session):
+def test_post_role_jwt_cookie_forwarding(client):
     """
     Test that JWT cookies are forwarded in POST requests to Guardian service.
     """
@@ -113,7 +113,7 @@ def test_post_role_jwt_cookie_forwarding(client, session):
             )
 
 
-def test_individual_role_jwt_forwarding(client, session):
+def test_individual_role_jwt_forwarding(client):
     """
     Test JWT forwarding for individual role operations (GET and DELETE).
     """

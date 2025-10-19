@@ -7,7 +7,7 @@ from unittest import mock
 from tests.conftest import get_init_db_payload, create_jwt_token
 
 
-def test_get_user_roles_with_direct_list_response(client, session):
+def test_get_user_roles_with_direct_list_response(client):
     """
     Test GET /users/<user_id>/roles when Guardian returns a direct list.
     """
@@ -44,7 +44,7 @@ def test_get_user_roles_with_direct_list_response(client, session):
             print("✅ Direct list format handled correctly")
 
 
-def test_get_user_roles_with_object_response(client, session):
+def test_get_user_roles_with_object_response(client):
     """
     Test GET /users/<user_id>/roles when Guardian returns an object with roles key.
     """
@@ -83,7 +83,7 @@ def test_get_user_roles_with_object_response(client, session):
             print("✅ Object with roles key format handled correctly")
 
 
-def test_get_user_roles_with_invalid_response_format(client, session):
+def test_get_user_roles_with_invalid_response_format(client):
     """
     Test GET /users/<user_id>/roles when Guardian returns an unexpected format.
     The API should gracefully handle this by returning an empty list with a 200 status.
@@ -121,7 +121,7 @@ def test_get_user_roles_with_invalid_response_format(client, session):
             )
 
 
-def test_get_user_roles_empty_list(client, session):
+def test_get_user_roles_empty_list(client):
     """
     Test GET /users/<user_id>/roles when user has no roles (empty list).
     """

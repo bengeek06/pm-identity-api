@@ -6,7 +6,7 @@ import uuid
 from unittest import mock
 
 
-def test_guardian_direct_list_format(client, session):
+def test_guardian_direct_list_format(client):
     """Test que le service Guardian retourne une liste directe."""
     from tests.test_user import get_init_db_payload, create_jwt_token
 
