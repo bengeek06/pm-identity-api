@@ -19,6 +19,7 @@ from app.logger import logger
 
 from app.models.customer import Customer
 from app.schemas.customer_schema import CustomerSchema
+from app.utils import require_jwt_auth, check_access_required
 
 
 class CustomerListResource(Resource):
@@ -33,6 +34,8 @@ class CustomerListResource(Resource):
             Create a new customer with the provided data.
     """
 
+    @require_jwt_auth(extract_company_id=False)
+    @check_access_required("list")
     def get(self):
         """
         Retrieve all customers.
@@ -47,6 +50,8 @@ class CustomerListResource(Resource):
         customer_schema = CustomerSchema(session=db.session, many=True)
         return customer_schema.dump(customers), 200
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("create")
     def post(self):
         """
         Create a new customer.
@@ -100,6 +105,8 @@ class CustomerResource(Resource):
             Delete a customer by ID.
     """
 
+    @require_jwt_auth(extract_company_id=False)
+    @check_access_required("read")
     def get(self, customer_id):
         """
         Retrieve a customer by ID.
@@ -121,6 +128,8 @@ class CustomerResource(Resource):
         customer_schema = CustomerSchema(session=db.session)
         return customer_schema.dump(customer), 200
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("update")
     def put(self, customer_id):
         """
         Update an existing customer by ID.
@@ -162,6 +171,8 @@ class CustomerResource(Resource):
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("update")
     def patch(self, customer_id):
         """
         Partially update an existing customer by ID.
@@ -203,6 +214,8 @@ class CustomerResource(Resource):
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
+    @require_jwt_auth(extract_company_id=True)
+    @check_access_required("delete")
     def delete(self, customer_id):
         """
         Delete a customer by ID.
