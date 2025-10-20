@@ -33,11 +33,15 @@ from app.resources.subcontractor import (
 from app.resources.user import (
     UserListResource,
     UserResource,
-    UserPositionResource,
-    VerifyPasswordResource,
+)
+from app.resources.user_position import UserPositionResource
+from app.resources.user_roles import (
     UserRolesListResource,
     UserRolesResource,
 )
+from app.resources.user_policies import UserPoliciesResource
+from app.resources.user_permissions import UserPermissionsResource
+from app.resources.user_auth import VerifyPasswordResource
 from app.resources.init_db import InitDBResource
 from app.resources.health import HealthResource
 
@@ -94,6 +98,12 @@ def register_routes(app):
     api.add_resource(
         UserRolesResource,
         "/users/<string:user_id>/roles/<string:user_role_id>",
+    )
+    api.add_resource(
+        UserPoliciesResource, "/users/<string:user_id>/policies"
+    )
+    api.add_resource(
+        UserPermissionsResource, "/users/<string:user_id>/permissions"
     )
 
     api.add_resource(

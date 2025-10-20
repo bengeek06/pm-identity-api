@@ -1853,3 +1853,677 @@ def test_delete_user_role_wrong_user(client):
             assert response.status_code == 404
             data = response.get_json()
             assert "not found" in str(data).lower()
+
+
+##################################################
+# Test cases for GET /users/<user_id>/policies
+##################################################
+def test_get_user_policies_success(client):
+    """
+    Test GET /users/<user_id>/policies with successful response from Guardian.
+    Should fetch roles then policies for each role.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Mock user roles response
+    role_id_1 = str(uuid.uuid4())
+    role_id_2 = str(uuid.uuid4())
+    roles_response = mock.Mock()
+    roles_response.status_code = 200
+    roles_response.json.return_value = [
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id_1},
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id_2},
+    ]
+
+    # Mock policies for role 1
+    policy_1 = {"id": str(uuid.uuid4()), "name": "policy1"}
+    policy_2 = {"id": str(uuid.uuid4()), "name": "policy2"}
+    policies_response_1 = mock.Mock()
+    policies_response_1.status_code = 200
+    policies_response_1.json.return_value = [policy_1, policy_2]
+
+    # Mock policies for role 2
+    policy_3 = {"id": str(uuid.uuid4()), "name": "policy3"}
+    policies_response_2 = mock.Mock()
+    policies_response_2.status_code = 200
+    policies_response_2.json.return_value = [policy_3, policy_1]  # policy_1 duplicated
+
+    def mock_get_side_effect(url, **kwargs):
+        if "/user-roles" in url:
+            return roles_response
+        if f"/roles/{role_id_1}/policies" in url:
+            return policies_response_1
+        if f"/roles/{role_id_2}/policies" in url:
+            return policies_response_2
+        raise ValueError(f"Unexpected URL: {url}")
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/policies")
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "policies" in data
+            # Should have 3 unique policies (policy_1 deduplicated)
+            assert len(data["policies"]) == 3
+            policy_ids = [p["id"] for p in data["policies"]]
+            assert policy_1["id"] in policy_ids
+            assert policy_2["id"] in policy_ids
+            assert policy_3["id"] in policy_ids
+
+
+def test_get_user_policies_no_roles(client):
+    """
+    Test GET /users/<user_id>/policies when user has no roles.
+    Should return empty policies list.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Mock empty roles response
+    roles_response = mock.Mock()
+    roles_response.status_code = 200
+    roles_response.json.return_value = []
+
+    with mock.patch("requests.get", return_value=roles_response):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/policies")
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "policies" in data
+            assert data["policies"] == []
+
+
+def test_get_user_policies_missing_jwt(client):
+    """
+    Test GET /users/<user_id>/policies without JWT authentication.
+    """
+    fake_user_id = str(uuid.uuid4())
+    response = client.get(f"/users/{fake_user_id}/policies")
+    assert response.status_code == 401
+
+
+def test_get_user_policies_user_not_found(client):
+    """
+    Test GET /users/<user_id>/policies with non-existent user.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    fake_user_id = str(uuid.uuid4())
+    response = client.get(f"/users/{fake_user_id}/policies")
+    assert response.status_code == 404
+    data = response.get_json()
+    assert "not found" in str(data).lower()
+
+
+def test_get_user_policies_different_company_denied(client, session):
+    """
+    Test GET /users/<user_id>/policies when accessing user from different company.
+    """
+    # Create first user
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id_1 = resp.get_json()["company"]["id"]
+    user_id_1 = resp.get_json()["user"]["id"]
+
+    # Create second user in different company
+    other_company_id = str(uuid.uuid4())
+    other_user = User(
+        email="other@example.com",
+        hashed_password=generate_password_hash("password"),
+        first_name="Other",
+        last_name="User",
+        company_id=other_company_id,
+    )
+    session.add(other_user)
+    session.commit()
+
+    # Authenticate as first user
+    jwt_token = create_jwt_token(company_id_1, user_id_1)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Try to access second user's policies
+    response = client.get(f"/users/{other_user.id}/policies")
+    assert response.status_code == 403
+    data = response.get_json()
+    assert "denied" in str(data).lower()
+
+
+def test_get_user_policies_missing_guardian_url(client):
+    """
+    Test GET /users/<user_id>/policies when GUARDIAN_SERVICE_URL is not set.
+    """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Keep JWT_SECRET but remove GUARDIAN_SERVICE_URL
+    jwt_secret = os.environ.get("JWT_SECRET", "test_secret")
+    with mock.patch.dict(
+        "os.environ", {"JWT_SECRET": jwt_secret}, clear=True
+    ):
+        response = client.get(f"/users/{user_id}/policies")
+        assert response.status_code == 500
+
+
+def test_get_user_policies_guardian_roles_error(client):
+    """
+    Test GET /users/<user_id>/policies when Guardian fails to return roles.
+    """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Mock Guardian returning error for roles
+    roles_response = mock.Mock()
+    roles_response.status_code = 500
+    roles_response.text = "Internal server error"
+
+    with mock.patch("requests.get", return_value=roles_response):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/policies")
+            assert response.status_code == 500
+            data = response.get_json()
+            assert "error" in str(data).lower()
+
+
+def test_get_user_policies_guardian_policies_partial_failure(client):
+    """
+    Test GET /users/<user_id>/policies when some role policies fail.
+    Should continue with other roles and return partial results.
+    """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    role_id_1 = str(uuid.uuid4())
+    role_id_2 = str(uuid.uuid4())
+    roles_response = mock.Mock()
+    roles_response.status_code = 200
+    roles_response.json.return_value = [
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id_1},
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id_2},
+    ]
+
+    # Role 1 policies succeed
+    policy_1 = {"id": str(uuid.uuid4()), "name": "policy1"}
+    policies_response_1 = mock.Mock()
+    policies_response_1.status_code = 200
+    policies_response_1.json.return_value = [policy_1]
+
+    # Role 2 policies fail
+    policies_response_2 = mock.Mock()
+    policies_response_2.status_code = 500
+    policies_response_2.text = "Error"
+
+    def mock_get_side_effect(url, **kwargs):
+        if "/user-roles" in url:
+            return roles_response
+        if f"/roles/{role_id_1}/policies" in url:
+            return policies_response_1
+        if f"/roles/{role_id_2}/policies" in url:
+            return policies_response_2
+        raise ValueError(f"Unexpected URL: {url}")
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/policies")
+
+            # Should still succeed with partial results
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "policies" in data
+            assert len(data["policies"]) == 1
+            assert data["policies"][0]["id"] == policy_1["id"]
+
+
+def test_get_user_policies_role_not_found_in_guardian(client):
+    """
+    Test GET /users/<user_id>/policies when a role is not found in Guardian.
+    Should skip that role and continue.
+    """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    role_id_1 = str(uuid.uuid4())
+    roles_response = mock.Mock()
+    roles_response.status_code = 200
+    roles_response.json.return_value = [
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id_1},
+    ]
+
+    # Role not found in Guardian
+    policies_response = mock.Mock()
+    policies_response.status_code = 404
+
+    def mock_get_side_effect(url, **kwargs):
+        if "/user-roles" in url:
+            return roles_response
+        if f"/roles/{role_id_1}/policies" in url:
+            return policies_response
+        raise ValueError(f"Unexpected URL: {url}")
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/policies")
+
+            # Should succeed with empty policies
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "policies" in data
+            assert data["policies"] == []
+
+
+##################################################
+# User Permissions Tests
+##################################################
+def test_get_user_permissions_success(client):
+    """
+    Test GET /users/<user_id>/permissions with successful response from Guardian.
+    Should fetch roles, then policies for each role, then permissions for each policy.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Mock user roles response
+    role_id_1 = str(uuid.uuid4())
+    role_id_2 = str(uuid.uuid4())
+    roles_response = mock.Mock()
+    roles_response.status_code = 200
+    roles_response.json.return_value = [
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id_1},
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id_2},
+    ]
+
+    # Mock policies for role 1
+    policy_id_1 = str(uuid.uuid4())
+    policy_id_2 = str(uuid.uuid4())
+    policies_response_1 = mock.Mock()
+    policies_response_1.status_code = 200
+    policies_response_1.json.return_value = [
+        {"id": policy_id_1, "name": "policy1"},
+        {"id": policy_id_2, "name": "policy2"},
+    ]
+
+    # Mock policies for role 2
+    policy_id_3 = str(uuid.uuid4())
+    policies_response_2 = mock.Mock()
+    policies_response_2.status_code = 200
+    policies_response_2.json.return_value = [
+        {"id": policy_id_3, "name": "policy3"},
+        {"id": policy_id_1, "name": "policy1"},  # policy_id_1 duplicated
+    ]
+
+    # Mock permissions for policy 1
+    permission_1 = {"id": str(uuid.uuid4()), "service": "identity", "resource_name": "user"}
+    permission_2 = {"id": str(uuid.uuid4()), "service": "identity", "resource_name": "company"}
+    permissions_response_1 = mock.Mock()
+    permissions_response_1.status_code = 200
+    permissions_response_1.json.return_value = [permission_1, permission_2]
+
+    # Mock permissions for policy 2
+    permission_3 = {"id": str(uuid.uuid4()), "service": "guardian", "resource_name": "role"}
+    permissions_response_2 = mock.Mock()
+    permissions_response_2.status_code = 200
+    permissions_response_2.json.return_value = [permission_3, permission_1]  # permission_1 duplicated
+
+    # Mock permissions for policy 3
+    permission_4 = {"id": str(uuid.uuid4()), "service": "guardian", "resource_name": "policy"}
+    permissions_response_3 = mock.Mock()
+    permissions_response_3.status_code = 200
+    permissions_response_3.json.return_value = [permission_4]
+
+    def mock_get_side_effect(url, **kwargs):
+        if "/user-roles" in url:
+            return roles_response
+        if f"/roles/{role_id_1}/policies" in url:
+            return policies_response_1
+        if f"/roles/{role_id_2}/policies" in url:
+            return policies_response_2
+        if f"/policies/{policy_id_1}/permissions" in url:
+            return permissions_response_1
+        if f"/policies/{policy_id_2}/permissions" in url:
+            return permissions_response_2
+        if f"/policies/{policy_id_3}/permissions" in url:
+            return permissions_response_3
+        raise ValueError(f"Unexpected URL: {url}")
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/permissions")
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "permissions" in data
+            # Should have 4 unique permissions (permission_1 deduplicated)
+            assert len(data["permissions"]) == 4
+            permission_ids = [p["id"] for p in data["permissions"]]
+            assert permission_1["id"] in permission_ids
+            assert permission_2["id"] in permission_ids
+            assert permission_3["id"] in permission_ids
+            assert permission_4["id"] in permission_ids
+
+
+def test_get_user_permissions_no_roles(client):
+    """
+    Test GET /users/<user_id>/permissions when user has no roles.
+    Should return empty permissions list.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Mock empty roles response
+    roles_response = mock.Mock()
+    roles_response.status_code = 200
+    roles_response.json.return_value = []
+
+    with mock.patch("requests.get", return_value=roles_response):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/permissions")
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "permissions" in data
+            assert data["permissions"] == []
+
+
+def test_get_user_permissions_missing_jwt(client):
+    """
+    Test GET /users/<user_id>/permissions without JWT authentication.
+    """
+    fake_user_id = str(uuid.uuid4())
+    response = client.get(f"/users/{fake_user_id}/permissions")
+    assert response.status_code == 401
+
+
+def test_get_user_permissions_user_not_found(client):
+    """
+    Test GET /users/<user_id>/permissions with non-existent user.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    fake_user_id = str(uuid.uuid4())
+    response = client.get(f"/users/{fake_user_id}/permissions")
+    assert response.status_code == 404
+    data = response.get_json()
+    assert "not found" in str(data).lower()
+
+
+def test_get_user_permissions_different_company_denied(client, session):
+    """
+    Test GET /users/<user_id>/permissions when accessing user from different company.
+    """
+    # Create first user
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id_1 = resp.get_json()["company"]["id"]
+    user_id_1 = resp.get_json()["user"]["id"]
+
+    # Create second user in different company
+    other_company_id = str(uuid.uuid4())
+    other_user = User(
+        email="other@example.com",
+        hashed_password=generate_password_hash("password"),
+        first_name="Other",
+        last_name="User",
+        company_id=other_company_id,
+    )
+    session.add(other_user)
+    session.commit()
+
+    # Authenticate as first user
+    jwt_token = create_jwt_token(company_id_1, user_id_1)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Try to access second user's permissions
+    response = client.get(f"/users/{other_user.id}/permissions")
+    assert response.status_code == 403
+    data = response.get_json()
+    assert "denied" in str(data).lower()
+
+
+def test_get_user_permissions_missing_guardian_url(client):
+    """
+    Test GET /users/<user_id>/permissions when GUARDIAN_SERVICE_URL is not set.
+    """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Keep JWT_SECRET but remove GUARDIAN_SERVICE_URL
+    jwt_secret = os.environ.get("JWT_SECRET", "test_secret")
+    with mock.patch.dict(
+        "os.environ", {"JWT_SECRET": jwt_secret}, clear=True
+    ):
+        response = client.get(f"/users/{user_id}/permissions")
+        assert response.status_code == 500
+
+
+def test_get_user_permissions_guardian_roles_error(client):
+    """
+    Test GET /users/<user_id>/permissions when Guardian fails to return roles.
+    """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Mock Guardian returning error for roles
+    roles_response = mock.Mock()
+    roles_response.status_code = 500
+    roles_response.text = "Internal server error"
+
+    with mock.patch("requests.get", return_value=roles_response):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/permissions")
+            assert response.status_code == 500
+            data = response.get_json()
+            assert "error" in str(data).lower()
+
+
+def test_get_user_permissions_guardian_permissions_partial_failure(client):
+    """
+    Test GET /users/<user_id>/permissions when some policy permissions fail.
+    Should continue with other policies and return partial results.
+    """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    role_id_1 = str(uuid.uuid4())
+    roles_response = mock.Mock()
+    roles_response.status_code = 200
+    roles_response.json.return_value = [
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id_1},
+    ]
+
+    # Mock policies
+    policy_id_1 = str(uuid.uuid4())
+    policy_id_2 = str(uuid.uuid4())
+    policies_response = mock.Mock()
+    policies_response.status_code = 200
+    policies_response.json.return_value = [
+        {"id": policy_id_1, "name": "policy1"},
+        {"id": policy_id_2, "name": "policy2"},
+    ]
+
+    # Policy 1 permissions succeed
+    permission_1 = {"id": str(uuid.uuid4()), "service": "identity", "resource_name": "user"}
+    permissions_response_1 = mock.Mock()
+    permissions_response_1.status_code = 200
+    permissions_response_1.json.return_value = [permission_1]
+
+    # Policy 2 permissions fail
+    permissions_response_2 = mock.Mock()
+    permissions_response_2.status_code = 500
+    permissions_response_2.text = "Error"
+
+    def mock_get_side_effect(url, **kwargs):
+        if "/user-roles" in url:
+            return roles_response
+        if f"/roles/{role_id_1}/policies" in url:
+            return policies_response
+        if f"/policies/{policy_id_1}/permissions" in url:
+            return permissions_response_1
+        if f"/policies/{policy_id_2}/permissions" in url:
+            return permissions_response_2
+        raise ValueError(f"Unexpected URL: {url}")
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/permissions")
+
+            # Should still succeed with partial results
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "permissions" in data
+            assert len(data["permissions"]) == 1
+            assert data["permissions"][0]["id"] == permission_1["id"]
+
+
+def test_get_user_permissions_policy_not_found_in_guardian(client):
+    """
+    Test GET /users/<user_id>/permissions when a policy is not found in Guardian.
+    Should skip that policy and continue.
+    """
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    role_id_1 = str(uuid.uuid4())
+    roles_response = mock.Mock()
+    roles_response.status_code = 200
+    roles_response.json.return_value = [
+        {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id_1},
+    ]
+
+    # Mock policies
+    policy_id_1 = str(uuid.uuid4())
+    policies_response = mock.Mock()
+    policies_response.status_code = 200
+    policies_response.json.return_value = [
+        {"id": policy_id_1, "name": "policy1"},
+    ]
+
+    # Policy not found in Guardian
+    permissions_response = mock.Mock()
+    permissions_response.status_code = 404
+
+    def mock_get_side_effect(url, **kwargs):
+        if "/user-roles" in url:
+            return roles_response
+        if f"/roles/{role_id_1}/policies" in url:
+            return policies_response
+        if f"/policies/{policy_id_1}/permissions" in url:
+            return permissions_response
+        raise ValueError(f"Unexpected URL: {url}")
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/permissions")
+
+            # Should succeed with empty permissions
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "permissions" in data
+            assert data["permissions"] == []
+
+

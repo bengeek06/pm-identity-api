@@ -885,6 +885,74 @@ components:
           type: string
           description: Role identifier to assign (from Guardian Service)
 
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the policy
+        name:
+          type: string
+          description: Name of the policy
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the policy
+        company_id:
+          type: string
+          format: uuid
+          description: Company identifier for multi-tenant isolation
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the policy was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the policy was last updated
+
+    Permission:
+      type: object
+      required:
+        - id
+        - service
+        - resource_name
+        - operations
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the permission
+        service:
+          type: string
+          description: Service name this permission belongs to
+        resource_name:
+          type: string
+          description: Name of the resource this permission applies to
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the permission
+        operations:
+          type: array
+          items:
+            type: string
+          description: List of operations allowed by this permission
+        company_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Company identifier for multi-tenant isolation
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the permission was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the permission was last updated
+
     PasswordVerification:
       type: object
       required:
@@ -2156,6 +2224,120 @@ paths:
       responses:
         '204':
           description: Role removed successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user_id}/policies:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user
+
+    get:
+      tags: [Users]
+      summary: Get user policies
+      description: |
+        Returns all policies associated with a user's roles via the Guardian Service (RBAC).
+        
+        This endpoint:
+        1. Fetches all roles assigned to the user from Guardian
+        2. For each role, fetches associated policies from Guardian
+        3. Returns a deduplicated list of all policies
+        
+        The policies are aggregated from all roles and deduplicated by policy ID.
+      responses:
+        '200':
+          description: List of policies for the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Policy'
+              example:
+                policies:
+                  - id: "123e4567-e89b-12d3-a456-426614174000"
+                    name: "Project Management Policy"
+                    description: "Permissions for project management operations"
+                    company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+                  - id: "456e7890-f12b-34c5-d678-90abcdef1234"
+                    name: "User Management Policy"
+                    description: "Permissions for user management operations"
+                    company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user_id}/permissions:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user
+
+    get:
+      tags: [Users]
+      summary: Get user permissions
+      description: |
+        Returns all permissions associated with a user's policies via the Guardian Service (RBAC).
+        
+        This endpoint:
+        1. Fetches all roles assigned to the user from Guardian
+        2. For each role, fetches associated policies from Guardian
+        3. For each policy, fetches associated permissions from Guardian
+        4. Returns a deduplicated list of all permissions
+        
+        The permissions are aggregated from all policies of all roles and deduplicated by permission ID.
+      responses:
+        '200':
+          description: List of permissions for the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Permission'
+              example:
+                permissions:
+                  - id: "123e4567-e89b-12d3-a456-426614174000"
+                    service: "identity"
+                    resource_name: "user"
+                    description: "Manage users"
+                    operations: ["create", "read", "update", "delete"]
+                  - id: "456e7890-f12b-34c5-d678-90abcdef1234"
+                    service: "identity"
+                    resource_name: "company"
+                    description: "Manage companies"
+                    operations: ["read", "update"]
+                  - id: "789abcde-f34c-56d7-e890-123456789012"
+                    service: "guardian"
+                    resource_name: "role"
+                    description: "Manage roles"
+                    operations: ["create", "read", "update", "delete"]
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
