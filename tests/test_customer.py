@@ -39,7 +39,7 @@ def test_get_customers_single(client, session):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="Test Customer", company_id=1)
+    customer = Customer(name="Test Customer", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
@@ -106,12 +106,13 @@ def test_post_customer_success(client):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    payload = {"name": "Nouveau Client", "company_id": 1}
+    customer_company_id = str(uuid.uuid4())
+    payload = {"name": "Nouveau Client", "company_id": customer_company_id}
     response = client.post("/customers", json=payload)
     assert response.status_code == 201
     data = response.get_json()
     assert data["name"] == "Nouveau Client"
-    assert data["company_id"] == 1
+    assert data["company_id"] == customer_company_id
     assert "id" in data
 
 
@@ -125,7 +126,7 @@ def test_post_customer_missing_name(client):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    payload = {"company_id": 1}
+    payload = {"company_id": str(uuid.uuid4())}
     response = client.post("/customers", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -145,7 +146,7 @@ def test_post_customer_unknown_field(client):
 
     payload = {
         "name": "Client Mystère",
-        "company_id": 1,
+        "company_id": str(uuid.uuid4()),
         "unknown_field": "valeur",
     }
     response = client.post("/customers", json=payload)
@@ -170,7 +171,7 @@ def test_post_customer_integrity_error(client, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
 
-    payload = {"name": "Test Client", "company_id": 1}
+    payload = {"name": "Test Client", "company_id": str(uuid.uuid4())}
     response = client.post("/customers", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -193,7 +194,7 @@ def test_post_customer_sqlalchemy_error(client, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
 
-    payload = {"name": "Test Client", "company_id": 1}
+    payload = {"name": "Test Client", "company_id": str(uuid.uuid4())}
     response = client.post("/customers", json=payload)
     assert response.status_code == 500
     data = response.get_json()
@@ -214,7 +215,8 @@ def test_get_customer_by_id_success(client, session):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="FindMe", company_id=1)
+    customer_company_id = str(uuid.uuid4())
+    customer = Customer(name="FindMe", company_id=customer_company_id)
     session.add(customer)
     session.commit()
 
@@ -223,7 +225,7 @@ def test_get_customer_by_id_success(client, session):
     data = response.get_json()
     assert data["id"] == customer.id
     assert data["name"] == "FindMe"
-    assert data["company_id"] == 1
+    assert data["company_id"] == customer_company_id
 
 
 def test_get_customer_by_id_not_found(client):
@@ -256,17 +258,19 @@ def test_put_customer_success(client, session):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="OldName", company_id=1)
+    customer_company_id = str(uuid.uuid4())
+    customer = Customer(name="OldName", company_id=customer_company_id)
     session.add(customer)
     session.commit()
 
-    payload = {"name": "NewName", "company_id": 1}
+    new_company_id = str(uuid.uuid4())
+    payload = {"name": "NewName", "company_id": new_company_id}
     response = client.put(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == customer.id
     assert data["name"] == "NewName"
-    assert data["company_id"] == 1
+    assert data["company_id"] == new_company_id
 
 
 def test_put_customer_not_found(client):
@@ -279,7 +283,7 @@ def test_put_customer_not_found(client):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    payload = {"name": "DoesNotExist", "company_id": 1}
+    payload = {"name": "DoesNotExist", "company_id": str(uuid.uuid4())}
     response = client.put("/customers/doesnotexist", json=payload)
     assert response.status_code == 404
     data = response.get_json()
@@ -297,11 +301,11 @@ def test_put_customer_missing_name(client, session):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="ToBeUpdated", company_id=1)
+    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
-    payload = {"company_id": 1}
+    payload = {"company_id": str(uuid.uuid4())}
     response = client.put(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -319,13 +323,13 @@ def test_put_customer_unknown_field(client, session):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="ToBeUpdated", company_id=1)
+    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
     payload = {
         "name": "StillValid",
-        "company_id": 1,
+        "company_id": str(uuid.uuid4()),
         "unknown_field": "should fail",
     }
     response = client.put(f"/customers/{customer.id}", json=payload)
@@ -345,7 +349,7 @@ def test_put_customer_integrity_error(client, session, monkeypatch):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="ToBeUpdated", company_id=1)
+    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
@@ -354,7 +358,7 @@ def test_put_customer_integrity_error(client, session, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
 
-    payload = {"name": "NewName", "company_id": 1}
+    payload = {"name": "NewName", "company_id": str(uuid.uuid4())}
     response = client.put(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -372,7 +376,7 @@ def test_put_customer_sqlalchemy_error(client, session, monkeypatch):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="ToBeUpdated", company_id=1)
+    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
@@ -381,7 +385,7 @@ def test_put_customer_sqlalchemy_error(client, session, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
 
-    payload = {"name": "NewName", "company_id": 1}
+    payload = {"name": "NewName", "company_id": str(uuid.uuid4())}
     response = client.put(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 500
     data = response.get_json()
@@ -397,7 +401,7 @@ def test_put_customer_sqlalchemy_error(client, session, monkeypatch):
 @pytest.fixture
 def customer_fixture(session):
     """Fixture to create a customer for PATCH tests."""
-    cust = Customer(name="PatchMe", company_id=1)
+    cust = Customer(name="PatchMe", company_id=str(uuid.uuid4()))
     session.add(cust)
     session.commit()
     return cust
@@ -644,7 +648,7 @@ def test_patch_customer_integrity_error(client, session, monkeypatch):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="ToBeUpdated", company_id=1)
+    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
@@ -653,7 +657,7 @@ def test_patch_customer_integrity_error(client, session, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
 
-    payload = {"name": "NewName", "company_id": 1}
+    payload = {"name": "NewName", "company_id": str(uuid.uuid4())}
     response = client.patch(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -671,7 +675,7 @@ def test_patch_customer_sqlalchemy_error(client, session, monkeypatch):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="ToBeUpdated", company_id=1)
+    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
@@ -680,7 +684,7 @@ def test_patch_customer_sqlalchemy_error(client, session, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
 
-    payload = {"name": "NewName", "company_id": 1}
+    payload = {"name": "NewName", "company_id": str(uuid.uuid4())}
     response = client.patch(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 500
     data = response.get_json()
@@ -701,7 +705,7 @@ def test_delete_customer_success(client, session):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="DeleteMe", company_id=1)
+    customer = Customer(name="DeleteMe", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
@@ -739,7 +743,7 @@ def test_delete_customer_integrity_error(client, session, monkeypatch):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="DeleteMe", company_id=1)
+    customer = Customer(name="DeleteMe", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
@@ -765,7 +769,7 @@ def test_delete_customer_sqlalchemy_error(client, session, monkeypatch):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer = Customer(name="DeleteMe", company_id=1)
+    customer = Customer(name="DeleteMe", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 

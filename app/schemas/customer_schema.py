@@ -26,7 +26,7 @@ class CustomerSchema(SQLAlchemyAutoSchema):
 
     Fields:
         name (str): Required. 1-100 characters.
-        company_id (int): Required. Must be a positive integer.
+        company_id (str): Required. Must be a valid UUID (36 characters).
         email (str): Optional. Must be a valid email, max 100 characters.
         contact_person (str): Optional. Max 100 characters.
         phone_number (str): Optional. Digits only, max 50 characters.
@@ -55,9 +55,9 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         required=True, validate=validate.Length(min=1, max=100)
     )
 
-    company_id = fields.Integer(
+    company_id = fields.String(
         required=True,
-        validate=validate.Range(min=1),
+        validate=validate.Length(equal=36),
     )
 
     email = fields.Email(allow_none=True, validate=validate.Length(max=100))
