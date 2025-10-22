@@ -34,18 +34,16 @@ class Customer(db.Model):
         created_at (datetime): Timestamp when the customer was created.
         updated_at (datetime): Timestamp when the customer was last updated.
     """
-    __tablename__ = 'customer'
+
+    __tablename__ = "customer"
 
     id = db.Column(
-        db.String(36),
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     name = db.Column(db.String(100), nullable=False)
     company_id = db.Column(
-        db.String(36),
-        db.ForeignKey('company.id'),
-        nullable=False)
+        db.String(36), db.ForeignKey("company.id"), nullable=False
+    )
     email = db.Column(db.String(100), nullable=True, unique=True)
     contact_person = db.Column(db.String(100), nullable=True)
     phone_number = db.Column(db.String(50), nullable=True)
@@ -54,7 +52,7 @@ class Customer(db.Model):
     updated_at = db.Column(
         db.DateTime,
         default=db.func.current_timestamp(),
-        onupdate=db.func.current_timestamp()
+        onupdate=db.func.current_timestamp(),
     )
 
     def __repr__(self):
@@ -98,9 +96,7 @@ class Customer(db.Model):
         try:
             return cls.query.filter_by(id=customer_id).first()
         except SQLAlchemyError as e:
-            logger.error(
-                f"Error retrieving customer by ID {customer_id}: {e}"
-            )
+            logger.error(f"Error retrieving customer by ID {customer_id}: {e}")
             return None
 
     @classmethod

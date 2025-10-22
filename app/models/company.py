@@ -43,12 +43,11 @@ class Company(db.Model):
         organizations_units (list[OrganizationUnit]): Relationship to
                     OrganizationUnit objects belonging to the company.
     """
-    __tablename__ = 'company'
+
+    __tablename__ = "company"
 
     id = db.Column(
-        db.String(36),
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255), nullable=True)
@@ -60,25 +59,16 @@ class Company(db.Model):
     postal_code = db.Column(db.String(20), nullable=True)
     city = db.Column(db.String(100), nullable=True)
     country = db.Column(db.String(100), nullable=True)
-    created_at = db.Column(
-        db.DateTime,
-        default=db.func.current_timestamp()
-    )
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
         default=db.func.current_timestamp(),
-        onupdate=db.func.current_timestamp()
+        onupdate=db.func.current_timestamp(),
     )
 
-    users = db.relationship(
-        'User',
-        back_populates='company',
-        lazy=True
-    )
+    users = db.relationship("User", back_populates="company", lazy=True)
     organizations_units = db.relationship(
-        'OrganizationUnit',
-        back_populates='company',
-        lazy=True
+        "OrganizationUnit", back_populates="company", lazy=True
     )
 
     def __repr__(self):
@@ -120,11 +110,9 @@ class Company(db.Model):
                              if not found.
         """
         try:
-            return cls.query.get(company_id)
+            return db.session.get(cls, company_id)
         except SQLAlchemyError as e:
-            logger.error(
-                f"Error retrieving company by ID {company_id}: {e}"
-            )
+            logger.error(f"Error retrieving company by ID {company_id}: {e}")
             return None
 
     @classmethod
@@ -142,7 +130,5 @@ class Company(db.Model):
         try:
             return cls.query.filter_by(name=name).first()
         except SQLAlchemyError as e:
-            logger.error(
-                f"Error retrieving company by name {name}: {e}"
-            )
+            logger.error(f"Error retrieving company by name {name}: {e}")
             return None

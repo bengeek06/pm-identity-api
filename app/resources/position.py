@@ -20,6 +20,7 @@ from app.logger import logger
 from app.models.position import Position
 from app.schemas.position_schema import PositionSchema
 from app.models.organization_unit import OrganizationUnit
+from app.utils import require_jwt_auth, check_access_required
 
 
 class PositionListResource(Resource):
@@ -33,6 +34,9 @@ class PositionListResource(Resource):
         post():
             Create a new position with the provided data.
     """
+
+    @require_jwt_auth()
+    @check_access_required("list")
     def get(self):
         """
         Retrieve all positions.
@@ -49,6 +53,8 @@ class PositionListResource(Resource):
             logger.error("Error fetching positions: %s", str(e))
             return {"message": "Error fetching positions"}, 500
 
+    @require_jwt_auth()
+    @check_access_required("create")
     def post(self):
         """
         Create a new position.
@@ -65,14 +71,16 @@ class PositionListResource(Resource):
         logger.info("Creating a new position")
 
         json_data = request.get_json()
-        org_unit_id = json_data.get('organization_unit_id')
+        org_unit_id = json_data.get("organization_unit_id")
         if not org_unit_id:
             logger.warning("organization_unit_id is required")
             return {"message": "organization_unit_id is required"}, 400
 
         org_unit = OrganizationUnit.get_by_id(org_unit_id)
         if not org_unit:
-            logger.warning("Organization unit with ID %s not found", org_unit_id)
+            logger.warning(
+                "Organization unit with ID %s not found", org_unit_id
+            )
             return {"message": "Organization unit not found"}, 404
 
         position_schema = PositionSchema(session=db.session)
@@ -114,6 +122,9 @@ class PositionResource(Resource):
         delete(position_id):
             Delete a position by ID.
     """
+
+    @require_jwt_auth()
+    @check_access_required("read")
     def get(self, position_id):
         """
         Retrieve a position by ID.
@@ -135,6 +146,8 @@ class PositionResource(Resource):
         schema = PositionSchema(session=db.session)
         return schema.dump(position), 200
 
+    @require_jwt_auth()
+    @check_access_required("update")
     def put(self, position_id):
         """
         Update an existing position with the provided data.
@@ -176,6 +189,8 @@ class PositionResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth()
+    @check_access_required("update")
     def patch(self, position_id):
         """
         Partially update an existing position with the provided data.
@@ -217,6 +232,8 @@ class PositionResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth()
+    @check_access_required("delete")
     def delete(self, position_id):
         """
         Delete a position by ID.
@@ -254,6 +271,9 @@ class OrganizationUnitPositionsResource(Resource):
         post(unit_id):
             Create a new position for a given organization unit.
     """
+
+    @require_jwt_auth()
+    @check_access_required("list")
     def get(self, unit_id):
         """
         List all positions for a given organization unit.
@@ -270,6 +290,8 @@ class OrganizationUnitPositionsResource(Resource):
         schema = PositionSchema(many=True)
         return schema.dump(positions), 200
 
+    @require_jwt_auth()
+    @check_access_required("create")
     def post(self, unit_id):
         """
         Create a new position for a given organization unit.
@@ -290,7 +312,7 @@ class OrganizationUnitPositionsResource(Resource):
 
         json_data = request.get_json()
         # Renseigne automatiquement organization_unit_id
-        json_data['organization_unit_id'] = unit_id
+        json_data["organization_unit_id"] = unit_id
         position_schema = PositionSchema(session=db.session)
         try:
             position = position_schema.load(json_data)

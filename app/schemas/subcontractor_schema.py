@@ -35,6 +35,7 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         email (str): Optional email address of the subcontractor.
         address (str): Optional address of the subcontractor.
     """
+
     class Meta:
         """
         Meta options for the Subcontractor schema.
@@ -45,44 +46,42 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
             include_fk: Whether to include foreign keys.
             dump_only: Fields that are only used for serialization.
         """
+
         model = Subcontractor
         load_instance = True
         include_fk = True
-        dump_only = ('id', 'created_at', 'updated_at')
+        dump_only = ("id", "created_at", "updated_at")
 
     name = fields.String(
         required=True,
         validate=validate.Length(
-            min=1, max=100,
-            error="Name must be between 1 and 100 characters."
+            min=1, max=100, error="Name must be between 1 and 100 characters."
         ),
     )
 
     description = fields.String(
         required=False,
         validate=validate.Length(
-            max=200,
-            error="Description cannot exceed 200 characters."
+            max=200, error="Description cannot exceed 200 characters."
         ),
     )
 
     company_id = fields.String(
         required=True,
         validate=validate.Regexp(
-            r'^[a-fA-F0-9]{8}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{12}$',
-            error="Company ID must be a valid UUID."
-        )
+            r"^[a-fA-F0-9]{8}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{12}$",
+            error="Company ID must be a valid UUID.",
+        ),
     )
 
     contact_person = fields.String(
         required=False,
         validate=validate.Length(
-            max=100,
-            error="Contact person cannot exceed 100 characters."
+            max=100, error="Contact person cannot exceed 100 characters."
         ),
     )
 
@@ -91,27 +90,26 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         validate=[
             validate.Length(max=50),
             validate.Regexp(
-                r"^\d*$", error="Phone number must contain only digits.")
-        ]
+                r"^\d*$", error="Phone number must contain only digits."
+            ),
+        ],
     )
 
     email = fields.Email(
         required=False,
         validate=validate.Length(
-            max=100,
-            error="Email cannot exceed 100 characters."
+            max=100, error="Email cannot exceed 100 characters."
         ),
     )
 
     address = fields.String(
         required=False,
         validate=validate.Length(
-            max=200,
-            error="Address cannot exceed 200 characters."
+            max=200, error="Address cannot exceed 200 characters."
         ),
     )
 
-    @validates('name')
+    @validates("name")
     def validate_name(self, value, **kwargs):
         """
         Validate that the name is not empty and is unique.
@@ -130,8 +128,8 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         subcontractor = Subcontractor.get_by_name(value)
         if subcontractor:
             logger.error(
-              "Validation error: Subcontractor with name '%s' already exists.",
-              value
+                "Validation error: Subcontractor with name '%s' already exists.",
+                value,
             )
             raise ValidationError("Name must be unique.")
         return value

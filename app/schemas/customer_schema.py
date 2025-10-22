@@ -26,12 +26,13 @@ class CustomerSchema(SQLAlchemyAutoSchema):
 
     Fields:
         name (str): Required. 1-100 characters.
-        company_id (int): Required. Must be a positive integer.
+        company_id (str): Required. Must be a valid UUID (36 characters).
         email (str): Optional. Must be a valid email, max 100 characters.
         contact_person (str): Optional. Max 100 characters.
         phone_number (str): Optional. Digits only, max 50 characters.
         address (str): Optional. Max 255 characters.
     """
+
     class Meta:
         """
         Meta options for the Customer schema.
@@ -43,30 +44,26 @@ class CustomerSchema(SQLAlchemyAutoSchema):
             dump_only: Fields that are only used for serialization.
             unknown: Raise error on unknown fields.
         """
+
         model = Customer
         load_instance = True
         include_fk = True
-        dump_only = ('id', 'created_at', 'updated_at')
+        dump_only = ("id", "created_at", "updated_at")
         unknown = RAISE
 
     name = fields.String(
-        required=True,
-        validate=validate.Length(min=1, max=100)
+        required=True, validate=validate.Length(min=1, max=100)
     )
 
-    company_id = fields.Integer(
+    company_id = fields.String(
         required=True,
-        validate=validate.Range(min=1),
+        validate=validate.Length(equal=36),
     )
 
-    email = fields.Email(
-        allow_none=True,
-        validate=validate.Length(max=100)
-    )
+    email = fields.Email(allow_none=True, validate=validate.Length(max=100))
 
     contact_person = fields.String(
-        allow_none=True,
-        validate=validate.Length(max=100)
+        allow_none=True, validate=validate.Length(max=100)
     )
 
     phone_number = fields.String(
@@ -74,11 +71,9 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         validate=[
             validate.Length(max=50),
             validate.Regexp(
-                r"^\d*$", error="Phone number must contain only digits.")
-        ]
+                r"^\d*$", error="Phone number must contain only digits."
+            ),
+        ],
     )
 
-    address = fields.String(
-        allow_none=True,
-        validate=validate.Length(max=255)
-    )
+    address = fields.String(allow_none=True, validate=validate.Length(max=255))

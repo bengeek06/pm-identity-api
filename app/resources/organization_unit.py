@@ -19,6 +19,7 @@ from app.models import db
 from app.logger import logger
 from app.models.organization_unit import OrganizationUnit
 from app.schemas.organization_unit_schema import OrganizationUnitSchema
+from app.utils import require_jwt_auth, check_access_required
 
 
 class OrganizationUnitListResource(Resource):
@@ -33,6 +34,8 @@ class OrganizationUnitListResource(Resource):
             Create a new organization unit with the provided data.
     """
 
+    @require_jwt_auth()
+    @check_access_required("list")
     def get(self):
         """
         Retrieve all organization units.
@@ -47,6 +50,8 @@ class OrganizationUnitListResource(Resource):
         org_unit_schema = OrganizationUnitSchema(session=db.session, many=True)
         return org_unit_schema.dump(org_units), 200
 
+    @require_jwt_auth()
+    @check_access_required("create")
     def post(self):
         """
         Create a new organization unit.
@@ -77,7 +82,8 @@ class OrganizationUnitListResource(Resource):
         except IntegrityError as err:
             db.session.rollback()
             logger.error(
-                "Integrity error, possibly duplicate entry: %s", str(err))
+                "Integrity error, possibly duplicate entry: %s", str(err)
+            )
             return {"error": "Integrity error, possibly duplicate entry."}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
@@ -104,6 +110,8 @@ class OrganizationUnitResource(Resource):
             descendants.
     """
 
+    @require_jwt_auth()
+    @check_access_required("read")
     def get(self, unit_id):
         """
         Retrieve an organization unit by its ID.
@@ -126,6 +134,8 @@ class OrganizationUnitResource(Resource):
         org_unit_schema = OrganizationUnitSchema(session=db.session)
         return org_unit_schema.dump(org_unit), 200
 
+    @require_jwt_auth()
+    @check_access_required("update")
     def put(self, unit_id):
         """
         Update an existing organization unit by its ID.
@@ -145,18 +155,20 @@ class OrganizationUnitResource(Resource):
         logger.info("Updating organization unit with ID %s", unit_id)
         json_data = request.get_json()
         org_unit_schema = OrganizationUnitSchema(session=db.session)
-        org_unit_schema.context = {'current_id': unit_id}
+        org_unit_schema.context = {"current_id": unit_id}
 
         try:
             org_unit = OrganizationUnit.get_by_id(unit_id)
             if not org_unit:
                 logger.warning(
-                    "Organization unit with ID %s not found", unit_id)
+                    "Organization unit with ID %s not found", unit_id
+                )
                 return {"error": "Organization unit not found"}, 404
 
             updated_org_unit = org_unit_schema.load(
-                json_data, instance=org_unit)
-            updated_org_unit.context = {'current_id': unit_id}
+                json_data, instance=org_unit
+            )
+            updated_org_unit.context = {"current_id": unit_id}
             updated_org_unit.update_path_and_level()
             db.session.commit()
             return org_unit_schema.dump(updated_org_unit), 200
@@ -166,13 +178,16 @@ class OrganizationUnitResource(Resource):
         except IntegrityError as err:
             db.session.rollback()
             logger.error(
-                "Integrity error, possibly duplicate entry: %s", str(err))
+                "Integrity error, possibly duplicate entry: %s", str(err)
+            )
             return {"error": "Integrity error, possibly duplicate entry."}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
+    @require_jwt_auth()
+    @check_access_required("update")
     def patch(self, unit_id):
         """
         Partially update an existing organization unit by its ID.
@@ -192,14 +207,14 @@ class OrganizationUnitResource(Resource):
         logger.info("Partially updating organization unit with ID %s", unit_id)
         json_data = request.get_json()
         org_unit_schema = OrganizationUnitSchema(
-            session=db.session, partial=True)
-        org_unit_schema.context = {'current_id': unit_id}
+            session=db.session, partial=True
+        )
+        org_unit_schema.context = {"current_id": unit_id}
         try:
             org_unit = OrganizationUnit.get_by_id(unit_id)
             if not org_unit:
                 logger.warning(
-                    "Organization unit with ID %s not found",
-                    unit_id
+                    "Organization unit with ID %s not found", unit_id
                 )
                 return {"error": "Organization unit not found"}, 404
 
@@ -216,13 +231,16 @@ class OrganizationUnitResource(Resource):
         except IntegrityError as err:
             db.session.rollback()
             logger.error(
-                "Integrity error, possibly duplicate entry: %s", str(err))
+                "Integrity error, possibly duplicate entry: %s", str(err)
+            )
             return {"error": "Integrity error, possibly duplicate entry."}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error("Database error: %s", str(err))
             return {"error": "Database error occurred."}, 500
 
+    @require_jwt_auth()
+    @check_access_required("delete")
     def delete(self, unit_id):
         """
         Delete an organization unit by its ID, including all its descendants.
@@ -236,7 +254,7 @@ class OrganizationUnitResource(Resource):
         """
         logger.info(
             "Deleting organization unit with ID %s and all its descendants",
-            unit_id
+            unit_id,
         )
 
         org_unit = OrganizationUnit.get_by_id(unit_id)
@@ -262,12 +280,12 @@ class OrganizationUnitResource(Resource):
             delete_descendants(org_unit)
             db.session.delete(org_unit)
             db.session.commit()
-            return '', 204
+            return "", 204
         except IntegrityError as err:
             db.session.rollback()
             logger.error(
                 "Integrity error while deleting organization unit: %s",
-                str(err)
+                str(err),
             )
             return {
                 "error": "Integrity error, possibly due to FK constraints."
@@ -275,8 +293,7 @@ class OrganizationUnitResource(Resource):
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error(
-                "Database error while deleting organization unit: %s",
-                str(err)
+                "Database error while deleting organization unit: %s", str(err)
             )
             return {"error": "Database error occurred."}, 500
 
@@ -290,6 +307,8 @@ class OrganizationUnitChildrenResource(Resource):
             Retrieve all children of a specific organization unit.
     """
 
+    @require_jwt_auth()
+    @check_access_required("list")
     def get(self, unit_id):
         """
         Retrieve all children of a specific organization unit.
@@ -302,7 +321,8 @@ class OrganizationUnitChildrenResource(Resource):
                    status code 200.
         """
         logger.info(
-            "Retrieving children of organization unit with ID %s", unit_id)
+            "Retrieving children of organization unit with ID %s", unit_id
+        )
 
         children = OrganizationUnit.get_children(unit_id)
         org_unit_schema = OrganizationUnitSchema(session=db.session, many=True)

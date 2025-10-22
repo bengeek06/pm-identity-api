@@ -23,9 +23,10 @@ from flask_migrate import Migrate
 from flask_marshmallow import Marshmallow
 from flask_cors import CORS
 
-from .models import db
-from .logger import logger
-from .routes import register_routes
+from app.models import db
+from app.logger import logger
+from app.routes import register_routes
+from app.models.user import User
 
 # Initialize Flask extensions
 migrate = Migrate()
@@ -52,8 +53,9 @@ def register_error_handlers(app):
     Args:
         app (Flask): The Flask application instance.
     """
+
     @app.errorhandler(401)
-    def unauthorized(_):
+    def unauthorized(error):
         """
         Handler for 401 (unauthorized) errors.
 
@@ -62,20 +64,22 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Unauthorized access attempt detected.",
+            error=error,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Unauthorized",
             "path": request.path,
             "method": request.method,
-            "request_id": getattr(g, "request_id", None)
+            "request_id": getattr(g, "request_id", None),
+            "exception": str(error),
         }
         return response, 401
 
     @app.errorhandler(403)
-    def forbidden(_):
+    def forbidden(error):
         """
         Handler for 403 (forbidden) errors.
 
@@ -84,20 +88,22 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Forbidden access attempt detected.",
+            error=error,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Forbidden",
             "path": request.path,
             "method": request.method,
-            "request_id": getattr(g, "request_id", None)
+            "request_id": getattr(g, "request_id", None),
+            "exception": str(error),
         }
         return response, 403
 
     @app.errorhandler(404)
-    def not_found(_):
+    def not_found(error):
         """
         Handler for 404 (resource not found) errors.
 
@@ -106,20 +112,22 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Resource not found.",
+            error=error,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Resource not found",
             "path": request.path,
             "method": request.method,
-            "request_id": getattr(g, "request_id", None)
+            "request_id": getattr(g, "request_id", None),
+            "exception": str(error),
         }
         return response, 404
 
     @app.errorhandler(400)
-    def bad_request(_):
+    def bad_request(error):
         """
         Handler for 400 (bad request) errors.
 
@@ -128,20 +136,46 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Bad request received.",
+            error=error,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Bad request",
             "path": request.path,
             "method": request.method,
-            "request_id": getattr(g, "request_id", None)
+            "request_id": getattr(g, "request_id", None),
+            "exception": str(error),
         }
         return response, 400
 
+    @app.errorhandler(415)
+    def unsupported_media_type(error):
+        """
+        Handler for 415 (unsupported media type) errors.
+
+        Returns:
+            tuple: JSON response and HTTP status code 415.
+        """
+        logger.warning(
+            "Unsupported media type.",
+            error=error,
+            path=request.path,
+            method=request.method,
+            request_id=getattr(g, "request_id", None),
+        )
+        response = {
+            "message": "Unsupported media type",
+            "path": request.path,
+            "method": request.method,
+            "request_id": getattr(g, "request_id", None),
+            "exception": str(error),
+        }
+        return response, 415
+
     @app.errorhandler(500)
-    def internal_error(e):
+    def internal_error(error):
         """
         Handler for 500 (internal server error) errors.
 
@@ -156,16 +190,16 @@ def register_error_handlers(app):
             exc_info=True,
             path=request.path,
             method=request.method,
-            request_id=getattr(g, "request_id", None)
+            request_id=getattr(g, "request_id", None),
         )
         response = {
             "message": "Internal server error",
             "path": request.path,
             "method": request.method,
-            "request_id": getattr(g, "request_id", None)
+            "request_id": getattr(g, "request_id", None),
         }
         if app.config.get("DEBUG"):
-            response["exception"] = str(e)
+            response["exception"] = str(error)
         return response, 500
 
     logger.info("Error handlers registered successfully.")
@@ -181,16 +215,14 @@ def create_app(config_class):
     Returns:
         Flask: The configured and ready-to-use Flask application instance.
     """
-    env = os.getenv('FLASK_ENV')
+    env = os.getenv("FLASK_ENV")
     logger.info("Creating app in %s environment.", env)
     app = Flask(__name__)
     app.config.from_object(config_class)
-    if env in ('development', 'staging'):
+    if env in ("development", "staging"):
         CORS(
-            app,
-            supports_credentials=True,
-            resources={r"/*": {"origins": "*"}}
-            )
+            app, supports_credentials=True, resources={r"/*": {"origins": "*"}}
+        )
 
     register_extensions(app)
     register_error_handlers(app)

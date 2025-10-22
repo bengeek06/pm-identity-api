@@ -36,6 +36,7 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
         path (str): Optional hierarchical path of the organization unit.
         level (int): Optional level in the organization hierarchy.
     """
+
     class Meta:
         """
         Meta options for the OrganizationUnit schema.
@@ -47,48 +48,50 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
             dump_only: Fields that are only used for serialization.
             unknown: How to handle unknown fields during deserialization.
         """
+
         model = OrganizationUnit
         load_instance = True
         include_fk = True
-        dump_only = ('id', 'created_at', 'updated_at', 'path', 'level')
+        dump_only = ("id", "created_at", "updated_at", "path", "level")
         unknown = RAISE
 
     name = fields.String(
         required=True,
         validate=[
             validate.Length(
-                min=1, max=100,
-                error="Name must be between 1 and 100 characters."),
+                min=1,
+                max=100,
+                error="Name must be between 1 and 100 characters.",
+            ),
             validate.Regexp(
-               r'^[a-zA-Z0-9\s\-_.]+$',
-               error="Name: only letters, numbers, spaces, -, _ and . allowed."
-            )
-        ]
+                r"^[a-zA-Z0-9\s\-_.]+$",
+                error="Name: only letters, numbers, spaces, -, _ and . allowed.",
+            ),
+        ],
     )
 
     company_id = fields.String(
         required=True,
-        validate=validate.Length(min=1, error="Company ID cannot be empty.")
+        validate=validate.Length(min=1, error="Company ID cannot be empty."),
     )
 
     description = fields.String(
         allow_none=True,
         validate=validate.Length(
-            max=200,
-            error="Description cannot exceed 200 characters."
-        )
+            max=200, error="Description cannot exceed 200 characters."
+        ),
     )
 
     parent_id = fields.String(
         allow_none=True,
         validate=validate.Regexp(
-            r'^[a-fA-F0-9]{8}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{12}$',
-            error="Parent ID must be a valid UUID."
-        )
+            r"^[a-fA-F0-9]{8}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{12}$",
+            error="Parent ID must be a valid UUID.",
+        ),
     )
 
     path = fields.String(dump_only=True)
@@ -96,7 +99,7 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
 
     context: Dict[str, Any]
 
-    @validates('parent_id')
+    @validates("parent_id")
     def validate_parent_id(self, value, **kwargs):
         """
         Validate the parent_id field to prevent self-referencing and cycles.
@@ -113,17 +116,22 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
             return
         # Prevent a node from being its own parent
         context = getattr(self, "context", {}) or {}
-        if context.get('current_id') and value == context['current_id']:
+        if context.get("current_id") and value == context["current_id"]:
             raise ValidationError(
-                "An organization unit cannot be its own parent.")
+                "An organization unit cannot be its own parent."
+            )
 
         # Prevent cycles (parent_id must not be a descendant)
-        current_id = context.get('current_id')
+        current_id = context.get("current_id")
         if current_id:
             parent = OrganizationUnit.get_by_id(value)
             while parent:
                 if parent.id == current_id:
                     raise ValidationError(
-                       "Can't set parent_id to a descendant (cycle detected).")
-                parent = OrganizationUnit.get_by_id(
-                    parent.parent_id) if parent.parent_id else None
+                        "Can't set parent_id to a descendant (cycle detected)."
+                    )
+                parent = (
+                    OrganizationUnit.get_by_id(parent.parent_id)
+                    if parent.parent_id
+                    else None
+                )

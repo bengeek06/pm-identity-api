@@ -37,46 +37,36 @@ class OrganizationUnit(db.Model):
         updated_at (datetime): Timestamp when the organization unit was last
                                updated.
     """
-    __tablename__ = 'organization_unit'
+
+    __tablename__ = "organization_unit"
 
     id = db.Column(
-        db.String(36),
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     name = db.Column(db.String(100), nullable=False)
     company_id = db.Column(
-        db.String(36),
-        db.ForeignKey('company.id'),
-        nullable=False
+        db.String(36), db.ForeignKey("company.id"), nullable=False
     )
     description = db.Column(db.String(255), nullable=True)
     parent_id = db.Column(
-        db.String(36),
-        db.ForeignKey('organization_unit.id'),
-        nullable=True
+        db.String(36), db.ForeignKey("organization_unit.id"), nullable=True
     )
     path = db.Column(db.String(255), nullable=True)
     level = db.Column(db.Integer, nullable=True)
-    created_at = db.Column(
-        db.DateTime,
-        default=db.func.current_timestamp()
-    )
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
         default=db.func.current_timestamp(),
-        onupdate=db.func.current_timestamp()
+        onupdate=db.func.current_timestamp(),
     )
     company = db.relationship(
-        'Company',
-        back_populates='organizations_units',
-        lazy=True
+        "Company", back_populates="organizations_units", lazy=True
     )
     positions = db.relationship(
-        'Position',
-        back_populates='organization_unit',
-        cascade='all, delete-orphan',
-        lazy=True
+        "Position",
+        back_populates="organization_unit",
+        cascade="all, delete-orphan",
+        lazy=True,
     )
 
     def __repr__(self):
@@ -114,7 +104,8 @@ class OrganizationUnit(db.Model):
             return cls.query.filter_by(id=unit_id).first()
         except SQLAlchemyError as e:
             logger.error(
-                f"Error retrieving organization unit by ID {unit_id}: {e}")
+                f"Error retrieving organization unit by ID {unit_id}: {e}"
+            )
             return None
 
     @classmethod
@@ -132,7 +123,8 @@ class OrganizationUnit(db.Model):
             return cls.query.filter_by(name=name).first()
         except SQLAlchemyError as e:
             logger.error(
-                f"Error retrieving organization unit by name {name}: {e}")
+                f"Error retrieving organization unit by name {name}: {e}"
+            )
             return None
 
     @classmethod

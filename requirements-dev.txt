@@ -1,14 +1,3 @@
-colorlog
-structlog
-python-dotenv
-Flask
-flask-cors
-flask-marshmallow
-Flask-Migrate
-flask-restful
-Flask-SQLAlchemy
-flask-cors
-marshmallow-sqlalchemy
 pytest
 pytest-cov
 pylint

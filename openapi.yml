@@ -2,1124 +2,90 @@ openapi: 3.0.3
 info:
   title: Identity Service API
   version: 0.0.1
-  description: API for managing users, companies, organizations, positions, subcontractors, and customers
+  description: |
+    Identity Service is a comprehensive identity microservice
+    designed for modern distributed architectures. It provides robust user and company management features.
+
+    Key Features:
+    - Company Management: Multi-tenant architecture with company-based data isolation
+    - User Management: Full user lifecycle with profile management  
+    - Organizational Structure: Hierarchical organization units and position management
+    - Business Relationships: Customer and subcontractor management
+    - Security & RBAC: JWT cookie authentication with Guardian Service (RBAC) and Authentification Service (token management) integration
+    - Health Monitoring: Comprehensive health checks and monitoring endpoints
+    - Database Management: Automated migrations and initialization workflows
+
+  contact:
+      name: Identity Service Support
+      email: bengeek06@gmail.com
+  license:
+    name: AGPL v3 / Commercial
+    url: https://github.com/bengeek06/pm-identity-api/blob/identity_staging/LICENSE.md
 
 servers:
+  - url: http://localhost:5002
+    description: Staging development server
   - url: http://localhost:5000
     description: Local development server
-  - url: http://localhost:5001
-    description: Staging development server
-
-paths:
-  /version:
-    get:
-      tags: [Version]
-      summary: Get API version
-      responses:
-        '200':
-          description: API version information
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  version:
-                    type: string
-                    example: "1.0.0"
-  /users:
-    post:
-      tags: [User]
-      summary: Create a new user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreate'
-      responses:
-        '201':
-          description: User created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-    get:
-      tags: [User]
-      summary: List users
-      responses:
-        '200':
-          description: List of users
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-
-  /users/{user_id}:
-    get:
-      tags: [User]
-      summary: Get user by ID
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: User retrieved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-    put:
-      tags: [User]
-      summary: Update user by ID
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreate'
-      responses:
-        '200':
-          description: User updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-    patch:
-      tags: [User]
-      summary: Partially update user by ID
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreate'
-      responses:
-        '200':
-          description: User partially updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-    delete:
-      tags: [User]
-      summary: Delete user by ID
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: User deleted
-
-  /verify_password:
-    post:
-      tags: [User]
-      summary: Verify a user's password by email
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-      responses:
-        '200':
-          description: Password verification result
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  valid:
-                    type: boolean
-                  user_id:
-                    type: string
-                    nullable: true
-                  company_id:
-                    type: string
-                    nullable: true
-
-  /companies:
-    post:
-      tags: [Company]
-      summary: Create a new company
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CompanyCreate'
-      responses:
-        '201':
-          description: Company created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Company'
-    get:
-      tags: [Company]
-      summary: List companies
-      responses:
-        '200':
-          description: List of companies
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Company'
-
-  /companies/{company_id}:
-    get:
-      tags: [Company]
-      summary: Get company by ID
-      parameters:
-        - in: path
-          name: company_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Company retrieved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Company'
-    put:
-      tags: [Company]
-      summary: Update company by ID
-      parameters:
-        - in: path
-          name: company_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CompanyCreate'
-      responses:
-        '200':
-          description: Company updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Company'
-    patch:
-      tags: [Company]
-      summary: Partially update company by ID
-      parameters:
-        - in: path
-          name: company_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CompanyCreate'
-      responses:
-        '200':
-          description: Company partially updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Company'
-    delete:
-      tags: [Company]
-      summary: Delete company by ID
-      parameters:
-        - in: path
-          name: company_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Company deleted
-
-  /companies/{company_id}/users:
-    get:
-      tags: [User]
-      summary: List users in a company
-      parameters:
-        - in: path
-          name: company_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of users in the company
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-        '404':
-          description: Company not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-    post:
-      tags: [User]
-      summary: Create a new user in a company
-      parameters:
-        - in: path
-          name: company_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreate'
-      responses:
-        '201':
-          description: User created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '404':
-          description: Company not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-    delete:
-      tags: [User]
-      summary: Delete all users in a company
-      parameters:
-        - in: path
-          name: company_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: All users deleted
-        '404':
-          description: Company not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-
-  /organization_units:
-    post:
-      tags: [Organization]
-      summary: Create an organization unit
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrganizationUnitCreate'
-      responses:
-        '201':
-          description: Organization unit created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OrganizationUnit'
-    get:
-      tags: [Organization]
-      summary: List organization units
-      responses:
-        '200':
-          description: List of organization units
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/OrganizationUnit'
-
-  /organization_units/{organization_id}:
-    get:
-      tags: [Organization]
-      summary: Get organization unit by ID
-      parameters:
-        - in: path
-          name: organization_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Organization unit retrieved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OrganizationUnit'
-    put:
-      tags: [Organization]
-      summary: Update organization unit by ID
-      parameters:
-        - in: path
-          name: organization_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrganizationUnitCreate'
-      responses:
-        '200':
-          description: Organization unit updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OrganizationUnit'
-    patch:
-      tags: [Organization]
-      summary: Partially update organization unit by ID
-      parameters:
-        - in: path
-          name: organization_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrganizationUnitCreate'
-      responses:
-        '200':
-          description: Organization unit partially updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OrganizationUnit'
-    delete:
-      tags: [Organization]
-      summary: Delete organization unit by ID
-      parameters:
-        - in: path
-          name: organization_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Organization unit deleted
-
-  /organization_units/{unit_id}/children:
-    get:
-      tags: [Organization]
-      summary: List children of an organization unit
-      parameters:
-        - in: path
-          name: unit_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of children units
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/OrganizationUnit'
-        '404':
-          description: Organization unit not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-
-  /organization_units/{unit_id}/positions:
-    get:
-      tags: [Position]
-      summary: List positions for an organization unit
-      parameters:
-        - in: path
-          name: unit_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of positions for the organization unit
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Position'
-        '404':
-          description: Organization unit not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-    post:
-      tags: [Position]
-      summary: Create a new position for an organization unit
-      parameters:
-        - in: path
-          name: unit_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PositionCreate'
-      responses:
-        '201':
-          description: Position created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Position'
-        '404':
-          description: Organization unit not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-
-  /positions:
-    post:
-      tags: [Position]
-      summary: Create a new position
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PositionCreate'
-      responses:
-        '201':
-          description: Position created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Position'
-    get:
-      tags: [Position]
-      summary: List positions
-      responses:
-        '200':
-          description: List of positions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Position'
-
-  /positions/{position_id}:
-    get:
-      tags: [Position]
-      summary: Get position by ID
-      parameters:
-        - in: path
-          name: position_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Position retrieved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Position'
-    put:
-      tags: [Position]
-      summary: Update position by ID
-      parameters:
-        - in: path
-          name: position_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PositionCreate'
-      responses:
-        '200':
-          description: Position updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Position'
-    patch:
-      tags: [Position]
-      summary: Partially update position by ID
-      parameters:
-        - in: path
-          name: position_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PositionCreate'
-      responses:
-        '200':
-          description: Position partially updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Position'
-    delete:
-      tags: [Position]
-      summary: Delete position by ID
-      parameters:
-        - in: path
-          name: position_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Position deleted
-
-  /positions/{position_id}/users:
-    get:
-      tags: [User]
-      summary: List users by position
-      parameters:
-        - in: path
-          name: position_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of users with this position
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-
-  /subcontractors:
-    post:
-      tags: [Subcontractor]
-      summary: Create a new subcontractor
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubcontractorCreate'
-      responses:
-        '201':
-          description: Subcontractor created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Subcontractor'
-    get:
-      tags: [Subcontractor]
-      summary: List subcontractors
-      responses:
-        '200':
-          description: List of subcontractors
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Subcontractor'
-
-  /subcontractors/{subcontractor_id}:
-    get:
-      tags: [Subcontractor]
-      summary: Get subcontractor by ID
-      parameters:
-        - in: path
-          name: subcontractor_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Subcontractor retrieved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Subcontractor'
-    put:
-      tags: [Subcontractor]
-      summary: Update subcontractor by ID
-      parameters:
-        - in: path
-          name: subcontractor_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubcontractorCreate'
-      responses:
-        '200':
-          description: Subcontractor updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Subcontractor'
-    patch:
-      tags: [Subcontractor]
-      summary: Partially update subcontractor by ID
-      parameters:
-        - in: path
-          name: subcontractor_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubcontractorCreate'
-      responses:
-        '200':
-          description: Subcontractor partially updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Subcontractor'
-    delete:
-      tags: [Subcontractor]
-      summary: Delete subcontractor by ID
-      parameters:
-        - in: path
-          name: subcontractor_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Subcontractor deleted
-
-  /customers:
-    post:
-      tags: [Customer]
-      summary: Create a new customer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomerCreate'
-      responses:
-        '201':
-          description: Customer created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Customer'
-    get:
-      tags: [Customer]
-      summary: List customers
-      responses:
-        '200':
-          description: List of customers
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Customer'
-
-  /customers/{customer_id}:
-    get:
-      tags: [Customer]
-      summary: Get customer by ID
-      parameters:
-        - in: path
-          name: customer_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Customer retrieved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Customer'
-    put:
-      tags: [Customer]
-      summary: Update customer by ID
-      parameters:
-        - in: path
-          name: customer_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomerCreate'
-      responses:
-        '200':
-          description: Customer updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Customer'
-    patch:
-      tags: [Customer]
-      summary: Partially update customer by ID
-      parameters:
-        - in: path
-          name: customer_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomerCreate'
-      responses:
-        '200':
-          description: Customer partially updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Customer'
-    delete:
-      tags: [Customer]
-      summary: Delete customer by ID
-      parameters:
-        - in: path
-          name: customer_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Customer deleted
+  
+security:
+  - JWTAuth: []
 
 components:
+  securitySchemes:
+    JWTAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token passed via HTTP-only cookies containing company_id and user_id. Validated by Identity Service; access control performed via Guardian Service /check-access endpoint.
+
+
   schemas:
-    UserCreate:
+    Customer:
       type: object
       required:
-        - email
-        - password
+        - name
         - company_id
-      properties:
-        email:
-          type: string
-        password:
-          type: string
-        company_id:
-          type: string
-        first_name:
-          type: string
-        last_name:
-          type: string
-        phone_number:
-          type: string
-        avatar_url:
-          type: string
-        is_active:
-          type: boolean
-        is_verified:
-          type: boolean
-        role_id:
-          type: string
-        position_id:
-          type: string
-
-    User:
-      type: object
       properties:
         id:
           type: string
-        company_id:
-          type: string
-        email:
-          type: string
-        first_name:
-          type: string
-        last_name:
-          type: string
-        phone_number:
-          type: string
-        avatar_url:
-          type: string
-        is_active:
-          type: boolean
-        is_verified:
-          type: boolean
-        role_id:
-          type: string
-        position_id:
-          type: string
-        last_login_at:
-          type: string
-          format: date-time
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    CompanyCreate:
-      type: object
-      required:
-        - name
-      properties:
+          readOnly: true
+          description: Unique identifier of the customer
         name:
           type: string
-        description:
-          type: string
-        address:
-          type: string
-        phone_number:
-          type: string
-        email:
-          type: string
-        website:
-          type: string
-        logo_url:
-          type: string
-        country:
-          type: string
-        city:
-          type: string
-        postal_code:
-          type: string
-
-    Company:
-      type: object
-      properties:
+          maxLength: 100
+          description: Name of the customer
         company_id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        address:
-          type: string
-        phone_number:
-          type: string
-        email:
-          type: string
-        website:
-          type: string
-        logo_url:
-          type: string
-        country:
-          type: string
-        city:
-          type: string
-        postal_code:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    OrganizationUnitCreate:
-      type: object
-      required:
-        - name
-        - company_id
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        company_id:
-          type: string
-        parent_id:
-          type: string
-        path:
-          type: string
-        level:
           type: integer
-
-    OrganizationUnit:
-      type: object
-      properties:
-        organization_id:
+          minimum: 1
+          description: Associated company identifier (integer)
+        email:
           type: string
-        company_id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        parent_id:
-          type: string
-        path:
-          type: string
-        level:
-          type: integer
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    PositionCreate:
-      type: object
-      required:
-        - title
-        - organization_unit_id
-      properties:
-        title:
-          type: string
-        description:
-          type: string
-        organization_unit_id:
-          type: string
-        level:
-          type: string
-
-    Position:
-      type: object
-      properties:
-        position_id:
-          type: string
-        company_id:
-          type: string # Lecture seule, toujours présent en réponse
-        organization_unit_id:
-          type: string
-        title:
-          type: string
-        description:
-          type: string
-        level:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    SubcontractorCreate:
-      type: object
-      required:
-        - name
-        - company_id
-      properties:
-        name:
-          type: string
-        company_id:
-          type: string
+          format: email
+          maxLength: 100
+          description: Email address of the customer
         contact_person:
           type: string
+          maxLength: 100
+          description: Contact person name
         phone_number:
           type: string
-        email:
-          type: string
+          maxLength: 50
+          description: Phone number (digits only)
         address:
           type: string
-
-    Subcontractor:
-      type: object
-      properties:
-        subcontractor_id:
-          type: string
-        company_id:
-          type: string
-        name:
-          type: string
-        contact_person:
-          type: string
-        phone_number:
-          type: string
-        email:
-          type: string
-        address:
-          type: string
+          maxLength: 255
+          description: Address of the customer
         created_at:
           type: string
           format: date-time
+          readOnly: true
+          description: Creation date
         updated_at:
           type: string
           format: date-time
+          readOnly: true
+          description: Last update date
 
     CustomerCreate:
       type: object
@@ -1129,37 +95,2459 @@ components:
       properties:
         name:
           type: string
+          maxLength: 100
+          description: Name of the customer
         company_id:
-          type: string
-        contact_person:
-          type: string
-        phone_number:
-          type: string
+          type: integer
+          minimum: 1
+          description: Associated company identifier (integer)
         email:
           type: string
+          format: email
+          maxLength: 100
+          description: Email address of the customer
+        contact_person:
+          type: string
+          maxLength: 100
+          description: Contact person name
+        phone_number:
+          type: string
+          maxLength: 50
+          description: Phone number (digits only)
         address:
           type: string
+          maxLength: 255
+          description: Address of the customer
 
-    Customer:
+    CustomerUpdate:
       type: object
       properties:
-        customer_id:
-          type: string
-        company_id:
-          type: string
         name:
           type: string
-        contact_person:
-          type: string
-        phone_number:
-          type: string
+          maxLength: 100
+          description: Name of the customer
+        company_id:
+          type: integer
+          minimum: 1
+          description: Associated company identifier (integer)
         email:
           type: string
+          format: email
+          maxLength: 100
+          description: Email address of the customer
+        contact_person:
+          type: string
+          maxLength: 100
+          description: Contact person name
+        phone_number:
+          type: string
+          maxLength: 50
+          description: Phone number (digits only)
         address:
           type: string
+          maxLength: 255
+          description: Address of the customer
+    Subcontractor:
+      type: object
+      required:
+        - name
+        - company_id
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier of the subcontractor
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the subcontractor
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the subcontractor
+        contact_person:
+          type: string
+          maxLength: 100
+          description: Optional contact person for the subcontractor
+        phone_number:
+          type: string
+          maxLength: 50
+          description: Phone number (digits only)
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: Email address of the subcontractor
+        address:
+          type: string
+          maxLength: 200
+          description: Address of the subcontractor
         created_at:
           type: string
           format: date-time
+          readOnly: true
+          description: Creation date
         updated_at:
           type: string
           format: date-time
+          readOnly: true
+          description: Last update date
+
+    SubcontractorCreate:
+      type: object
+      required:
+        - name
+        - company_id
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the subcontractor
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the subcontractor
+        contact_person:
+          type: string
+          maxLength: 100
+          description: Optional contact person for the subcontractor
+        phone_number:
+          type: string
+          maxLength: 50
+          description: Phone number (digits only)
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: Email address of the subcontractor
+        address:
+          type: string
+          maxLength: 200
+          description: Address of the subcontractor
+
+    SubcontractorUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the subcontractor
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the subcontractor
+        contact_person:
+          type: string
+          maxLength: 100
+          description: Optional contact person for the subcontractor
+        phone_number:
+          type: string
+          maxLength: 50
+          description: Phone number (digits only)
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: Email address of the subcontractor
+        address:
+          type: string
+          maxLength: 200
+          description: Address of the subcontractor
+    Position:
+      type: object
+      required:
+        - title
+        - company_id
+        - organization_unit_id
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier of the position
+        title:
+          type: string
+          maxLength: 100
+          description: Title or name of the position
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the position
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        organization_unit_id:
+          type: string
+          format: uuid
+          description: Associated organization unit identifier
+        level:
+          type: integer
+          description: Level or rank of the position (must be >= 0)
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Creation date
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Last update date
+
+    PositionCreate:
+      type: object
+      required:
+        - title
+        - organization_unit_id
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          description: Title or name of the position
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the position
+        organization_unit_id:
+          type: string
+          format: uuid
+          description: Organization unit identifier the position belongs to
+        level:
+          type: integer
+          minimum: 0
+          description: Level or rank of the position (must be >= 0)
+
+    PositionCreateInUnit:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          description: Title or name of the position
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the position
+        level:
+          type: integer
+          minimum: 0
+          description: Level or rank of the position (must be >= 0)
+
+    PositionUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          description: Title or name of the position
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the position
+        organization_unit_id:
+          type: string
+          format: uuid
+          description: Organization unit identifier the position belongs to
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        level:
+          type: integer
+          minimum: 0
+          description: Level or rank of the position (must be >= 0)
+    OrganizationUnit:
+      type: object
+      required:
+        - name
+        - company_id
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier of the organization unit
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the organization unit
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the organization unit
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional parent organization unit identifier
+        path:
+          type: string
+          readOnly: true
+          description: Hierarchical path of the organization unit
+        level:
+          type: integer
+          readOnly: true
+          description: Hierarchy level of the organization unit
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Creation date
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Last update date
+
+    OrganizationUnitCreate:
+      type: object
+      required:
+        - name
+        - company_id
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the organization unit
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the organization unit
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional parent organization unit identifier
+
+    OrganizationUnitUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the organization unit
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the organization unit
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional parent organization unit identifier
+    Company:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier of the company
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the company
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the company
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL to the company's logo
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Website URL of the company
+        phone_number:
+          type: string
+          maxLength: 20
+          description: Phone number of the company (digits only)
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Email address of the company
+        address:
+          type: string
+          maxLength: 255
+          description: Address of the company
+        postal_code:
+          type: string
+          maxLength: 20
+          description: Postal code of the company
+        city:
+          type: string
+          maxLength: 100
+          description: City where the company is located
+        country:
+          type: string
+          maxLength: 100
+          description: Country where the company is located
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Creation date
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Last update date
+
+    CompanyCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the company
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the company
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL to the company's logo
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Website URL of the company
+        phone_number:
+          type: string
+          maxLength: 20
+          description: Phone number of the company (digits only)
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Email address of the company
+        address:
+          type: string
+          maxLength: 255
+          description: Address of the company
+        postal_code:
+          type: string
+          maxLength: 20
+          description: Postal code of the company
+        city:
+          type: string
+          maxLength: 100
+          description: City where the company is located
+        country:
+          type: string
+          maxLength: 100
+          description: Country where the company is located
+
+    CompanyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Name of the company
+        description:
+          type: string
+          maxLength: 200
+          description: Optional description of the company
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL to the company's logo
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Website URL of the company
+        phone_number:
+          type: string
+          maxLength: 20
+          description: Phone number of the company (digits only)
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Email address of the company
+        address:
+          type: string
+          maxLength: 255
+          description: Address of the company
+        postal_code:
+          type: string
+          maxLength: 20
+          description: Postal code of the company
+        city:
+          type: string
+          maxLength: 100
+          description: City where the company is located
+        country:
+          type: string
+          maxLength: 100
+          description: Country where the company is located
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+        errors:
+          type: object
+          description: Detailed validation errors
+          additionalProperties: true
+      required:
+        - message
+    
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        service:
+          type: string
+          example: identity_service
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        environment:
+          type: string
+          enum: [development, testing, staging, production]
+        checks:
+          type: object
+          properties:
+            database:
+              type: object
+              properties:
+                healthy:
+                  type: boolean
+                message:
+                  type: string
+                response_time_ms:
+                  type: number
+                  format: float
+
+    VersionResponse:
+      type: object
+      properties:
+        version:
+          type: string
+          example: "1.0.0"
+      required:
+        - version
+
+    ConfigResponse:
+      type: object
+      properties:
+        env:
+          type: string
+          enum: [development, testing, staging, production]
+        debug:
+          type: boolean
+        database_url:
+          type: string
+          description: Database connection URL (sensitive info masked)
+
+    InitDbResponse:
+      type: object
+      properties:
+        initialized:
+          type: boolean
+          description: Whether the database has been initialized
+        message:
+          type: string
+
+    User:
+      type: object
+      required:
+        - email
+        - hashed_password
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier of the user
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: User's email address
+        hashed_password:
+          type: string
+          maxLength: 255
+          writeOnly: true
+          description: Hashed password
+        first_name:
+          type: string
+          maxLength: 50
+          description: User's first name
+        last_name:
+          type: string
+          maxLength: 50
+          description: User's last name
+        phone_number:
+          type: string
+          maxLength: 50
+          description: Phone number
+        avatar_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Avatar URL
+        is_active:
+          type: boolean
+          default: true
+          description: Indicates if the user account is active
+        is_verified:
+          type: boolean
+          default: false
+          description: Indicates if the email is verified
+        last_login_at:
+          type: string
+          format: date-time
+          description: Last login date
+        company_id:
+          type: string
+          format: uuid
+          description: Associated company identifier
+        position_id:
+          type: string
+          format: uuid
+          description: Associated position identifier
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Creation date
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Last update date
+        language:
+          type: string
+          enum: [en, fr]
+          description: User language (en, fr)
+
+    UserCreate:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: User's email address
+        password:
+          type: string
+          description: Plain password (will be hashed automatically)
+        first_name:
+          type: string
+          maxLength: 50
+          description: User's first name
+        last_name:
+          type: string
+          maxLength: 50
+          description: User's last name
+        phone_number:
+          type: string
+          maxLength: 50
+          description: Phone number
+        avatar_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Avatar URL
+        is_active:
+          type: boolean
+          default: true
+          description: Indicates if the user account is active
+        is_verified:
+          type: boolean
+          default: false
+          description: Indicates if the email is verified
+        position_id:
+          type: string
+          format: uuid
+          description: Associated position identifier
+        language:
+          type: string
+          enum: [en, fr]
+          description: User language (en, fr)
+
+    UserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: User's email address
+        password:
+          type: string
+          description: New plain password (will be hashed automatically)
+        first_name:
+          type: string
+          maxLength: 50
+          description: User's first name
+        last_name:
+          type: string
+          maxLength: 50
+          description: User's last name
+        phone_number:
+          type: string
+          maxLength: 50
+          description: Phone number
+        avatar_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Avatar URL
+        is_active:
+          type: boolean
+          description: Indicates if the user account is active
+        is_verified:
+          type: boolean
+          description: Indicates if the email is verified
+        position_id:
+          type: string
+          format: uuid
+          description: Associated position identifier
+        language:
+          type: string
+          enum: [en, fr]
+          description: User language (en, fr)
+
+    UserRole:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the user role
+        user_id:
+          type: string
+          format: uuid
+          description: User identifier
+        role_id:
+          type: string
+          description: Role identifier (managed by Guardian Service)
+
+    UserRoleAssignment:
+      type: object
+      required:
+        - role_id
+      properties:
+        role_id:
+          type: string
+          description: Role identifier to assign (from Guardian Service)
+
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the policy
+        name:
+          type: string
+          description: Name of the policy
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the policy
+        company_id:
+          type: string
+          format: uuid
+          description: Company identifier for multi-tenant isolation
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the policy was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the policy was last updated
+
+    Permission:
+      type: object
+      required:
+        - id
+        - service
+        - resource_name
+        - operations
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the permission
+        service:
+          type: string
+          description: Service name this permission belongs to
+        resource_name:
+          type: string
+          description: Name of the resource this permission applies to
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the permission
+        operations:
+          type: array
+          items:
+            type: string
+          description: List of operations allowed by this permission
+        company_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Company identifier for multi-tenant isolation
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the permission was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the permission was last updated
+
+    PasswordVerification:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+        password:
+          type: string
+          description: Password to verify
+
+
+  responses:
+    CustomerCreated:
+      description: Customer created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Customer'
+
+    CustomerList:
+      description: List of customers
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Customer'
+
+    CustomerDetails:
+      description: Customer details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Customer'
+
+    CustomerUpdated:
+      description: Customer updated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Customer'
+
+    CustomerDeleted:
+      description: Customer deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Customer deleted successfully"
+    PositionCreated:
+      description: Position created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Position'
+
+    PositionList:
+      description: List of positions
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Position'
+
+    PositionDetails:
+      description: Position details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Position'
+
+    PositionUpdated:
+      description: Position updated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Position'
+
+    PositionDeleted:
+      description: Position deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Position deleted successfully"
+    OrganizationUnitCreated:
+      description: Organization unit created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OrganizationUnit'
+
+    OrganizationUnitList:
+      description: List of organization units
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/OrganizationUnit'
+
+    OrganizationUnitDetails:
+      description: Organization unit details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OrganizationUnit'
+
+    OrganizationUnitUpdated:
+      description: Organization unit updated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OrganizationUnit'
+
+    OrganizationUnitDeleted:
+      description: Organization unit deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Organization unit deleted successfully"
+    CompanyCreated:
+      description: Company created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Company'
+
+    CompanyList:
+      description: List of companies
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Company'
+
+    CompanyDetails:
+      description: Company details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Company'
+
+    CompanyUpdated:
+      description: Company updated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Company'
+
+    CompanyDeleted:
+      description: Company deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Company deleted successfully"
+    Unauthorized:
+      description: Missing, invalid, or expired JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Missing or invalid JWT token"
+
+    BadRequest:
+      description: Invalid request data or malformed UUIDs
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Invalid input data"
+
+    NotFound:
+      description: Resource not found within company context
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Resource not found"
+
+    Conflict:
+      description: Resource already exists or constraint violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Resource already exists"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Internal server error"
+
+    Forbidden:
+      description: Valid authentication but insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Access denied - insufficient permissions"
+
+    SubcontractorCreated:
+      description: Subcontractor created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Subcontractor'
+
+    SubcontractorList:
+      description: List of subcontractors
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Subcontractor'
+
+    SubcontractorDetails:
+      description: Subcontractor details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Subcontractor'
+
+    SubcontractorUpdated:
+      description: Subcontractor updated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Subcontractor'
+
+    SubcontractorDeleted:
+      description: Subcontractor deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Subcontractor deleted successfully"
+
+    UserCreated:
+      description: User created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+
+    UserList:
+      description: List of users
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/User'
+
+    UserDetails:
+      description: User details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+
+    UserUpdated:
+      description: User updated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+
+    UserDeleted:
+      description: User deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "User deleted successfully"
+
+    UserRoles:
+      description: User roles list
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              roles:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserRole'
+
+    UserRoleCreated:
+      description: Role assigned to user successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserRole'
+
+    PasswordVerificationResult:
+      description: Password verification result
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              valid:
+                type: boolean
+                description: Indicates if the password is valid
+              user:
+                $ref: '#/components/schemas/User'
+   
+paths:
+  /customers:
+    get:
+      tags: [Customers Management]
+      summary: List all customers
+      description: Returns the list of all customers
+      responses:
+        '200':
+          $ref: '#/components/responses/CustomerList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Customers Management]
+      summary: Create a new customer
+      description: Creates a new customer with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/CustomerCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /customers/{customer_id}:
+    parameters:
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Unique identifier of the customer
+
+    get:
+      tags: [Customers Management]
+      summary: Get a customer by ID
+      description: Returns details of a specific customer
+      responses:
+        '200':
+          $ref: '#/components/responses/CustomerDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Customers Management]
+      summary: Update a customer
+      description: Fully updates an existing customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/CustomerUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Customers Management]
+      summary: Partially update a customer
+      description: Partially updates an existing customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/CustomerUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Customers Management]
+      summary: Delete a customer
+      description: Deletes an existing customer
+      responses:
+        '204':
+          $ref: '#/components/responses/CustomerDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /positions:
+    get:
+      tags: [Positions]
+      summary: List all positions
+      description: Returns the list of all positions
+      responses:
+        '200':
+          $ref: '#/components/responses/PositionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Positions]
+      summary: Create a new position
+      description: Creates a new position with the provided data; company_id is inferred from the organization unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/PositionCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /positions/{position_id}:
+    parameters:
+      - name: position_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the position
+
+    get:
+      tags: [Positions]
+      summary: Get a position by ID
+      description: Returns details of a specific position
+      responses:
+        '200':
+          $ref: '#/components/responses/PositionDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Positions]
+      summary: Update a position
+      description: Fully updates an existing position
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/PositionUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Positions]
+      summary: Partially update a position
+      description: Partially updates an existing position
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/PositionUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Positions]
+      summary: Delete a position
+      description: Deletes an existing position
+      responses:
+        '204':
+          $ref: '#/components/responses/PositionDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organization_units/{unit_id}/positions:
+    parameters:
+      - name: unit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the organization unit
+
+    get:
+      tags: [Positions]
+      summary: List positions for an organization unit
+      description: Returns the list of positions associated with a specific organization unit
+      responses:
+        '200':
+          $ref: '#/components/responses/PositionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Positions]
+      summary: Create a position for an organization unit
+      description: Creates a new position within the specified organization unit; company_id is inferred from the unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionCreateInUnit'
+      responses:
+        '201':
+          $ref: '#/components/responses/PositionCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /organization_units:
+    get:
+      tags: [Organizations]
+      summary: List all organization units
+      description: Returns the list of all organization units
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Organizations]
+      summary: Create a new organization unit
+      description: Creates a new organization unit with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUnitCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/OrganizationUnitCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organization_units/{unit_id}:
+    parameters:
+      - name: unit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the organization unit
+
+    get:
+      tags: [Organizations]
+      summary: Get an organization unit by ID
+      description: Returns details of a specific organization unit
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Organizations]
+      summary: Update an organization unit
+      description: Fully updates an existing organization unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUnitUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Organizations]
+      summary: Partially update an organization unit
+      description: Partially updates an existing organization unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUnitUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Organizations]
+      summary: Delete an organization unit
+      description: Deletes an existing organization unit
+      responses:
+        '204':
+          $ref: '#/components/responses/OrganizationUnitDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organization_units/{unit_id}/children:
+    parameters:
+      - name: unit_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the organization unit
+
+    get:
+      tags: [Organizations]
+      summary: List children of an organization unit
+      description: Returns the list of child organization units for the given parent organization unit
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationUnitList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /companies:
+    get:
+      tags: [Companies]
+      summary: List all companies
+      description: Returns the list of all companies
+      responses:
+        '200':
+          $ref: '#/components/responses/CompanyList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Companies]
+      summary: Create a new company
+      description: Creates a new company with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/CompanyCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /companies/{company_id}:
+    parameters:
+      - name: company_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the company
+
+    get:
+      tags: [Companies]
+      summary: Get a company by ID
+      description: Returns details of a specific company
+      responses:
+        '200':
+          $ref: '#/components/responses/CompanyDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Companies]
+      summary: Update a company
+      description: Fully updates an existing company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/CompanyUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Companies]
+      summary: Partially update a company
+      description: Partially updates an existing company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/CompanyUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Companies]
+      summary: Delete a company
+      description: Deletes an existing company
+      responses:
+        '204':
+          $ref: '#/components/responses/CompanyDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /health:
+    get:
+      tags: [System]
+      summary: Health check endpoint
+      description: Returns comprehensive health information including database connectivity
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /version:
+    get:
+      tags: [System]
+      summary: Get API version
+      description: Returns the current version of the identity Service API
+      responses:
+        '200':
+          description: API version information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /config:
+    get:
+      tags: [System]
+      summary: Get application configuration
+      description: Returns current application configuration (non-sensitive data only)
+      responses:
+        '200':
+          description: Application configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /init-db:
+    get:
+      tags: [System]
+      summary: Check database initialization status
+      description: Returns whether the identity Service has been initialized
+      security: []
+      responses:
+        '200':
+          description: Initialization status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitDbResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [System]
+      summary: Initialize database with default permissions
+      description: Initialize the database with default permissions if not already done
+      security: []
+      responses:
+        '200':
+          description: Database initialized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitDbResponse'
+        '409':
+          description: Database already initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List all users
+      description: Returns the list of all users for the authenticated company
+      responses:
+        '200':
+          $ref: '#/components/responses/UserList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Users]
+      summary: Create a new user
+      description: Creates a new user with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/UserCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user_id}:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user
+
+    get:
+      tags: [Users]
+      summary: Get a user by ID
+      description: Returns details of a specific user
+      responses:
+        '200':
+          $ref: '#/components/responses/UserDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Users]
+      summary: Update a user
+      description: Fully updates an existing user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Users]
+      summary: Partially update a user
+      description: Partially updates an existing user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Users]
+      summary: Delete a user
+      description: Deletes an existing user
+      responses:
+        '204':
+          $ref: '#/components/responses/UserDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user_id}/roles:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user
+
+    get:
+      tags: [Users]
+      summary: Get user roles
+      description: Returns the list of roles assigned to a user via the Guardian Service (RBAC)
+      responses:
+        '200':
+          $ref: '#/components/responses/UserRoles'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Users]
+      summary: Assign a role to a user
+      description: Assigns a new role to a user via the Guardian Service (RBAC)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRoleAssignment'
+      responses:
+        '201':
+          $ref: '#/components/responses/UserRoleCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user_id}/roles/{user_role_id}:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user
+      - name: user_role_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Unique identifier of the user role
+
+    get:
+      tags: [Users]
+      summary: Get a specific user role
+      description: Returns details of a role assigned to a user
+      responses:
+        '200':
+          description: User role details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRole'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Users]
+      summary: Remove a role from a user
+      description: Removes a specific role from a user via the Guardian Service (RBAC)
+      responses:
+        '204':
+          description: Role removed successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user_id}/policies:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user
+
+    get:
+      tags: [Users]
+      summary: Get user policies
+      description: |
+        Returns all policies associated with a user's roles via the Guardian Service (RBAC).
+        
+        This endpoint:
+        1. Fetches all roles assigned to the user from Guardian
+        2. For each role, fetches associated policies from Guardian
+        3. Returns a deduplicated list of all policies
+        
+        The policies are aggregated from all roles and deduplicated by policy ID.
+      responses:
+        '200':
+          description: List of policies for the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Policy'
+              example:
+                policies:
+                  - id: "123e4567-e89b-12d3-a456-426614174000"
+                    name: "Project Management Policy"
+                    description: "Permissions for project management operations"
+                    company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+                  - id: "456e7890-f12b-34c5-d678-90abcdef1234"
+                    name: "User Management Policy"
+                    description: "Permissions for user management operations"
+                    company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user_id}/permissions:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user
+
+    get:
+      tags: [Users]
+      summary: Get user permissions
+      description: |
+        Returns all permissions associated with a user's policies via the Guardian Service (RBAC).
+        
+        This endpoint:
+        1. Fetches all roles assigned to the user from Guardian
+        2. For each role, fetches associated policies from Guardian
+        3. For each policy, fetches associated permissions from Guardian
+        4. Returns a deduplicated list of all permissions
+        
+        The permissions are aggregated from all policies of all roles and deduplicated by permission ID.
+      responses:
+        '200':
+          description: List of permissions for the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Permission'
+              example:
+                permissions:
+                  - id: "123e4567-e89b-12d3-a456-426614174000"
+                    service: "identity"
+                    resource_name: "user"
+                    description: "Manage users"
+                    operations: ["create", "read", "update", "delete"]
+                  - id: "456e7890-f12b-34c5-d678-90abcdef1234"
+                    service: "identity"
+                    resource_name: "company"
+                    description: "Manage companies"
+                    operations: ["read", "update"]
+                  - id: "789abcde-f34c-56d7-e890-123456789012"
+                    service: "guardian"
+                    resource_name: "role"
+                    description: "Manage roles"
+                    operations: ["create", "read", "update", "delete"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /positions/{position_id}/users:
+    parameters:
+      - name: position_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the position
+
+    get:
+      tags: [Users]
+      summary: Get users for a position
+      description: Returns the list of users associated with a specific position
+      responses:
+        '200':
+          $ref: '#/components/responses/UserList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subcontractors:
+    get:
+      tags: [Subcontractors Management]
+      summary: List all subcontractors
+      description: Returns the list of all subcontractors
+      responses:
+        '200':
+          $ref: '#/components/responses/SubcontractorList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Subcontractors Management]
+      summary: Create a new subcontractor
+      description: Creates a new subcontractor with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcontractorCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/SubcontractorCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subcontractors/{subcontractor_id}:
+    parameters:
+      - name: subcontractor_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the subcontractor
+
+    get:
+      tags: [Subcontractors Management]
+      summary: Get a subcontractor by ID
+      description: Returns details of a specific subcontractor
+      responses:
+        '200':
+          $ref: '#/components/responses/SubcontractorDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Subcontractors Management]
+      summary: Update a subcontractor
+      description: Fully updates an existing subcontractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcontractorUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/SubcontractorUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Subcontractors Management]
+      summary: Partially update a subcontractor
+      description: Partially updates an existing subcontractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcontractorUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/SubcontractorUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Subcontractors Management]
+      summary: Delete a subcontractor
+      description: Deletes an existing subcontractor
+      responses:
+        '204':
+          $ref: '#/components/responses/SubcontractorDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /verify_password:
+    post:
+      tags: [Authentification]
+      summary: Verify password
+      description: Verifies if the provided password matches the user's password. Used by Authentification Service to create tokens.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordVerification'
+      responses:
+        '200':
+          $ref: '#/components/responses/PasswordVerificationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "User or password invalid"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+tags:
+- name: System
+  description: System health, version, and configuration endpoints
+- name: Users
+  description: User management operations
+- name: Authentification
+  description: Password verification endpoint used by Authentification Service for token creation
+- name: Companies
+  description: Company management operations
+- name: Organizations
+  description: Organization management operations
+- name: Positions
+  description: Position management operations
+- name: Customers Management
+  description: Customer management operations
+- name: Subcontractors Management
+  description: Subcontractor management operations

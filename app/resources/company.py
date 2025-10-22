@@ -19,6 +19,7 @@ from app.logger import logger
 
 from app.models.company import Company
 from app.schemas.company_schema import CompanySchema
+from app.utils import require_jwt_auth, check_access_required
 
 
 class CompanyListResource(Resource):
@@ -33,6 +34,8 @@ class CompanyListResource(Resource):
             Create a new company with the provided data.
     """
 
+    @require_jwt_auth()
+    @check_access_required("list")
     def get(self):
         """
         Retrieve all companies.
@@ -51,6 +54,8 @@ class CompanyListResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth()
+    @check_access_required("create")
     def post(self):
         """
         Create a new company.
@@ -104,6 +109,8 @@ class CompanyResource(Resource):
             Delete a specific company by its ID.
     """
 
+    @require_jwt_auth()
+    @check_access_required("read")
     def get(self, company_id):
         """
         Retrieve a specific company by its ID.
@@ -125,6 +132,8 @@ class CompanyResource(Resource):
         company_schema = CompanySchema(session=db.session)
         return company_schema.dump(company), 200
 
+    @require_jwt_auth()
+    @check_access_required("update")
     def put(self, company_id):
         """
         Update an existing company with the provided data.
@@ -148,7 +157,9 @@ class CompanyResource(Resource):
             logger.warning("Company with ID %s not found", company_id)
             return {"message": "Company not found"}, 404
 
-        company_schema = CompanySchema(context={'company': company}, session=db.session)
+        company_schema = CompanySchema(
+            context={"company": company}, session=db.session
+        )
 
         try:
             company = company_schema.load(json_data, instance=company)
@@ -166,6 +177,8 @@ class CompanyResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth()
+    @check_access_required("update")
     def patch(self, company_id):
         """
         Partially update an existing company with the provided data.
@@ -190,8 +203,7 @@ class CompanyResource(Resource):
             return {"message": "Company not found"}, 404
 
         company_schema = CompanySchema(
-            context={'company': company},
-            session=db.session, partial=True
+            context={"company": company}, session=db.session, partial=True
         )
 
         try:
@@ -210,6 +222,8 @@ class CompanyResource(Resource):
             logger.error("Database error: %s", str(e))
             return {"message": "Database error"}, 500
 
+    @require_jwt_auth()
+    @check_access_required("delete")
     def delete(self, company_id):
         """
         Delete a specific company by its ID.

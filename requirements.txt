@@ -1,6 +1,7 @@
 colorlog
 structlog
 python-dotenv
+requests
 Flask
 flask-cors
 flask-marshmallow
@@ -9,4 +10,5 @@ flask-restful
 Flask-SQLAlchemy
 marshmallow-sqlalchemy
 psycopg2-binary
+PyJWT
 gunicorn

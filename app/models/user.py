@@ -9,10 +9,19 @@ The User model represents an individual user account within a company.
 """
 
 import uuid
+import enum
+
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash
 from app.models import db
 from app.logger import logger
+
+
+class LanguageEnum(enum.Enum):
+    """Enumeration for supported user languages."""
+
+    EN = "en"
+    FR = "fr"
 
 
 class User(db.Model):
@@ -29,6 +38,7 @@ class User(db.Model):
         hashed_password (str): Hashed password for authentication.
         first_name (str): Optional first name of the user.
         last_name (str): Optional last name of the user.
+        language (LanguageEnum): Preferred language of the user.
         phone_number (str): Optional phone number of the user.
         avatar_url (str): Optional URL to the user's avatar.
         is_active (bool): Whether the user account is active.
@@ -39,43 +49,39 @@ class User(db.Model):
         created_at (datetime): Timestamp when the user was created.
         updated_at (datetime): Timestamp when the user was last updated.
     """
-    __tablename__ = 'user'
+
+    __tablename__ = "user"
 
     id = db.Column(
-        db.String(36),
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     email = db.Column(db.String(100), nullable=False, unique=True)
     hashed_password = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
+    language = db.Column(
+        db.Enum(LanguageEnum), default=LanguageEnum.EN, nullable=False
+    )
     phone_number = db.Column(db.String(50), nullable=True)
     avatar_url = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     is_verifed = db.Column(db.Boolean, default=False)
     last_login_at = db.Column(db.DateTime, nullable=True)
+    # Allow nullable company_id for superuser creation
     company_id = db.Column(
-        db.String(36),
-        db.ForeignKey('company.id'),
-        nullable=False
+        db.String(36), db.ForeignKey("company.id"), nullable=True, index=True
     )
     position_id = db.Column(
-        db.String(36),
-        db.ForeignKey('position.id'),
-        nullable=True
+        db.String(36), db.ForeignKey("position.id"), nullable=True
     )
-    created_at = db.Column(
-        db.DateTime,
-        default=db.func.current_timestamp()
-    )
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
         default=db.func.current_timestamp(),
-        onupdate=db.func.current_timestamp()
+        onupdate=db.func.current_timestamp(),
     )
 
-    company = db.relationship('Company', back_populates='users', lazy=True)
+    company = db.relationship("Company", back_populates="users", lazy=True)
 
     def __repr__(self):
         """
@@ -117,7 +123,7 @@ class User(db.Model):
             User or None: The User object if found, None otherwise.
         """
         try:
-            return cls.query.get(user_id)
+            return db.session.get(cls, user_id)
         except SQLAlchemyError as e:
             logger.error("Error retrieving user by ID %s: %s", user_id, str(e))
             return None
@@ -178,7 +184,8 @@ class User(db.Model):
         except SQLAlchemyError as e:
             logger.error(
                 "Error retrieving users for position %s: %s",
-                position_id, str(e)
+                position_id,
+                str(e),
             )
             return []
 
@@ -203,9 +210,7 @@ class User(db.Model):
                 query = query.filter(cls.last_name.ilike(f"%{last_name}%"))
             return query.all()
         except SQLAlchemyError as e:
-            logger.error(
-                "Error retrieving users by name: %s", str(e)
-            )
+            logger.error("Error retrieving users by name: %s", str(e))
             return []
 
     def verify_password(self, password):
@@ -219,3 +224,27 @@ class User(db.Model):
             bool: True if password matches the stored hash, False otherwise.
         """
         return check_password_hash(self.hashed_password, password)
+
+    def is_superuser(self):
+        """
+        Check if the user is a superuser (no company_id).
+
+        Returns:
+            bool: True if user is a superuser, False otherwise.
+        """
+        return self.company_id is None
+
+    @classmethod
+    def get_superusers(cls):
+        """
+        Retrieve all superusers from the database.
+
+        Returns:
+            list[User]: List of superuser User objects, or an empty list if an
+                        error occurs.
+        """
+        try:
+            return cls.query.filter(cls.company_id.is_(None)).all()
+        except SQLAlchemyError as e:
+            logger.error("Error retrieving superusers: %s", str(e))
+            return []

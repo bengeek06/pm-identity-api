@@ -35,9 +35,10 @@ class CompanySchema(SQLAlchemyAutoSchema):
         city (str): Optional. Max 100 characters.
         country (str): Optional. Max 100 characters.
     """
+
     # Permet le passage explicite du contexte lors de l'instanciation
     def __init__(self, *args, **kwargs):
-        self.context = kwargs.pop('context', {})
+        self.context = kwargs.pop("context", {})
         super().__init__(*args, **kwargs)
 
     class Meta:
@@ -51,59 +52,40 @@ class CompanySchema(SQLAlchemyAutoSchema):
             dump_only: Fields to exclude from deserialization.
             unknown: Raise error on unknown fields.
         """
+
         model = Company
         load_instance = True
         include_fk = True
-        dump_only = ('id', 'created_at', 'updated_at')
+        dump_only = ("id", "created_at", "updated_at")
         unknown = RAISE
 
     name = fields.String(
         required=True,
         validate=[
             validate.Length(min=1, max=100),
-        ]
+        ],
     )
-    description = fields.String(
-        validate=validate.Length(max=200)
-    )
-    logo_url = fields.URL(
-        allow_none=True,
-        validate=validate.Length(max=255)
-    )
-    website = fields.URL(
-        allow_none=True,
-        validate=validate.Length(max=255)
-    )
+    description = fields.String(validate=validate.Length(max=200))
+    logo_url = fields.URL(allow_none=True, validate=validate.Length(max=255))
+    website = fields.URL(allow_none=True, validate=validate.Length(max=255))
     phone_number = fields.String(
         allow_none=True,
         validate=[
             validate.Length(max=20),
             validate.Regexp(
-                r"^\d*$", error="Phone number must contain only digits.")
-        ]
+                r"^\d*$", error="Phone number must contain only digits."
+            ),
+        ],
     )
-    email = fields.Email(
-        allow_none=True,
-        validate=validate.Length(max=255)
-    )
-    address = fields.String(
-        allow_none=True,
-        validate=validate.Length(max=255)
-    )
+    email = fields.Email(allow_none=True, validate=validate.Length(max=255))
+    address = fields.String(allow_none=True, validate=validate.Length(max=255))
     postal_code = fields.String(
-        allow_none=True,
-        validate=validate.Length(max=20)
+        allow_none=True, validate=validate.Length(max=20)
     )
-    city = fields.String(
-        allow_none=True,
-        validate=validate.Length(max=100)
-    )
-    country = fields.String(
-        allow_none=True,
-        validate=validate.Length(max=100)
-    )
+    city = fields.String(allow_none=True, validate=validate.Length(max=100))
+    country = fields.String(allow_none=True, validate=validate.Length(max=100))
 
-    @validates('name')
+    @validates("name")
     def validate_name(self, value, **kwargs):
         """
         Ensure the company name is unique, sauf pour la société courante (update).
@@ -116,6 +98,11 @@ class CompanySchema(SQLAlchemyAutoSchema):
         """
         _ = kwargs
         company = Company.query.filter_by(name=value).first()
-        current_company = self.context.get('company') if hasattr(self, 'context') else None
-        if company and (not current_company or company.id != getattr(current_company, 'id', None)):
+        current_company = (
+            self.context.get("company") if hasattr(self, "context") else None
+        )
+        if company and (
+            not current_company
+            or company.id != getattr(current_company, "id", None)
+        ):
             raise ValidationError("Company name must be unique.")

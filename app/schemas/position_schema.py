@@ -32,6 +32,7 @@ class PositionSchema(SQLAlchemyAutoSchema):
         organization_unit_id (str): Foreign key to the associated unit (UUID).
         level (int): Level of the position.
     """
+
     class Meta:
         """
         Meta options for the Position schema.
@@ -42,48 +43,50 @@ class PositionSchema(SQLAlchemyAutoSchema):
             include_fk: Whether to include foreign keys.
             dump_only: Fields that are only used for serialization.
         """
+
         model = Position
         load_instance = True
         include_fk = True
-        dump_only = ('id', 'created_at', 'updated_at')
+        dump_only = ("id", "created_at", "updated_at")
 
     title = fields.String(
         required=True,
-        validate=validate.Length(min=1, error="Title cannot be empty.")
+        validate=validate.Length(min=1, error="Title cannot be empty."),
     )
 
     description = fields.String(
         validate=validate.Length(
-            max=200, error="Description cannot exceed 200 characters.")
+            max=200, error="Description cannot exceed 200 characters."
+        )
     )
 
     company_id = fields.String(
-        required=False,
-        dump_only=True,
+        required=True,
         validate=validate.Regexp(
-            r'^[a-fA-F0-9]{8}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{12}$',
-            error="Company ID must be a valid UUID."
-        )
+            r"^[a-fA-F0-9]{8}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{12}$",
+            error="Company ID must be a valid UUID.",
+        ),
     )
 
     organization_unit_id = fields.String(
         required=True,
         validate=validate.Regexp(
-            r'^[a-fA-F0-9]{8}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{4}-'
-            r'[a-fA-F0-9]{12}$',
-            error="Organization Unit ID must be a valid UUID."
-        )
+            r"^[a-fA-F0-9]{8}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{12}$",
+            error="Organization Unit ID must be a valid UUID.",
+        ),
     )
 
     level = fields.Integer(
         required=False,
         validate=validate.Range(
-            min=0, error="Level must be a positive integer.")
+            min=0, error="Level must be a positive integer."
+        ),
     )
