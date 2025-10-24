@@ -220,7 +220,7 @@ def create_app(config_class):
     app.config.from_object(config_class)
 
     env = os.getenv("FLASK_ENV", "development")
-    logger.info(f"Creating app in {env} environment.")
+    logger.info("Creating app in environment.", environment=env)
     if env in ("development", "staging"):
         CORS(
             app, supports_credentials=True, resources={r"/*": {"origins": "*"}}
