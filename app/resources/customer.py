@@ -9,7 +9,7 @@ updating, and deleting customers. The resources use Marshmallow schemas for
 validation and serialization, and handle database errors gracefully.
 """
 
-from flask import request
+from flask import request, g
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from flask_restful import Resource
@@ -68,6 +68,9 @@ class CustomerListResource(Resource):
 
         json_data = request.get_json()
         customer_schema = CustomerSchema(session=db.session)
+        
+        # Inject company_id from JWT token (stored in g by require_jwt_auth)
+        json_data['company_id'] = g.company_id
 
         try:
             new_customer = customer_schema.load(json_data)
