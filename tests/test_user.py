@@ -656,6 +656,7 @@ def test_get_users_by_position_not_found(client):
 def test_verify_password_success(client, session):
     """
     Test POST /verify_password with correct email and password.
+    Verify that last_login_at is updated on successful authentication.
     """
     company_id = str(uuid.uuid4())
     password = "MySecret123!"
@@ -669,11 +670,20 @@ def test_verify_password_success(client, session):
     session.add(user)
     session.commit()
 
+    # Store the initial last_login_at (should be None)
+    initial_last_login = user.last_login_at
+    assert initial_last_login is None
+
     payload = {"email": "verify@example.com", "password": password}
     response = client.post("/verify_password", json=payload)
     assert response.status_code == 200
     data = response.get_json()
     assert data["email"] == "verify@example.com"
+
+    # Verify last_login_at was updated
+    session.refresh(user)
+    assert user.last_login_at is not None
+    assert data["last_login_at"] is not None
 
 
 def test_verify_password_wrong_password(client, session):
