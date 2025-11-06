@@ -57,17 +57,11 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
 
     name = fields.String(
         required=True,
-        validate=[
-            validate.Length(
-                min=1,
-                max=100,
-                error="Name must be between 1 and 100 characters.",
-            ),
-            validate.Regexp(
-                r"^[a-zA-Z0-9\s\-_.]+$",
-                error="Name: only letters, numbers, spaces, -, _ and . allowed.",
-            ),
-        ],
+        validate=validate.Length(
+            min=1,
+            max=100,
+            error="Name must be between 1 and 100 characters.",
+        ),
     )
 
     company_id = fields.String(
