@@ -45,6 +45,94 @@ from app.schemas.user_schema import UserSchema
 from app.models.company import Company
 
 
+# Helper functions for user operations
+def _validate_avatar_url_field(avatar_url_value, context="POST"):
+    """Log warning if avatar_url is sent by frontend (this is a bug)."""
+    is_base64 = (
+        avatar_url_value.startswith("data:image/")
+        if avatar_url_value
+        else False
+    )
+    logger.warning(
+        f"[{context}] Frontend sent avatar_url - THIS IS A BUG! "
+        f"Length: {len(avatar_url_value)} chars, "
+        f"Is base64 data URI: {is_base64}, "
+        f"Preview: {avatar_url_value[:50]}... "
+        f"EXPECTED: Frontend should send file via "
+        f"'avatar' field in multipart/form-data, "
+        f"NOT avatar_url. The backend manages avatar_url "
+        f"after upload to Storage Service."
+    )
+
+
+def _parse_request_data(is_multipart, context="POST"):
+    """Parse request data from multipart or JSON."""
+    if is_multipart:
+        # Check if avatar_url is in multipart form data (this is a bug)
+        if "avatar_url" in request.form:
+            _validate_avatar_url_field(request.form["avatar_url"], context)
+
+        # Get form data but exclude file fields and avatar_url
+        json_data = {
+            k: v
+            for k, v in request.form.items()
+            if k not in ("avatar", "avatar_url")
+        }
+    else:
+        json_data = request.get_json() or {}
+        # Remove avatar_url from JSON data if present
+        if "avatar_url" in json_data:
+            _validate_avatar_url_field(json_data["avatar_url"], context)
+            json_data.pop("avatar_url", None)
+
+    return json_data
+
+
+def _handle_avatar_upload(user, company_id):
+    """Handle avatar upload if present in request."""
+    if "avatar" not in request.files:
+        return
+
+    avatar_file = request.files["avatar"]
+    try:
+        file_data = avatar_file.read()
+        content_type = avatar_file.content_type or "image/jpeg"
+        filename = avatar_file.filename or "avatar.jpg"
+
+        object_key = upload_avatar_via_proxy(
+            user_id=str(user.id),
+            company_id=company_id,
+            file_data=file_data,
+            content_type=content_type,
+            filename=filename,
+        )
+
+        user.avatar_url = object_key
+        db.session.commit()
+        logger.info(f"Avatar uploaded for new user {user.id}")
+
+    except AvatarValidationError as e:
+        logger.warning(f"Avatar validation failed: {e}")
+        # Don't fail user creation, just log the warning
+
+    except StorageServiceError as e:
+        logger.error(f"Storage service error: {e}")
+        # Don't fail user creation, just log the error
+
+
+def _create_user_storage(user_id, company_id):
+    """Create user directory structure in Storage Service."""
+    try:
+        create_user_directories(
+            user_id=str(user_id),
+            company_id=company_id,
+        )
+        logger.info(f"User directories created for {user_id}")
+    except StorageServiceError as e:
+        logger.warning(f"Failed to create user directories: {e}")
+        # Don't fail user creation if directory creation fails
+
+
 class UserListResource(Resource):
     """
     Resource for handling user list operations.
@@ -126,62 +214,13 @@ class UserListResource(Resource):
             return {"message": "JWT error"}, 401
 
         # Handle multipart/form-data or JSON
-        # Check both content_type and mimetype for better compatibility
         is_multipart = (
             request.content_type
             and "multipart/form-data" in request.content_type
         ) or (request.mimetype and "multipart/form-data" in request.mimetype)
 
-        if is_multipart:
-            # Check if avatar_url is in multipart form data (this is a bug)
-            if "avatar_url" in request.form:
-                avatar_url_value = request.form["avatar_url"]
-                is_base64 = (
-                    avatar_url_value.startswith("data:image/")
-                    if avatar_url_value
-                    else False
-                )
-                logger.warning(
-                    f"[POST] Frontend sent avatar_url in "
-                    f"multipart/form-data - THIS IS A BUG! "
-                    f"Length: {len(avatar_url_value)} chars, "
-                    f"Is base64 data URI: {is_base64}, "
-                    f"Preview: {avatar_url_value[:50]}... "
-                    f"EXPECTED: Frontend should send file via "
-                    f"'avatar' field in multipart/form-data, "
-                    f"NOT avatar_url. The backend manages avatar_url "
-                    f"after upload to Storage Service."
-                )
-
-            # Get form data but exclude file fields and avatar_url (managed by upload logic)
-            json_data = {
-                k: v
-                for k, v in request.form.items()
-                if k not in ("avatar", "avatar_url")
-            }
-        else:
-            json_data = request.get_json() or {}
-            # Remove avatar_url from JSON data if present (should only be set by our upload logic)
-            if "avatar_url" in json_data:
-                avatar_url_value = json_data["avatar_url"]
-                is_base64 = (
-                    avatar_url_value.startswith("data:image/")
-                    if avatar_url_value
-                    else False
-                )
-                logger.warning(
-                    f"[POST] Frontend sent avatar_url in JSON payload "
-                    f"- THIS IS A BUG! "
-                    f"Length: {len(avatar_url_value)} chars, "
-                    f"Is base64 data URI: {is_base64}, "
-                    f"Preview: {avatar_url_value[:50]}... "
-                    f"EXPECTED: Frontend should send file via "
-                    f"'avatar' field in multipart/form-data, "
-                    f"NOT avatar_url in JSON. The backend manages "
-                    f"avatar_url after upload."
-                )
-                json_data.pop("avatar_url", None)
-
+        # Parse request data
+        json_data = _parse_request_data(is_multipart, context="POST")
         json_data["company_id"] = company_id
 
         user_schema = UserSchema(session=db.session)
@@ -211,43 +250,10 @@ class UserListResource(Resource):
             db.session.commit()
 
             # Create user directory structure in Storage Service
-            try:
-                create_user_directories(
-                    user_id=str(user.id),
-                    company_id=company_id,
-                )
-                logger.info(f"User directories created for {user.id}")
-            except StorageServiceError as e:
-                logger.warning(f"Failed to create user directories: {e}")
-                # Don't fail user creation if directory creation fails
+            _create_user_storage(user.id, company_id)
 
             # Handle avatar upload if present
-            if "avatar" in request.files:
-                avatar_file = request.files["avatar"]
-                try:
-                    file_data = avatar_file.read()
-                    content_type = avatar_file.content_type or "image/jpeg"
-                    filename = avatar_file.filename or "avatar.jpg"
-
-                    object_key = upload_avatar_via_proxy(
-                        user_id=str(user.id),
-                        company_id=company_id,
-                        file_data=file_data,
-                        content_type=content_type,
-                        filename=filename,
-                    )
-
-                    user.avatar_url = object_key
-                    db.session.commit()
-                    logger.info(f"Avatar uploaded for new user {user.id}")
-
-                except AvatarValidationError as e:
-                    logger.warning(f"Avatar validation failed: {e}")
-                    # Don't fail user creation, just log the warning
-
-                except StorageServiceError as e:
-                    logger.error(f"Storage service error: {e}")
-                    # Don't fail user creation, just log the error
+            _handle_avatar_upload(user, company_id)
 
             return user_schema.dump(user), 201
         except ValidationError as e:
