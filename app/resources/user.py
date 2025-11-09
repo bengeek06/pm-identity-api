@@ -142,12 +142,15 @@ class UserListResource(Resource):
                     else False
                 )
                 logger.warning(
-                    f"[POST] Frontend sent avatar_url in multipart/form-data - THIS IS A BUG! "
+                    f"[POST] Frontend sent avatar_url in "
+                    f"multipart/form-data - THIS IS A BUG! "
                     f"Length: {len(avatar_url_value)} chars, "
                     f"Is base64 data URI: {is_base64}, "
                     f"Preview: {avatar_url_value[:50]}... "
-                    f"EXPECTED: Frontend should send file via 'avatar' field in multipart/form-data, "
-                    f"NOT avatar_url. The backend manages avatar_url after upload to Storage Service."
+                    f"EXPECTED: Frontend should send file via "
+                    f"'avatar' field in multipart/form-data, "
+                    f"NOT avatar_url. The backend manages avatar_url "
+                    f"after upload to Storage Service."
                 )
 
             # Get form data but exclude file fields and avatar_url (managed by upload logic)
@@ -167,12 +170,15 @@ class UserListResource(Resource):
                     else False
                 )
                 logger.warning(
-                    f"[POST] Frontend sent avatar_url in JSON payload - THIS IS A BUG! "
+                    f"[POST] Frontend sent avatar_url in JSON payload "
+                    f"- THIS IS A BUG! "
                     f"Length: {len(avatar_url_value)} chars, "
                     f"Is base64 data URI: {is_base64}, "
                     f"Preview: {avatar_url_value[:50]}... "
-                    f"EXPECTED: Frontend should send file via 'avatar' field in multipart/form-data, "
-                    f"NOT avatar_url in JSON. The backend manages avatar_url after upload."
+                    f"EXPECTED: Frontend should send file via "
+                    f"'avatar' field in multipart/form-data, "
+                    f"NOT avatar_url in JSON. The backend manages "
+                    f"avatar_url after upload."
                 )
                 json_data.pop("avatar_url", None)
 
@@ -335,12 +341,15 @@ class UserResource(Resource):
                     else False
                 )
                 logger.warning(
-                    f"[PUT] Frontend sent avatar_url in multipart/form-data - THIS IS A BUG! "
+                    f"[PUT] Frontend sent avatar_url in "
+                    f"multipart/form-data - THIS IS A BUG! "
                     f"Length: {len(avatar_url_value)} chars, "
                     f"Is base64 data URI: {is_base64}, "
                     f"Preview: {avatar_url_value[:50]}... "
-                    f"EXPECTED: Frontend should send file via 'avatar' field in multipart/form-data, "
-                    f"NOT avatar_url. The backend manages avatar_url after upload to Storage Service."
+                    f"EXPECTED: Frontend should send file via "
+                    f"'avatar' field in multipart/form-data, "
+                    f"NOT avatar_url. The backend manages avatar_url "
+                    f"after upload to Storage Service."
                 )
 
             # Get form data but exclude file fields and avatar_url (managed by upload logic)
@@ -360,12 +369,15 @@ class UserResource(Resource):
                     else False
                 )
                 logger.warning(
-                    f"[PUT] Frontend sent avatar_url in JSON payload - THIS IS A BUG! "
+                    f"[PUT] Frontend sent avatar_url in JSON payload "
+                    f"- THIS IS A BUG! "
                     f"Length: {len(avatar_url_value)} chars, "
                     f"Is base64 data URI: {is_base64}, "
                     f"Preview: {avatar_url_value[:50]}... "
-                    f"EXPECTED: Frontend should send file via 'avatar' field in multipart/form-data, "
-                    f"NOT avatar_url in JSON. The backend manages avatar_url after upload."
+                    f"EXPECTED: Frontend should send file via "
+                    f"'avatar' field in multipart/form-data, "
+                    f"NOT avatar_url in JSON. The backend manages "
+                    f"avatar_url after upload."
                 )
                 json_data.pop("avatar_url", None)
 
@@ -481,7 +493,9 @@ class UserResource(Resource):
             for key in request.form.keys():
                 value = request.form[key]
                 logger.debug(
-                    f"[PATCH] form field '{key}': length={len(value) if value else 0}, preview={value[:100] if value and len(value) > 100 else value}"
+                    f"[PATCH] form field '{key}': "
+                    f"length={len(value) if value else 0}, "
+                    f"preview={value[:100] if value and len(value) > 100 else value}"
                 )
 
             # Check if avatar_url is in multipart form data (this is a bug)
@@ -493,12 +507,15 @@ class UserResource(Resource):
                     else False
                 )
                 logger.warning(
-                    f"[PATCH] Frontend sent avatar_url in multipart/form-data - THIS IS A BUG! "
+                    f"[PATCH] Frontend sent avatar_url in "
+                    f"multipart/form-data - THIS IS A BUG! "
                     f"Length: {len(avatar_url_value)} chars, "
                     f"Is base64 data URI: {is_base64}, "
                     f"Preview: {avatar_url_value[:50]}... "
-                    f"EXPECTED: Frontend should send file via 'avatar' field in multipart/form-data, "
-                    f"NOT avatar_url. The backend manages avatar_url after upload to Storage Service."
+                    f"EXPECTED: Frontend should send file via "
+                    f"'avatar' field in multipart/form-data, "
+                    f"NOT avatar_url. The backend manages avatar_url "
+                    f"after upload to Storage Service."
                 )
 
             # Get form data but exclude file fields and avatar_url (managed by upload logic)
@@ -508,10 +525,12 @@ class UserResource(Resource):
                 if k not in ("avatar", "avatar_url")
             }
         else:
-            # Try to parse as JSON, force=True ignores Content-Type, silent=True returns None on error
+            # Try to parse as JSON, force=True ignores Content-Type,
+            # silent=True returns None on error
             json_data = request.get_json(force=True, silent=True) or {}
             logger.debug(f"[PATCH] Parsed JSON data: {bool(json_data)}")
-            # Remove avatar_url from JSON data if present (should only be set by our upload logic)
+            # Remove avatar_url from JSON data if present
+            # (should only be set by our upload logic)
             if "avatar_url" in json_data:
                 avatar_url_value = json_data["avatar_url"]
                 is_base64 = (
@@ -520,12 +539,15 @@ class UserResource(Resource):
                     else False
                 )
                 logger.warning(
-                    f"[PATCH] Frontend sent avatar_url in JSON payload - THIS IS A BUG! "
+                    f"[PATCH] Frontend sent avatar_url in JSON payload "
+                    f"- THIS IS A BUG! "
                     f"Length: {len(avatar_url_value)} chars, "
                     f"Is base64 data URI: {is_base64}, "
                     f"Preview: {avatar_url_value[:50]}... "
-                    f"EXPECTED: Frontend should send file via 'avatar' field in multipart/form-data, "
-                    f"NOT avatar_url in JSON. The backend manages avatar_url after upload."
+                    f"EXPECTED: Frontend should send file via "
+                    f"'avatar' field in multipart/form-data, "
+                    f"NOT avatar_url in JSON. The backend manages "
+                    f"avatar_url after upload."
                 )
                 json_data.pop("avatar_url", None)
 
@@ -562,7 +584,8 @@ class UserResource(Resource):
                     filename = avatar_file.filename or "avatar.jpg"
 
                     logger.debug(
-                        f"[PATCH] Uploading avatar: size={len(file_data)}, type={content_type}, name={filename}"
+                        f"[PATCH] Uploading avatar: size={len(file_data)}, "
+                        f"type={content_type}, name={filename}"
                     )
 
                     uploaded_avatar_url = upload_avatar_via_proxy(
@@ -574,7 +597,9 @@ class UserResource(Resource):
                     )
 
                     logger.debug(
-                        f"[PATCH] Avatar uploaded, object_key length: {len(uploaded_avatar_url)}, value: {uploaded_avatar_url}"
+                        f"[PATCH] Avatar uploaded, "
+                        f"object_key length: {len(uploaded_avatar_url)}, "
+                        f"value: {uploaded_avatar_url}"
                     )
                     logger.info(f"Avatar updated for user {user.id}")
 

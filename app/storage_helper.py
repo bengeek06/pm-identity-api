@@ -8,7 +8,6 @@ Provides avatar upload/delete functionality for the Identity Service.
 
 import os
 import requests
-from typing import Optional, Dict, Any
 
 from app.logger import logger
 
@@ -32,13 +31,9 @@ ALLOWED_AVATAR_TYPES = {
 class StorageServiceError(Exception):
     """Exception raised when Storage Service operations fail."""
 
-    pass
-
 
 class AvatarValidationError(Exception):
     """Exception raised when avatar validation fails."""
-
-    pass
 
 
 def validate_avatar(
@@ -181,7 +176,7 @@ def upload_avatar_via_proxy(
             try:
                 error_data = e.response.json()
                 error_msg = error_data.get("message", str(e))
-            except Exception:
+            except ValueError:
                 error_msg = str(e)
         else:
             error_msg = str(e)
@@ -317,7 +312,7 @@ def create_user_directories(user_id: str, company_id: str) -> None:
                 try:
                     error_data = e.response.json()
                     error_msg = error_data.get("message", str(e))
-                except Exception:
+                except ValueError:
                     error_msg = str(e)
             else:
                 error_msg = str(e)
@@ -401,8 +396,8 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
                         f"Failed to delete file {file_id}: {del_response.status_code}"
                     )
 
-            except Exception as e:
-                logger.warning(f"Error deleting file {file_id}: {e}")
+            except (requests.exceptions.RequestException, ValueError) as file_error:
+                logger.warning(f"Error deleting file {file_id}: {file_error}")
                 # Continue with next file
 
         logger.info(f"Finished deleting storage for user {user_id}")
@@ -413,5 +408,5 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
     except requests.exceptions.RequestException as e:
         logger.error(f"Error deleting user storage: {e}")
 
-    except Exception as e:
-        logger.error(f"Unexpected error deleting user storage: {e}")
+    except ValueError as e:
+        logger.error(f"JSON parsing error deleting user storage: {e}")

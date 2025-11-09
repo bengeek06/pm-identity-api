@@ -60,7 +60,7 @@ class UserAvatarResource(Resource):
         object_key = user.avatar_url
 
         # Extract components from object_key
-        # Example: "users/c0fa9ab7-f1c5-46cc-b709-2b9a745332e4/avatars/c0fa9ab7-f1c5-46cc-b709-2b9a745332e4.png/1"
+        # Example: "users/uuid/avatars/uuid.png/1"
         parts = object_key.split("/")
         if len(parts) < 3 or parts[0] != "users":
             logger.error(f"Invalid object_key format: {object_key}")
@@ -68,7 +68,8 @@ class UserAvatarResource(Resource):
 
         bucket_type = "users"
         bucket_id = parts[1]  # user_id
-        # Reconstruct logical_path: everything after bucket_id, EXCLUDING the version number at the end
+        # Reconstruct logical_path: everything after bucket_id,
+        # EXCLUDING the version number at the end
         # object_key format: users/{user_id}/avatars/{filename}/{version}
         # logical_path format: avatars/{filename} (no version)
         path_parts = parts[2:]  # ['avatars', 'filename.ext', 'version']
@@ -85,10 +86,13 @@ class UserAvatarResource(Resource):
 
         try:
             logger.debug(
-                f"Fetching avatar from Storage Service: bucket_type={bucket_type}, bucket_id={bucket_id}, logical_path={logical_path}"
+                f"Fetching avatar from Storage Service: "
+                f"bucket_type={bucket_type}, bucket_id={bucket_id}, "
+                f"logical_path={logical_path}"
             )
 
-            # Call Storage Service /download/proxy endpoint with bucket triplet
+            # Call Storage Service /download/proxy endpoint
+            # with bucket triplet
             response = requests.get(
                 f"{storage_service_url}/download/proxy",
                 params={
