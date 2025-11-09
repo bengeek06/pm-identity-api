@@ -69,9 +69,9 @@ class SubcontractorListResource(Resource):
 
         json_data = request.get_json()
         subcontractor_schema = SubcontractorSchema(session=db.session)
-        
+
         # Inject company_id from JWT token (stored in g by require_jwt_auth)
-        json_data['company_id'] = g.company_id
+        json_data["company_id"] = g.company_id
 
         try:
             subcontractor = subcontractor_schema.load(json_data)

@@ -101,9 +101,7 @@ def register_routes(app):
         UserRolesResource,
         "/users/<string:user_id>/roles/<string:user_role_id>",
     )
-    api.add_resource(
-        UserPoliciesResource, "/users/<string:user_id>/policies"
-    )
+    api.add_resource(UserPoliciesResource, "/users/<string:user_id>/policies")
     api.add_resource(
         UserPermissionsResource, "/users/<string:user_id>/permissions"
     )

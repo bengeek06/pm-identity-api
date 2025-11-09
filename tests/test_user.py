@@ -1904,7 +1904,10 @@ def test_get_user_policies_success(client):
     policy_3 = {"id": str(uuid.uuid4()), "name": "policy3"}
     policies_response_2 = mock.Mock()
     policies_response_2.status_code = 200
-    policies_response_2.json.return_value = [policy_3, policy_1]  # policy_1 duplicated
+    policies_response_2.json.return_value = [
+        policy_3,
+        policy_1,
+    ]  # policy_1 duplicated
 
     def mock_get_side_effect(url, **kwargs):
         if "/user-roles" in url:
@@ -2038,9 +2041,7 @@ def test_get_user_policies_missing_guardian_url(client):
 
     # Keep JWT_SECRET but remove GUARDIAN_SERVICE_URL
     jwt_secret = os.environ.get("JWT_SECRET", "test_secret")
-    with mock.patch.dict(
-        "os.environ", {"JWT_SECRET": jwt_secret}, clear=True
-    ):
+    with mock.patch.dict("os.environ", {"JWT_SECRET": jwt_secret}, clear=True):
         response = client.get(f"/users/{user_id}/policies")
         assert response.status_code == 500
 
@@ -2223,20 +2224,39 @@ def test_get_user_permissions_success(client):
     ]
 
     # Mock permissions for policy 1
-    permission_1 = {"id": str(uuid.uuid4()), "service": "identity", "resource_name": "user"}
-    permission_2 = {"id": str(uuid.uuid4()), "service": "identity", "resource_name": "company"}
+    permission_1 = {
+        "id": str(uuid.uuid4()),
+        "service": "identity",
+        "resource_name": "user",
+    }
+    permission_2 = {
+        "id": str(uuid.uuid4()),
+        "service": "identity",
+        "resource_name": "company",
+    }
     permissions_response_1 = mock.Mock()
     permissions_response_1.status_code = 200
     permissions_response_1.json.return_value = [permission_1, permission_2]
 
     # Mock permissions for policy 2
-    permission_3 = {"id": str(uuid.uuid4()), "service": "guardian", "resource_name": "role"}
+    permission_3 = {
+        "id": str(uuid.uuid4()),
+        "service": "guardian",
+        "resource_name": "role",
+    }
     permissions_response_2 = mock.Mock()
     permissions_response_2.status_code = 200
-    permissions_response_2.json.return_value = [permission_3, permission_1]  # permission_1 duplicated
+    permissions_response_2.json.return_value = [
+        permission_3,
+        permission_1,
+    ]  # permission_1 duplicated
 
     # Mock permissions for policy 3
-    permission_4 = {"id": str(uuid.uuid4()), "service": "guardian", "resource_name": "policy"}
+    permission_4 = {
+        "id": str(uuid.uuid4()),
+        "service": "guardian",
+        "resource_name": "policy",
+    }
     permissions_response_3 = mock.Mock()
     permissions_response_3.status_code = 200
     permissions_response_3.json.return_value = [permission_4]
@@ -2380,9 +2400,7 @@ def test_get_user_permissions_missing_guardian_url(client):
 
     # Keep JWT_SECRET but remove GUARDIAN_SERVICE_URL
     jwt_secret = os.environ.get("JWT_SECRET", "test_secret")
-    with mock.patch.dict(
-        "os.environ", {"JWT_SECRET": jwt_secret}, clear=True
-    ):
+    with mock.patch.dict("os.environ", {"JWT_SECRET": jwt_secret}, clear=True):
         response = client.get(f"/users/{user_id}/permissions")
         assert response.status_code == 500
 
@@ -2447,7 +2465,11 @@ def test_get_user_permissions_guardian_permissions_partial_failure(client):
     ]
 
     # Policy 1 permissions succeed
-    permission_1 = {"id": str(uuid.uuid4()), "service": "identity", "resource_name": "user"}
+    permission_1 = {
+        "id": str(uuid.uuid4()),
+        "service": "identity",
+        "resource_name": "user",
+    }
     permissions_response_1 = mock.Mock()
     permissions_response_1.status_code = 200
     permissions_response_1.json.return_value = [permission_1]
@@ -2535,5 +2557,3 @@ def test_get_user_permissions_policy_not_found_in_guardian(client):
             data = response.get_json()
             assert "permissions" in data
             assert data["permissions"] == []
-
-

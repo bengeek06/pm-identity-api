@@ -68,7 +68,9 @@ def validate_avatar(
         )
 
     if content_type not in ALLOWED_AVATAR_TYPES:
-        logger.error(f"Invalid content type: {content_type}. Allowed: {', '.join(ALLOWED_AVATAR_TYPES)}")
+        logger.error(
+            f"Invalid content type: {content_type}. Allowed: {', '.join(ALLOWED_AVATAR_TYPES)}"
+        )
         raise AvatarValidationError(
             f"Invalid content type: {content_type}. "
             f"Allowed: {', '.join(ALLOWED_AVATAR_TYPES)}"
@@ -134,26 +136,36 @@ def upload_avatar_via_proxy(
         )
 
         response = requests.post(
-            url, files=files, data=data, headers=headers, timeout=REQUEST_TIMEOUT
+            url,
+            files=files,
+            data=data,
+            headers=headers,
+            timeout=REQUEST_TIMEOUT,
         )
 
-        logger.debug(f"Storage Service response status: {response.status_code}")
-        
+        logger.debug(
+            f"Storage Service response status: {response.status_code}"
+        )
+
         # Accept both 200 and 201 as success
         if response.status_code not in (200, 201):
-            logger.error(f"Failed to upload avatar: {response.status_code} {response.text}")
+            logger.error(
+                f"Failed to upload avatar: {response.status_code} {response.text}"
+            )
             response.raise_for_status()
-        
+
         result = response.json()
         logger.debug(f"Storage Service response: {result}")
-        
+
         # The object_key can be either at root level or in 'data' object
         object_key = result.get("object_key")
         if not object_key and "data" in result:
             object_key = result["data"].get("object_key")
-        
+
         if not object_key:
-            raise StorageServiceError(f"Storage Service did not return object_key. Response: {result}")
+            raise StorageServiceError(
+                f"Storage Service did not return object_key. Response: {result}"
+            )
 
         logger.info(f"Avatar uploaded successfully: {object_key}")
         logger.debug(f"object_key length: {len(object_key)}")
@@ -176,9 +188,7 @@ def upload_avatar_via_proxy(
         raise StorageServiceError(f"Storage Service error: {error_msg}") from e
 
 
-def delete_avatar(
-    user_id: str, company_id: str, file_id: str
-) -> None:
+def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
     """
     Delete a user's avatar from the Storage Service.
 
@@ -222,7 +232,9 @@ def delete_avatar(
             return
 
         # Log the error response for debugging
-        logger.error(f"Failed to delete avatar: {response.status_code} - {response.text}")
+        logger.error(
+            f"Failed to delete avatar: {response.status_code} - {response.text}"
+        )
         response.raise_for_status()
 
     except requests.exceptions.Timeout:
@@ -239,7 +251,7 @@ def delete_avatar(
 def create_user_directories(user_id: str, company_id: str) -> None:
     """
     Create the user directory structure in the Storage Service.
-    
+
     Creates:
     - /users/{user_id}/.keep (to ensure user directory exists)
     - /users/{user_id}/workspace/.keep (to ensure workspace directory exists)
@@ -252,47 +264,55 @@ def create_user_directories(user_id: str, company_id: str) -> None:
         StorageServiceError: If directory creation fails
     """
     url = f"{STORAGE_SERVICE_URL}/upload/proxy"
-    
+
     headers = {
         "X-User-ID": user_id,
         "X-Company-ID": company_id,
     }
-    
+
     # Create .keep file content (empty marker file)
     keep_content = b""
-    
+
     directories = [
         ".keep",  # /users/{user_id}/.keep
         "workspace/.keep",  # /users/{user_id}/workspace/.keep
     ]
-    
+
     for logical_path in directories:
         files = {
             "file": (".keep", keep_content, "text/plain"),
         }
-        
+
         data = {
             "bucket_type": "users",
             "bucket_id": user_id,
             "logical_path": logical_path,
         }
-        
+
         try:
-            logger.info(f"Creating directory marker: {logical_path} for user {user_id}")
-            
-            response = requests.post(
-                url, files=files, data=data, headers=headers, timeout=REQUEST_TIMEOUT
+            logger.info(
+                f"Creating directory marker: {logical_path} for user {user_id}"
             )
-            
+
+            response = requests.post(
+                url,
+                files=files,
+                data=data,
+                headers=headers,
+                timeout=REQUEST_TIMEOUT,
+            )
+
             response.raise_for_status()
             logger.info(f"Directory marker created: {logical_path}")
-            
+
         except requests.exceptions.Timeout:
             logger.error(f"Timeout creating directory marker: {logical_path}")
             raise StorageServiceError("Storage Service timeout") from None
-            
+
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error creating directory marker {logical_path}: {e}")
+            logger.error(
+                f"Error creating directory marker {logical_path}: {e}"
+            )
             if hasattr(e, "response") and e.response is not None:
                 try:
                     error_data = e.response.json()
@@ -301,13 +321,15 @@ def create_user_directories(user_id: str, company_id: str) -> None:
                     error_msg = str(e)
             else:
                 error_msg = str(e)
-            raise StorageServiceError(f"Failed to create directory structure: {error_msg}") from e
+            raise StorageServiceError(
+                f"Failed to create directory structure: {error_msg}"
+            ) from e
 
 
 def delete_user_storage(user_id: str, company_id: str) -> None:
     """
     Delete all user storage (entire user directory and contents).
-    
+
     This deletes everything under /users/{user_id}/
 
     Args:
@@ -319,75 +341,77 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
     """
     # Since the Storage Service doesn't have a "delete directory" endpoint,
     # we need to list all files and delete them one by one
-    
+
     # First, try to list all files for this user
     list_url = f"{STORAGE_SERVICE_URL}/list"
-    
+
     headers = {
         "X-User-ID": user_id,
         "X-Company-ID": company_id,
     }
-    
+
     params = {
         "bucket": "users",
         "id": user_id,
         "limit": 1000,  # Get all files
     }
-    
+
     try:
         logger.info(f"Listing files for user {user_id} to delete")
-        
+
         response = requests.get(
             list_url, params=params, headers=headers, timeout=REQUEST_TIMEOUT
         )
-        
+
         if response.status_code == 404:
             logger.info(f"No files found for user {user_id}")
             return
-        
+
         response.raise_for_status()
         data = response.json()
-        
+
         files = data.get("data", {}).get("items", [])
         logger.info(f"Found {len(files)} files to delete for user {user_id}")
-        
+
         # Delete each file
         delete_url = f"{STORAGE_SERVICE_URL}/delete"
-        
+
         for file_meta in files:
             file_id = file_meta.get("file_id")
             if not file_id:
                 continue
-            
+
             try:
                 delete_payload = {
                     "file_id": file_id,
                     "physical": True,  # Permanent deletion
                 }
-                
+
                 del_response = requests.delete(
-                    delete_url, 
-                    json=delete_payload, 
-                    headers=headers, 
-                    timeout=REQUEST_TIMEOUT
+                    delete_url,
+                    json=delete_payload,
+                    headers=headers,
+                    timeout=REQUEST_TIMEOUT,
                 )
-                
+
                 if del_response.status_code in (200, 204, 404):
                     logger.debug(f"Deleted file {file_id}")
                 else:
-                    logger.warning(f"Failed to delete file {file_id}: {del_response.status_code}")
-                    
+                    logger.warning(
+                        f"Failed to delete file {file_id}: {del_response.status_code}"
+                    )
+
             except Exception as e:
                 logger.warning(f"Error deleting file {file_id}: {e}")
                 # Continue with next file
-        
+
         logger.info(f"Finished deleting storage for user {user_id}")
-        
+
     except requests.exceptions.Timeout:
         logger.error(f"Timeout listing/deleting files for user {user_id}")
-        
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Error deleting user storage: {e}")
-        
+
     except Exception as e:
         logger.error(f"Unexpected error deleting user storage: {e}")

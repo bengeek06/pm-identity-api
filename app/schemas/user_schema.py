@@ -64,7 +64,9 @@ class UserSchema(SQLAlchemyAutoSchema):
         load_instance = True
         include_fk = True
         dump_only = ("id", "created_at", "updated_at")
-        exclude = ("avatar_url",)  # Internal field, frontend should use /users/{id}/avatar endpoint
+        exclude = (
+            "avatar_url",
+        )  # Internal field, frontend should use /users/{id}/avatar endpoint
 
     id = fields.UUID(dump_only=True)
     email = fields.Email(required=True, validate=validate.Length(max=100))
