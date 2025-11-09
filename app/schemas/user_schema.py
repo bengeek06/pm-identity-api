@@ -57,12 +57,14 @@ class UserSchema(SQLAlchemyAutoSchema):
             load_instance: Whether to load model instances.
             include_fk: Whether to include foreign keys.
             dump_only: Fields that are only used for serialization.
+            exclude: Fields to exclude from serialization.
         """
 
         model = User
         load_instance = True
         include_fk = True
         dump_only = ("id", "created_at", "updated_at")
+        exclude = ("avatar_url",)  # Internal field, frontend should use /users/{id}/avatar endpoint
 
     id = fields.UUID(dump_only=True)
     email = fields.Email(required=True, validate=validate.Length(max=100))
@@ -80,9 +82,8 @@ class UserSchema(SQLAlchemyAutoSchema):
     phone_number = fields.String(
         validate=validate.Length(max=50), allow_none=True
     )
-    avatar_url = fields.String(
-        validate=validate.Length(max=255), allow_none=True
-    )
+    # avatar_url is excluded from dump (see Meta.exclude)
+    # Frontend should use /users/{id}/avatar endpoint instead
     is_active = fields.Boolean(load_default=True, dump_default=True)
     is_verifed = fields.Boolean(load_default=False, dump_default=False)
     last_login_at = fields.DateTime(allow_none=True)

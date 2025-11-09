@@ -136,7 +136,9 @@ def require_jwt_auth():
             # Store original JSON data in g without modification
             try:
                 if request.content_length and request.content_length > 0:
-                    g.json_data = request.get_json()
+                    # Use force=True to allow non-JSON content types (like multipart/form-data)
+                    # Use silent=True to return None instead of raising error
+                    g.json_data = request.get_json(force=True, silent=True)
                 else:
                     g.json_data = None
             except (ValueError, TypeError, RuntimeError):

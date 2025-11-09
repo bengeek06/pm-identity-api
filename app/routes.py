@@ -34,6 +34,7 @@ from app.resources.user import (
     UserListResource,
     UserResource,
 )
+from app.resources.user_avatar import UserAvatarResource
 from app.resources.user_position import UserPositionResource
 from app.resources.user_roles import (
     UserRolesListResource,
@@ -94,6 +95,7 @@ def register_routes(app):
 
     api.add_resource(UserListResource, "/users")
     api.add_resource(UserResource, "/users/<string:user_id>")
+    api.add_resource(UserAvatarResource, "/users/<string:user_id>/avatar")
     api.add_resource(UserRolesListResource, "/users/<string:user_id>/roles")
     api.add_resource(
         UserRolesResource,

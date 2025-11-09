@@ -25,9 +25,12 @@ class Config:
 
     Attributes:
         SQLALCHEMY_TRACK_MODIFICATIONS (bool): Disable SQLAlchemy event system.
+        MAX_CONTENT_LENGTH (int): Maximum allowed request size in bytes (16 MB).
     """
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Allow uploads up to 16 MB (enough for avatar images)
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
 
 
 class DevelopmentConfig(Config):

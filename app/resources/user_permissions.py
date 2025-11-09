@@ -238,8 +238,6 @@ class UserPermissionsResource(Resource):
                     all_permissions.append(permission)
 
         logger.info(
-            "Successfully fetched %d unique permissions for user %s",
-            len(all_permissions),
-            user_id,
+            f"Successfully fetched {len(all_permissions)} unique permissions for user {user_id}"
         )
         return {"permissions": all_permissions}, 200
