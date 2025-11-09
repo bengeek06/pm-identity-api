@@ -37,13 +37,9 @@ class Customer(db.Model):
 
     __tablename__ = "customer"
 
-    id = db.Column(
-        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(100), nullable=False)
-    company_id = db.Column(
-        db.String(36), db.ForeignKey("company.id"), nullable=False
-    )
+    company_id = db.Column(db.String(36), db.ForeignKey("company.id"), nullable=False)
     email = db.Column(db.String(100), nullable=True, unique=True)
     contact_person = db.Column(db.String(100), nullable=True)
     phone_number = db.Column(db.String(50), nullable=True)
@@ -114,9 +110,7 @@ class Customer(db.Model):
         try:
             return cls.query.filter_by(company_id=company_id).all()
         except SQLAlchemyError as e:
-            logger.error(
-                f"Error retrieving customers by company ID {company_id}: {e}"
-            )
+            logger.error(f"Error retrieving customers by company ID {company_id}: {e}")
             return []
 
     @classmethod

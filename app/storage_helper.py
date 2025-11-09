@@ -12,9 +12,7 @@ import requests
 from app.logger import logger
 
 # Configuration
-STORAGE_SERVICE_URL = os.getenv(
-    "STORAGE_SERVICE_URL", "http://storage-service:5000"
-)
+STORAGE_SERVICE_URL = os.getenv("STORAGE_SERVICE_URL", "http://storage-service:5000")
 REQUEST_TIMEOUT = int(os.getenv("STORAGE_REQUEST_TIMEOUT", "30"))
 MAX_AVATAR_SIZE = int(os.getenv("MAX_AVATAR_SIZE_MB", "5")) * 1024 * 1024
 
@@ -150,9 +148,7 @@ def upload_avatar_via_proxy(
     logger.debug(f"Uploading avatar for user {user_id} to {url}")
 
     try:
-        logger.info(
-            f"Uploading avatar for user {user_id}: {len(file_data)} bytes"
-        )
+        logger.info(f"Uploading avatar for user {user_id}: {len(file_data)} bytes")
 
         response = requests.post(
             url,
@@ -162,9 +158,7 @@ def upload_avatar_via_proxy(
             timeout=REQUEST_TIMEOUT,
         )
 
-        logger.debug(
-            f"Storage Service response status: {response.status_code}"
-        )
+        logger.debug(f"Storage Service response status: {response.status_code}")
 
         # Accept both 200 and 201 as success
         if response.status_code not in (200, 201):
@@ -302,9 +296,7 @@ def create_user_directories(user_id: str, company_id: str) -> None:
         }
 
         try:
-            logger.info(
-                f"Creating directory marker: {logical_path} for user {user_id}"
-            )
+            logger.info(f"Creating directory marker: {logical_path} for user {user_id}")
 
             response = requests.post(
                 url,
@@ -322,9 +314,7 @@ def create_user_directories(user_id: str, company_id: str) -> None:
             raise StorageServiceError("Storage Service timeout") from None
 
         except requests.exceptions.RequestException as e:
-            logger.error(
-                f"Error creating directory marker {logical_path}: {e}"
-            )
+            logger.error(f"Error creating directory marker {logical_path}: {e}")
             if hasattr(e, "response") and e.response is not None:
                 try:
                     error_data = e.response.json()

@@ -106,12 +106,8 @@ class UserRolesListResource(Resource):
             tuple: (dict, int) - Response data and status code
         """
         if response.status_code == 409:
-            logger.warning(
-                "Role ID %s already assigned to user %s", role_id, user_id
-            )
-            return {
-                "message": f"Role '{role_id}' already assigned to user"
-            }, 409
+            logger.warning("Role ID %s already assigned to user %s", role_id, user_id)
+            return {"message": f"Role '{role_id}' already assigned to user"}, 409
         if response.status_code == 400:
             logger.error("Bad request to Guardian: %s", response.text)
             return {"message": "Invalid role or request data"}, 400
@@ -119,9 +115,7 @@ class UserRolesListResource(Resource):
             logger.error("Error assigning role in Guardian: %s", response.text)
             return {"message": "Error assigning role"}, 500
 
-        logger.info(
-            "Successfully assigned role ID %s to user %s", role_id, user_id
-        )
+        logger.info("Successfully assigned role ID %s to user %s", role_id, user_id)
         return response.json(), 201
 
     @require_jwt_auth()
@@ -183,9 +177,7 @@ class UserRolesListResource(Resource):
             logger.error("Error contacting Guardian service: %s", str(e))
             return {"message": "Error fetching roles"}, 500
         if response.status_code != 200:
-            logger.error(
-                "Error fetching roles from Guardian: %s", response.text
-            )
+            logger.error("Error fetching roles from Guardian: %s", response.text)
             return {"message": "Error fetching roles"}, 500
 
         response_data = response.json()
@@ -298,9 +290,7 @@ class UserRolesResource(Resource):
         Returns:
             tuple: Role assignment information and HTTP status code 200 on success.
         """
-        logger.info(
-            "Retrieving role assignment %s for user %s", user_role_id, user_id
-        )
+        logger.info("Retrieving role assignment %s for user %s", user_role_id, user_id)
 
         # Get company_id from JWT data stored in g by the decorator
         jwt_data = getattr(g, "jwt_data", {})
@@ -346,9 +336,7 @@ class UserRolesResource(Resource):
             logger.warning("Role assignment %s not found", user_role_id)
             return {"message": "Role assignment not found"}, 404
         if response.status_code != 200:
-            logger.error(
-                "Error retrieving role from Guardian: %s", response.text
-            )
+            logger.error("Error retrieving role from Guardian: %s", response.text)
             return {"message": "Error retrieving role"}, 500
 
         role_data = response.json()
@@ -381,9 +369,7 @@ class UserRolesResource(Resource):
         Returns:
             tuple: Empty response and HTTP status code 204 on success.
         """
-        logger.info(
-            "Removing role assignment %s from user %s", user_role_id, user_id
-        )
+        logger.info("Removing role assignment %s from user %s", user_role_id, user_id)
 
         # Get company_id from JWT data stored in g by the decorator
         jwt_data = getattr(g, "jwt_data", {})
@@ -429,9 +415,7 @@ class UserRolesResource(Resource):
             logger.warning("Role assignment %s not found", user_role_id)
             return {"message": "Role assignment not found"}, 404
         if get_response.status_code != 200:
-            logger.error(
-                "Error checking role in Guardian: %s", get_response.text
-            )
+            logger.error("Error checking role in Guardian: %s", get_response.text)
             return {"message": "Error removing role"}, 500
 
         role_data = get_response.json()
@@ -457,14 +441,10 @@ class UserRolesResource(Resource):
             return {"message": "Error removing role"}, 500
 
         if response.status_code == 404:
-            logger.warning(
-                "Role assignment %s not found for deletion", user_role_id
-            )
+            logger.warning("Role assignment %s not found for deletion", user_role_id)
             return {"message": "Role assignment not found"}, 404
         if response.status_code not in [204, 200]:
-            logger.error(
-                "Error removing role from Guardian: %s", response.text
-            )
+            logger.error("Error removing role from Guardian: %s", response.text)
             return {"message": "Error removing role"}, 500
 
         logger.info(

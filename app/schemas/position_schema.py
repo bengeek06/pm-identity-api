@@ -86,7 +86,5 @@ class PositionSchema(SQLAlchemyAutoSchema):
 
     level = fields.Integer(
         required=False,
-        validate=validate.Range(
-            min=0, error="Level must be a positive integer."
-        ),
+        validate=validate.Range(min=0, error="Level must be a positive integer."),
     )

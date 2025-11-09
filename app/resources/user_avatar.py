@@ -112,17 +112,13 @@ class UserAvatarResource(Resource):
                 logger.error(
                     f"Storage Service returned {response.status_code}: {response.text}"
                 )
-                return {
-                    "message": "Failed to retrieve avatar"
-                }, response.status_code
+                return {"message": "Failed to retrieve avatar"}, response.status_code
 
             # Stream the file back to the client
             logger.info(f"Serving avatar for user {user_id}")
             return Response(
                 response.iter_content(chunk_size=8192),
-                content_type=response.headers.get(
-                    "Content-Type", "image/jpeg"
-                ),
+                content_type=response.headers.get("Content-Type", "image/jpeg"),
                 headers={
                     "Content-Disposition": response.headers.get(
                         "Content-Disposition", "inline"

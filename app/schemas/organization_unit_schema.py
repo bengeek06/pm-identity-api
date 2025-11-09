@@ -111,9 +111,7 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
         # Prevent a node from being its own parent
         context = getattr(self, "context", {}) or {}
         if context.get("current_id") and value == context["current_id"]:
-            raise ValidationError(
-                "An organization unit cannot be its own parent."
-            )
+            raise ValidationError("An organization unit cannot be its own parent.")
 
         # Prevent cycles (parent_id must not be a descendant)
         current_id = context.get("current_id")

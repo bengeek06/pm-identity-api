@@ -73,9 +73,7 @@ def register_routes(app):
     api.add_resource(CustomerResource, "/customers/<string:customer_id>")
 
     api.add_resource(OrganizationUnitListResource, "/organization_units")
-    api.add_resource(
-        OrganizationUnitResource, "/organization_units/<string:unit_id>"
-    )
+    api.add_resource(OrganizationUnitResource, "/organization_units/<string:unit_id>")
     api.add_resource(
         OrganizationUnitChildrenResource,
         "/organization_units/<string:unit_id>/children",
@@ -89,9 +87,7 @@ def register_routes(app):
     )
 
     api.add_resource(SubcontractorListResource, "/subcontractors")
-    api.add_resource(
-        SubcontractorResource, "/subcontractors/<string:subcontractor_id>"
-    )
+    api.add_resource(SubcontractorResource, "/subcontractors/<string:subcontractor_id>")
 
     api.add_resource(UserListResource, "/users")
     api.add_resource(UserResource, "/users/<string:user_id>")
@@ -102,13 +98,9 @@ def register_routes(app):
         "/users/<string:user_id>/roles/<string:user_role_id>",
     )
     api.add_resource(UserPoliciesResource, "/users/<string:user_id>/policies")
-    api.add_resource(
-        UserPermissionsResource, "/users/<string:user_id>/permissions"
-    )
+    api.add_resource(UserPermissionsResource, "/users/<string:user_id>/permissions")
 
-    api.add_resource(
-        UserPositionResource, "/positions/<string:position_id>/users"
-    )
+    api.add_resource(UserPositionResource, "/positions/<string:position_id>/users")
     api.add_resource(VerifyPasswordResource, "/verify_password")
 
     logger.info("Routes registered successfully.")

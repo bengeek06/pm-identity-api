@@ -157,9 +157,7 @@ class CustomerResource(Resource):
                 logger.warning("Customer with ID %s not found", customer_id)
                 return {"error": "Customer not found"}, 404
 
-            updated_customer = customer_schema.load(
-                json_data, instance=customer
-            )
+            updated_customer = customer_schema.load(json_data, instance=customer)
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:

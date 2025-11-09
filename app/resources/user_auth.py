@@ -66,9 +66,7 @@ class VerifyPasswordResource(Resource):
             db.session.commit()
             logger.info("Updated last_login_at for user %s", email)
         except SQLAlchemyError as e:
-            logger.error(
-                "Error updating last_login_at for user %s: %s", email, str(e)
-            )
+            logger.error("Error updating last_login_at for user %s: %s", email, str(e))
             db.session.rollback()
             # Continue even if update fails - don't block authentication
 

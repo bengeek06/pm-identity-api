@@ -51,9 +51,7 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         dump_only = ("id", "created_at", "updated_at")
         unknown = RAISE
 
-    name = fields.String(
-        required=True, validate=validate.Length(min=1, max=100)
-    )
+    name = fields.String(required=True, validate=validate.Length(min=1, max=100))
 
     company_id = fields.String(
         required=True,
@@ -62,17 +60,13 @@ class CustomerSchema(SQLAlchemyAutoSchema):
 
     email = fields.Email(allow_none=True, validate=validate.Length(max=100))
 
-    contact_person = fields.String(
-        allow_none=True, validate=validate.Length(max=100)
-    )
+    contact_person = fields.String(allow_none=True, validate=validate.Length(max=100))
 
     phone_number = fields.String(
         allow_none=True,
         validate=[
             validate.Length(max=50),
-            validate.Regexp(
-                r"^\d*$", error="Phone number must contain only digits."
-            ),
+            validate.Regexp(r"^\d*$", error="Phone number must contain only digits."),
         ],
     )
 

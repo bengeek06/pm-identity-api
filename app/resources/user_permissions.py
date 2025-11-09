@@ -97,15 +97,11 @@ class UserPermissionsResource(Resource):
                 timeout=5,
             )
         except requests.exceptions.RequestException as e:
-            logger.error(
-                "Error contacting Guardian service for roles: %s", str(e)
-            )
+            logger.error("Error contacting Guardian service for roles: %s", str(e))
             return {"message": "Error fetching user roles"}, 500
 
         if roles_response.status_code != 200:
-            logger.error(
-                "Error fetching roles from Guardian: %s", roles_response.text
-            )
+            logger.error("Error fetching roles from Guardian: %s", roles_response.text)
             return {"message": "Error fetching user roles"}, 500
 
         roles_data = roles_response.json()
@@ -146,9 +142,7 @@ class UserPermissionsResource(Resource):
                 continue
 
             if policies_response.status_code == 404:
-                logger.warning(
-                    "Role %s not found in Guardian, skipping", role_id
-                )
+                logger.warning("Role %s not found in Guardian, skipping", role_id)
                 continue
 
             if policies_response.status_code != 200:
@@ -169,9 +163,7 @@ class UserPermissionsResource(Resource):
             # Handle response format
             if isinstance(policies_data, list):
                 policies = policies_data
-            elif (
-                isinstance(policies_data, dict) and "policies" in policies_data
-            ):
+            elif isinstance(policies_data, dict) and "policies" in policies_data:
                 policies = policies_data.get("policies", [])
             else:
                 logger.warning(
@@ -207,9 +199,7 @@ class UserPermissionsResource(Resource):
                 continue
 
             if permissions_response.status_code == 404:
-                logger.warning(
-                    "Policy %s not found in Guardian, skipping", policy_id
-                )
+                logger.warning("Policy %s not found in Guardian, skipping", policy_id)
                 continue
 
             if permissions_response.status_code != 200:
@@ -231,8 +221,7 @@ class UserPermissionsResource(Resource):
             if isinstance(permissions_data, list):
                 permissions = permissions_data
             elif (
-                isinstance(permissions_data, dict)
-                and "permissions" in permissions_data
+                isinstance(permissions_data, dict) and "permissions" in permissions_data
             ):
                 permissions = permissions_data.get("permissions", [])
             else:

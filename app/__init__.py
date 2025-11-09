@@ -222,9 +222,7 @@ def create_app(config_class):
     env = os.getenv("FLASK_ENV", "development")
     logger.info("Creating app in environment.", environment=env)
     if env in ("development", "staging"):
-        CORS(
-            app, supports_credentials=True, resources={r"/*": {"origins": "*"}}
-        )
+        CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 
     register_extensions(app)
     register_error_handlers(app)
