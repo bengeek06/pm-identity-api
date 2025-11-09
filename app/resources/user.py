@@ -563,7 +563,7 @@ class UserResource(Resource):
                 company_id=company_id,
             )
             logger.info(f"User storage deleted for {user.id}")
-        except Exception as e:
+        except (StorageServiceError, ValueError) as e:
             # Log but don't fail user deletion if storage deletion fails
             logger.warning(f"Failed to delete user storage: {e}")
 
