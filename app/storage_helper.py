@@ -72,6 +72,46 @@ def validate_avatar(
         )
 
 
+def _prepare_avatar_upload_request(
+    user_id: str, company_id: str, file_data: bytes, content_type: str, filename: str
+):
+    """Prepare upload request data for avatar."""
+    extension = filename.rsplit(".", 1)[-1] if "." in filename else "jpg"
+    logical_path = f"avatars/{user_id}.{extension}"
+    logger.debug(f"Logical path for avatar: {logical_path}")
+
+    headers = {
+        "X-User-ID": user_id,
+        "X-Company-ID": company_id,
+    }
+
+    files = {
+        "file": (filename, file_data, content_type),
+    }
+
+    data = {
+        "bucket_type": "users",
+        "bucket_id": user_id,
+        "logical_path": logical_path,
+    }
+
+    return headers, files, data
+
+
+def _extract_object_key_from_response(result):
+    """Extract object_key from Storage Service response."""
+    object_key = result.get("object_key")
+    if not object_key and "data" in result:
+        object_key = result["data"].get("object_key")
+
+    if not object_key:
+        raise StorageServiceError(
+            f"Storage Service did not return object_key. Response: {result}"
+        )
+
+    return object_key
+
+
 def upload_avatar_via_proxy(
     user_id: str,
     company_id: str,
@@ -101,28 +141,12 @@ def upload_avatar_via_proxy(
     # Validate the file
     validate_avatar(file_data, content_type)
 
-    # Prepare the logical path
-    extension = filename.rsplit(".", 1)[-1] if "." in filename else "jpg"
-    logical_path = f"avatars/{user_id}.{extension}"
-    logger.debug(f"Logical path for avatar: {logical_path}")
+    # Prepare request components
+    headers, files, data = _prepare_avatar_upload_request(
+        user_id, company_id, file_data, content_type, filename
+    )
 
     url = f"{STORAGE_SERVICE_URL}/upload/proxy"
-
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-    }
-
-    # Prepare multipart/form-data
-    files = {
-        "file": (filename, file_data, content_type),
-    }
-
-    data = {
-        "bucket_type": "users",
-        "bucket_id": user_id,
-        "logical_path": logical_path,
-    }
     logger.debug(f"Uploading avatar for user {user_id} to {url}")
 
     try:
@@ -152,15 +176,8 @@ def upload_avatar_via_proxy(
         result = response.json()
         logger.debug(f"Storage Service response: {result}")
 
-        # The object_key can be either at root level or in 'data' object
-        object_key = result.get("object_key")
-        if not object_key and "data" in result:
-            object_key = result["data"].get("object_key")
-
-        if not object_key:
-            raise StorageServiceError(
-                f"Storage Service did not return object_key. Response: {result}"
-            )
+        # Extract object_key from response
+        object_key = _extract_object_key_from_response(result)
 
         logger.info(f"Avatar uploaded successfully: {object_key}")
         logger.debug(f"object_key length: {len(object_key)}")
