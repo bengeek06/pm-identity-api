@@ -33,9 +33,183 @@ import jwt
 from app.models import db
 from app.logger import logger
 from app.utils import require_jwt_auth, check_access_required
+from app.storage_helper import (
+    upload_avatar_via_proxy,
+    create_user_directories,
+    delete_user_storage,
+    AvatarValidationError,
+    StorageServiceError,
+)
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
 from app.models.company import Company
+
+
+# Helper functions for user operations
+def _validate_avatar_url_field(avatar_url_value, context="POST"):
+    """Log warning if avatar_url is sent by frontend (this is a bug)."""
+    is_base64 = (
+        avatar_url_value.startswith("data:image/") if avatar_url_value else False
+    )
+    logger.warning(
+        f"[{context}] Frontend sent avatar_url - THIS IS A BUG! "
+        f"Length: {len(avatar_url_value)} chars, "
+        f"Is base64 data URI: {is_base64}, "
+        f"Preview: {avatar_url_value[:50]}... "
+        f"EXPECTED: Frontend should send file via "
+        f"'avatar' field in multipart/form-data, "
+        f"NOT avatar_url. The backend manages avatar_url "
+        f"after upload to Storage Service."
+    )
+
+
+def _parse_request_data(is_multipart, context="POST"):
+    """Parse request data from multipart or JSON."""
+    if is_multipart:
+        # Check if avatar_url is in multipart form data (this is a bug)
+        if "avatar_url" in request.form:
+            _validate_avatar_url_field(request.form["avatar_url"], context)
+
+        # Get form data but exclude file fields and avatar_url
+        json_data = {
+            k: v for k, v in request.form.items() if k not in ("avatar", "avatar_url")
+        }
+    else:
+        json_data = request.get_json() or {}
+        # Remove avatar_url from JSON data if present
+        if "avatar_url" in json_data:
+            _validate_avatar_url_field(json_data["avatar_url"], context)
+            json_data.pop("avatar_url", None)
+
+    return json_data
+
+
+def _handle_avatar_upload(user, company_id):
+    """Handle avatar upload if present in request."""
+    if "avatar" not in request.files:
+        return
+
+    avatar_file = request.files["avatar"]
+    try:
+        file_data = avatar_file.read()
+        content_type = avatar_file.content_type or "image/jpeg"
+        filename = avatar_file.filename or "avatar.jpg"
+
+        object_key = upload_avatar_via_proxy(
+            user_id=str(user.id),
+            company_id=company_id,
+            file_data=file_data,
+            content_type=content_type,
+            filename=filename,
+        )
+
+        user.avatar_url = object_key
+        db.session.commit()
+        logger.info(f"Avatar uploaded for new user {user.id}")
+
+    except AvatarValidationError as e:
+        logger.warning(f"Avatar validation failed: {e}")
+        # Don't fail user creation, just log the warning
+
+    except StorageServiceError as e:
+        logger.error(f"Storage service error: {e}")
+        # Don't fail user creation, just log the error
+
+
+def _create_user_storage(user_id, company_id):
+    """Create user directory structure in Storage Service."""
+    try:
+        create_user_directories(
+            user_id=str(user_id),
+            company_id=company_id,
+        )
+        logger.info(f"User directories created for {user_id}")
+    except StorageServiceError as e:
+        logger.warning(f"Failed to create user directories: {e}")
+        # Don't fail user creation if directory creation fails
+
+
+def _handle_avatar_upload_for_update(user, company_id):
+    """Handle avatar upload for PUT/PATCH operations."""
+    if "avatar" not in request.files:
+        return None
+
+    avatar_file = request.files["avatar"]
+    try:
+        # Upload new avatar (Storage Service handles versioning automatically)
+        file_data = avatar_file.read()
+        content_type = avatar_file.content_type or "image/jpeg"
+        filename = avatar_file.filename or "avatar.jpg"
+
+        uploaded_avatar_url = upload_avatar_via_proxy(
+            user_id=str(user.id),
+            company_id=company_id,
+            file_data=file_data,
+            content_type=content_type,
+            filename=filename,
+        )
+
+        logger.info(f"Avatar updated for user {user.id}")
+        return uploaded_avatar_url
+
+    except AvatarValidationError as e:
+        logger.warning(f"Avatar validation failed: {e}")
+        raise
+
+    except StorageServiceError as e:
+        logger.error(f"Storage service error: {e}")
+        raise
+
+
+def _parse_multipart_data_with_debug(context="PATCH"):
+    """Parse multipart data with detailed debug logging."""
+    logger.debug(f"[{context}] request.form keys: {list(request.form.keys())}")
+    logger.debug(f"[{context}] request.files keys: {list(request.files.keys())}")
+
+    for key in request.form.keys():
+        value = request.form[key]
+        logger.debug(
+            f"[{context}] form field '{key}': "
+            f"length={len(value) if value else 0}, "
+            f"preview={value[:100] if value and len(value) > 100 else value}"
+        )
+
+    # Check if avatar_url is in multipart form data (this is a bug)
+    if "avatar_url" in request.form:
+        _validate_avatar_url_field(request.form["avatar_url"], context)
+
+    # Get form data but exclude file fields and avatar_url
+    return {k: v for k, v in request.form.items() if k not in ("avatar", "avatar_url")}
+
+
+def _parse_patch_request_data():
+    """Parse request data for PATCH operation with debug logging."""
+    logger.debug(f"[PATCH] Content-Type: {request.content_type}")
+    logger.debug(f"[PATCH] Mimetype: {request.mimetype}")
+    logger.debug(
+        f"[PATCH] Has form: {bool(request.form)}, Has files: {bool(request.files)}"
+    )
+
+    # Handle multipart/form-data or JSON
+    has_form_data = len(request.form) > 0 or len(request.files) > 0
+    is_multipart_content = (
+        request.content_type and "multipart" in request.content_type
+    ) or (request.mimetype and "multipart" in request.mimetype)
+
+    if has_form_data or is_multipart_content:
+        json_data = _parse_multipart_data_with_debug(context="PATCH")
+    else:
+        # Try to parse as JSON
+        json_data = request.get_json(force=True, silent=True) or {}
+        logger.debug(f"[PATCH] Parsed JSON data: {bool(json_data)}")
+
+        # Remove avatar_url from JSON data if present
+        if "avatar_url" in json_data:
+            _validate_avatar_url_field(json_data["avatar_url"], "PATCH")
+            json_data.pop("avatar_url", None)
+
+    logger.debug(f"[PATCH] json_data after filtering: {json_data}")
+    return json_data
 
 
 class UserListResource(Resource):
@@ -86,6 +260,7 @@ class UserListResource(Resource):
         Expects:
             JSON payload with at least 'email', 'password', 'first_name',
             'last_name', and 'company_id'.
+            Optional: multipart/form-data with 'avatar' file.
 
         Returns:
             tuple: The serialized created user and HTTP status code 201 on
@@ -117,24 +292,25 @@ class UserListResource(Resource):
             logger.error("JWT error: %s", str(e))
             return {"message": "JWT error"}, 401
 
-        json_data = request.get_json()
+        # Handle multipart/form-data or JSON
+        is_multipart = (
+            request.content_type and "multipart/form-data" in request.content_type
+        ) or (request.mimetype and "multipart/form-data" in request.mimetype)
+
+        # Parse request data
+        json_data = _parse_request_data(is_multipart, context="POST")
         json_data["company_id"] = company_id
 
         user_schema = UserSchema(session=db.session)
 
         if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(
-                json_data["password"]
-            )
+            json_data["hashed_password"] = generate_password_hash(json_data["password"])
             del json_data["password"]
 
         try:
             user = user_schema.load(json_data)
             # Handle nullable company_id for superuser creation
-            if (
-                "company_id" in json_data
-                and json_data["company_id"] is not None
-            ):
+            if "company_id" in json_data and json_data["company_id"] is not None:
                 company = Company.get_by_id(json_data["company_id"])
                 if not company:
                     logger.warning(
@@ -145,13 +321,20 @@ class UserListResource(Resource):
             # If company_id is None, this is a superuser creation
             db.session.add(user)
             db.session.commit()
+
+            # Create user directory structure in Storage Service
+            _create_user_storage(user.id, company_id)
+
+            # Handle avatar upload if present
+            _handle_avatar_upload(user, company_id)
+
             return user_schema.dump(user), 201
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
+            logger.error(f"Validation error: {e.messages}")
             return {"message": "Validation error", "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
+            logger.error(f"Integrity error: {str(e.orig)}")
             return {"message": "Integrity error"}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -207,6 +390,7 @@ class UserResource(Resource):
 
         Expects:
             JSON payload with fields to update.
+            Optional: multipart/form-data with 'avatar' file.
 
         Args:
             user_id (str): The ID of the user to update.
@@ -219,30 +403,53 @@ class UserResource(Resource):
         """
         logger.info("Updating user with ID %s", user_id)
 
-        json_data = request.get_json()
+        # Handle multipart/form-data or JSON
+        is_multipart = (
+            request.content_type and "multipart/form-data" in request.content_type
+        ) or (request.mimetype and "multipart/form-data" in request.mimetype)
+
+        # Parse request data
+        json_data = _parse_request_data(is_multipart, context="PUT")
+
         user = User.get_by_id(user_id)
         if not user:
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
 
+        # Get company_id from JWT for avatar operations
+        jwt_data = getattr(g, "jwt_data", {})
+        company_id = jwt_data.get("company_id")
+
         user_schema = UserSchema(session=db.session, context={"user": user})
 
         if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(
-                json_data["password"]
-            )
+            json_data["hashed_password"] = generate_password_hash(json_data["password"])
             del json_data["password"]
 
         try:
+            # Handle avatar upload if present
+            uploaded_avatar_url = None
+            try:
+                uploaded_avatar_url = _handle_avatar_upload_for_update(user, company_id)
+            except AvatarValidationError as e:
+                return {"message": str(e)}, 400
+            except StorageServiceError:
+                return {"message": "Failed to upload avatar"}, 500
+
             updated_user = user_schema.load(json_data, instance=user)
+
+            # Update avatar_url directly on the user object (not via schema)
+            if uploaded_avatar_url:
+                updated_user.avatar_url = uploaded_avatar_url
+
             db.session.commit()
             return user_schema.dump(updated_user), 200
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
+            logger.error(f"Validation error: {e.messages}")
             return {"message": "Validation error", "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
+            logger.error(f"Integrity error: {str(e.orig)}")
             return {"message": "Integrity error"}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -257,6 +464,7 @@ class UserResource(Resource):
 
         Expects:
             JSON payload with fields to update.
+            Optional: multipart/form-data with 'avatar' file.
 
         Args:
             user_id (str): The ID of the user to update.
@@ -267,37 +475,57 @@ class UserResource(Resource):
                    HTTP status code 404 if the user is not found.
                    HTTP status code 400 for validation errors.
         """
-        logger.info("Partially updating user with ID %s", user_id)
+        logger.info(f"Partially updating user with ID {user_id}")
 
-        json_data = request.get_json()
+        # Parse request data with debug logging
+        json_data = _parse_patch_request_data()
+
         user = User.get_by_id(user_id)
         if not user:
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
+
+        # Get company_id from JWT for avatar operations
+        jwt_data = getattr(g, "jwt_data", {})
+        company_id = jwt_data.get("company_id")
 
         user_schema = UserSchema(
             session=db.session, partial=True, context={"user": user}
         )
 
         if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(
-                json_data["password"]
-            )
+            json_data["hashed_password"] = generate_password_hash(json_data["password"])
             del json_data["password"]
 
         try:
+            # Handle avatar upload if present
+            uploaded_avatar_url = None
+            try:
+                uploaded_avatar_url = _handle_avatar_upload_for_update(user, company_id)
+            except AvatarValidationError as e:
+                return {"message": str(e)}, 400
+            except StorageServiceError:
+                return {"message": "Failed to upload avatar"}, 500
+
             # Company_id modification is prevented by schema validation
-            updated_user = user_schema.load(
-                json_data, instance=user, partial=True
-            )
+            logger.debug(f"[PATCH] json_data before schema.load: {json_data}")
+            updated_user = user_schema.load(json_data, instance=user, partial=True)
+
+            # Update avatar_url directly on the user object (not via schema)
+            if uploaded_avatar_url:
+                updated_user.avatar_url = uploaded_avatar_url
+                logger.debug(
+                    f"[PATCH] Set avatar_url on user object: {uploaded_avatar_url}"
+                )
+
             db.session.commit()
             return user_schema.dump(updated_user), 200
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
+            logger.error(f"Validation error: {e.messages}")
             return {"message": "Validation error", "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
+            logger.error(f"Integrity error: {str(e.orig)}")
             return {"message": "Integrity error"}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -309,6 +537,8 @@ class UserResource(Resource):
     def delete(self, user_id):
         """
         Delete a user by ID.
+
+        Also deletes all user storage (avatar and workspace) from the Storage Service.
 
         Args:
             user_id (str): The ID of the user to delete.
@@ -323,6 +553,19 @@ class UserResource(Resource):
         if not user:
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
+
+        # Delete all user storage from Storage Service
+        jwt_data = getattr(g, "jwt_data", {})
+        company_id = jwt_data.get("company_id")
+        try:
+            delete_user_storage(
+                user_id=str(user.id),
+                company_id=company_id,
+            )
+            logger.info(f"User storage deleted for {user.id}")
+        except (StorageServiceError, ValueError) as e:
+            # Log but don't fail user deletion if storage deletion fails
+            logger.warning(f"Failed to delete user storage: {e}")
 
         try:
             db.session.delete(user)

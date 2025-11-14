@@ -57,14 +57,18 @@ FROM base AS test
 RUN pip install -r requirements-dev.txt
 
 WORKDIR /app
+
+# Copy all needed files for testing (tests folder should NOT be in .dockerignore)
 COPY . .
 
 # Variables minimales de test
 ENV FLASK_ENV=testing \
     APP_MODE=testing \
-    PYTEST_ADDOPTS="-q"
+    PYTEST_ADDOPTS="-v" \
+    DATABASE_URL=sqlite:///:memory: \
+    JWT_SECRET=test-jwt-secret-key
 
-# Commande par défaut: exécution tests
+# Pas d'entrypoint, juste exécuter pytest directement
 CMD ["pytest"]
 
 ###############################

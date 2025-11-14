@@ -8,10 +8,13 @@ It provides endpoints for verifying user passwords and other authentication
 related operations.
 """
 
+from datetime import datetime, timezone
 from flask import request
 from flask_restful import Resource
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.logger import logger
+from app.models import db
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
 
@@ -56,6 +59,16 @@ class VerifyPasswordResource(Resource):
         if not user or not user.verify_password(password):
             logger.warning("Invalid user or password for email %s", email)
             return {"message": "User or password invalid"}, 403
+
+        # Update last_login_at on successful authentication
+        try:
+            user.last_login_at = datetime.now(timezone.utc)
+            db.session.commit()
+            logger.info("Updated last_login_at for user %s", email)
+        except SQLAlchemyError as e:
+            logger.error("Error updating last_login_at for user %s: %s", email, str(e))
+            db.session.rollback()
+            # Continue even if update fails - don't block authentication
 
         schema = UserSchema()
         return schema.dump(user), 200

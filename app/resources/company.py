@@ -157,9 +157,7 @@ class CompanyResource(Resource):
             logger.warning("Company with ID %s not found", company_id)
             return {"message": "Company not found"}, 404
 
-        company_schema = CompanySchema(
-            context={"company": company}, session=db.session
-        )
+        company_schema = CompanySchema(context={"company": company}, session=db.session)
 
         try:
             company = company_schema.load(json_data, instance=company)

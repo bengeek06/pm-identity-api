@@ -89,17 +89,13 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         allow_none=True,
         validate=[
             validate.Length(max=50),
-            validate.Regexp(
-                r"^\d*$", error="Phone number must contain only digits."
-            ),
+            validate.Regexp(r"^\d*$", error="Phone number must contain only digits."),
         ],
     )
 
     email = fields.Email(
         required=False,
-        validate=validate.Length(
-            max=100, error="Email cannot exceed 100 characters."
-        ),
+        validate=validate.Length(max=100, error="Email cannot exceed 100 characters."),
     )
 
     address = fields.String(

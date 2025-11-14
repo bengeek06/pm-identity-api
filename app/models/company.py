@@ -46,9 +46,7 @@ class Company(db.Model):
 
     __tablename__ = "company"
 
-    id = db.Column(
-        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255), nullable=True)
     logo_url = db.Column(db.String(255), nullable=True)

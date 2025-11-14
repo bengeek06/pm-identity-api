@@ -57,17 +57,11 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
 
     name = fields.String(
         required=True,
-        validate=[
-            validate.Length(
-                min=1,
-                max=100,
-                error="Name must be between 1 and 100 characters.",
-            ),
-            validate.Regexp(
-                r"^[a-zA-Z0-9\s\-_.]+$",
-                error="Name: only letters, numbers, spaces, -, _ and . allowed.",
-            ),
-        ],
+        validate=validate.Length(
+            min=1,
+            max=100,
+            error="Name must be between 1 and 100 characters.",
+        ),
     )
 
     company_id = fields.String(
@@ -117,9 +111,7 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
         # Prevent a node from being its own parent
         context = getattr(self, "context", {}) or {}
         if context.get("current_id") and value == context["current_id"]:
-            raise ValidationError(
-                "An organization unit cannot be its own parent."
-            )
+            raise ValidationError("An organization unit cannot be its own parent.")
 
         # Prevent cycles (parent_id must not be a descendant)
         current_id = context.get("current_id")

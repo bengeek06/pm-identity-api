@@ -78,9 +78,7 @@ class PositionListResource(Resource):
 
         org_unit = OrganizationUnit.get_by_id(org_unit_id)
         if not org_unit:
-            logger.warning(
-                "Organization unit with ID %s not found", org_unit_id
-            )
+            logger.warning("Organization unit with ID %s not found", org_unit_id)
             return {"message": "Organization unit not found"}, 404
 
         position_schema = PositionSchema(session=db.session)
@@ -284,9 +282,7 @@ class OrganizationUnitPositionsResource(Resource):
         Returns:
             tuple: List of serialized positions and HTTP status code 200.
         """
-        positions = Position.get_by_organization_unit_id(
-            organization_unit_id=unit_id
-        )
+        positions = Position.get_by_organization_unit_id(organization_unit_id=unit_id)
         schema = PositionSchema(many=True)
         return schema.dump(positions), 200
 

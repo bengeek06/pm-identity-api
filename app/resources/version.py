@@ -13,9 +13,7 @@ from app.utils import require_jwt_auth, check_access_required
 
 def _read_version():
     """Read version from VERSION file."""
-    version_file_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "VERSION"
-    )
+    version_file_path = os.path.join(os.path.dirname(__file__), "..", "..", "VERSION")
     try:
         with open(version_file_path, "r", encoding="utf-8") as f:
             return f.read().strip()

@@ -34,7 +34,9 @@ class UserPermissionsResource(Resource):
 
     @require_jwt_auth()
     @check_access_required("read")
-    def get(self, user_id):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+    def get(
+        self, user_id
+    ):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         """
         Retrieve all permissions associated with a user's policies.
 
@@ -99,9 +101,7 @@ class UserPermissionsResource(Resource):
             return {"message": "Error fetching user roles"}, 500
 
         if roles_response.status_code != 200:
-            logger.error(
-                "Error fetching roles from Guardian: %s", roles_response.text
-            )
+            logger.error("Error fetching roles from Guardian: %s", roles_response.text)
             return {"message": "Error fetching user roles"}, 500
 
         roles_data = roles_response.json()
@@ -220,7 +220,9 @@ class UserPermissionsResource(Resource):
             # Handle response format
             if isinstance(permissions_data, list):
                 permissions = permissions_data
-            elif isinstance(permissions_data, dict) and "permissions" in permissions_data:
+            elif (
+                isinstance(permissions_data, dict) and "permissions" in permissions_data
+            ):
                 permissions = permissions_data.get("permissions", [])
             else:
                 logger.warning(
@@ -238,8 +240,6 @@ class UserPermissionsResource(Resource):
                     all_permissions.append(permission)
 
         logger.info(
-            "Successfully fetched %d unique permissions for user %s",
-            len(all_permissions),
-            user_id,
+            f"Successfully fetched {len(all_permissions)} unique permissions for user {user_id}"
         )
         return {"permissions": all_permissions}, 200

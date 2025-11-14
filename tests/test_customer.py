@@ -100,19 +100,20 @@ def test_post_customer_success(client):
     """
     Test POST /customers with valid data.
     Should create a new customer and return 201 with the customer data.
+    Note: company_id is extracted from JWT token, not from the payload.
     """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    customer_company_id = str(uuid.uuid4())
-    payload = {"name": "Nouveau Client", "company_id": customer_company_id}
+    # company_id in payload is ignored; JWT company_id is used instead
+    payload = {"name": "Nouveau Client", "company_id": str(uuid.uuid4())}
     response = client.post("/customers", json=payload)
     assert response.status_code == 201
     data = response.get_json()
     assert data["name"] == "Nouveau Client"
-    assert data["company_id"] == customer_company_id
+    assert data["company_id"] == company_id  # JWT company_id, not payload
     assert "id" in data
 
 

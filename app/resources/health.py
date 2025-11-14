@@ -42,9 +42,7 @@ class HealthResource(Resource):
         health_data = {
             "status": "healthy",
             "service": "identity_service",
-            "timestamp": datetime.now(timezone.utc)
-            .isoformat()
-            .replace("+00:00", "Z"),
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "version": API_VERSION,
             "environment": os.getenv("FLASK_ENV", "development"),
             "checks": {},
@@ -76,9 +74,7 @@ class HealthResource(Resource):
 
             # Check if result is as expected
             if result.scalar() == 1:
-                response_time_ms = (
-                    end_time - start_time
-                ).total_seconds() * 1000
+                response_time_ms = (end_time - start_time).total_seconds() * 1000
                 return {
                     "healthy": True,
                     "message": "Database connection successful",

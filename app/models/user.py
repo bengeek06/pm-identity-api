@@ -52,16 +52,12 @@ class User(db.Model):
 
     __tablename__ = "user"
 
-    id = db.Column(
-        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = db.Column(db.String(100), nullable=False, unique=True)
     hashed_password = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
-    language = db.Column(
-        db.Enum(LanguageEnum), default=LanguageEnum.EN, nullable=False
-    )
+    language = db.Column(db.Enum(LanguageEnum), default=LanguageEnum.EN, nullable=False)
     phone_number = db.Column(db.String(50), nullable=True)
     avatar_url = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
@@ -71,9 +67,7 @@ class User(db.Model):
     company_id = db.Column(
         db.String(36), db.ForeignKey("company.id"), nullable=True, index=True
     )
-    position_id = db.Column(
-        db.String(36), db.ForeignKey("position.id"), nullable=True
-    )
+    position_id = db.Column(db.String(36), db.ForeignKey("position.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
@@ -142,9 +136,7 @@ class User(db.Model):
         try:
             return cls.query.filter_by(email=email).first()
         except SQLAlchemyError as e:
-            logger.error(
-                "Error retrieving user by email %s: %s", email, str(e)
-            )
+            logger.error("Error retrieving user by email %s: %s", email, str(e))
             return None
 
     @classmethod

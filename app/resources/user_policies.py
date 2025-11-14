@@ -34,7 +34,9 @@ class UserPoliciesResource(Resource):
 
     @require_jwt_auth()
     @check_access_required("read")
-    def get(self, user_id):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+    def get(
+        self, user_id
+    ):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         """
         Retrieve all policies associated with a user's roles.
 
@@ -98,9 +100,7 @@ class UserPoliciesResource(Resource):
             return {"message": "Error fetching user roles"}, 500
 
         if roles_response.status_code != 200:
-            logger.error(
-                "Error fetching roles from Guardian: %s", roles_response.text
-            )
+            logger.error("Error fetching roles from Guardian: %s", roles_response.text)
             return {"message": "Error fetching user roles"}, 500
 
         roles_data = roles_response.json()

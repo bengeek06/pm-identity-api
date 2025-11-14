@@ -39,13 +39,9 @@ class Subcontractor(db.Model):
 
     __tablename__ = "subcontractor"
 
-    id = db.Column(
-        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(100), nullable=False)
-    company_id = db.Column(
-        db.String(36), db.ForeignKey("company.id"), nullable=False
-    )
+    company_id = db.Column(db.String(36), db.ForeignKey("company.id"), nullable=False)
     description = db.Column(db.String(255), nullable=True)
     contact_person = db.Column(db.String(100), nullable=True)
     phone_number = db.Column(db.String(50), nullable=True)
@@ -143,7 +139,5 @@ class Subcontractor(db.Model):
         try:
             return cls.query.filter_by(name=name).first()
         except SQLAlchemyError as e:
-            logger.error(
-                "Error retrieving subcontractor by name %s: %s", name, e
-            )
+            logger.error("Error retrieving subcontractor by name %s: %s", name, e)
             return None

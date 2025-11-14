@@ -9,7 +9,7 @@ updating, and deleting subcontractors. The resources use Marshmallow schemas
 for validation and serialization, and handle database errors gracefully.
 """
 
-from flask import request
+from flask import request, g
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from flask_restful import Resource
@@ -70,6 +70,9 @@ class SubcontractorListResource(Resource):
         json_data = request.get_json()
         subcontractor_schema = SubcontractorSchema(session=db.session)
 
+        # Inject company_id from JWT token (stored in g by require_jwt_auth)
+        json_data["company_id"] = g.company_id
+
         try:
             subcontractor = subcontractor_schema.load(json_data)
             db.session.add(subcontractor)
@@ -124,9 +127,7 @@ class SubcontractorResource(Resource):
 
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
-            logger.warning(
-                "Subcontractor with ID %s not found", subcontractor_id
-            )
+            logger.warning("Subcontractor with ID %s not found", subcontractor_id)
             return {"message": "Subcontractor not found"}, 404
 
         schema = SubcontractorSchema(session=db.session)
@@ -158,9 +159,7 @@ class SubcontractorResource(Resource):
         try:
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
-                logger.warning(
-                    "Subcontractor with ID %s not found", subcontractor_id
-                )
+                logger.warning("Subcontractor with ID %s not found", subcontractor_id)
                 return {"message": "Subcontractor not found"}, 404
 
             updated_subcontractor = subcontractor_schema.load(
@@ -198,21 +197,15 @@ class SubcontractorResource(Resource):
                    HTTP status code 404 if the subcontractor is not found.
                    HTTP status code 400 for validation errors.
         """
-        logger.info(
-            "Partially updating subcontractor with ID: %s", subcontractor_id
-        )
+        logger.info("Partially updating subcontractor with ID: %s", subcontractor_id)
 
         json_data = request.get_json()
-        subcontractor_schema = SubcontractorSchema(
-            session=db.session, partial=True
-        )
+        subcontractor_schema = SubcontractorSchema(session=db.session, partial=True)
 
         try:
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
-                logger.warning(
-                    "Subcontractor with ID %s not found", subcontractor_id
-                )
+                logger.warning("Subcontractor with ID %s not found", subcontractor_id)
                 return {"message": "Subcontractor not found"}, 404
 
             updated_subcontractor = subcontractor_schema.load(
@@ -247,9 +240,7 @@ class SubcontractorResource(Resource):
         """
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
-            logger.warning(
-                "Subcontractor with ID %s not found", subcontractor_id
-            )
+            logger.warning("Subcontractor with ID %s not found", subcontractor_id)
             return {"message": "Subcontractor not found"}, 404
 
         try:
