@@ -35,7 +35,7 @@ class UserSchema(SQLAlchemyAutoSchema):
         phone_number (str, optional): Phone number of the user.
         avatar_url (str, optional): URL to the user's avatar.
         is_active (bool): Whether the user account is active.
-        is_verifed (bool): Whether the user's email is verified.
+        is_verified (bool): Whether the user's email is verified.
         last_login_at (datetime, optional): Timestamp of the user's last login.
         company_id (str): Foreign key referencing the associated company (UUID).
         position_id (str, optional): Foreign key referencing the user's position (UUID).
@@ -91,7 +91,7 @@ class UserSchema(SQLAlchemyAutoSchema):
     # avatar_url is excluded from dump (see Meta.exclude)
     # Frontend should use /users/{id}/avatar endpoint instead
     is_active = fields.Boolean(load_default=True, dump_default=True)
-    is_verifed = fields.Boolean(load_default=False, dump_default=False)
+    is_verified = fields.Boolean(load_default=False, dump_default=False)
     last_login_at = fields.DateTime(allow_none=True)
 
     position_id = fields.String(
