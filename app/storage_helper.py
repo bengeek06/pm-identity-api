@@ -123,7 +123,7 @@ def upload_avatar_via_proxy(
     file_data: bytes,
     content_type: str,
     filename: str,
-) -> str:
+) -> dict:
     """
     Upload an avatar via the Storage Service proxy endpoint.
 
@@ -137,7 +137,10 @@ def upload_avatar_via_proxy(
         filename: Original filename
 
     Returns:
-        str: The object_key to store in the database (avatar_url field)
+        dict: {
+            'file_id': 'uuid-from-storage',
+            'object_key': 'users/...'  # for legacy/debugging
+        }
 
     Raises:
         AvatarValidationError: If validation fails
@@ -181,12 +184,23 @@ def upload_avatar_via_proxy(
         result = response.json()
         logger.debug(f"Storage Service response: {result}")
 
+        # Extract file_id from response
+        file_id = result.get("file_id")
+        if not file_id and "data" in result:
+            file_id = result["data"].get("file_id")
+
+        if not file_id:
+            logger.error(
+                f"Storage Service did not return file_id. Response: {result}"
+            )
+            raise StorageServiceError("Storage Service did not return file_id")
+
         # Extract object_key from response
         object_key = _extract_object_key_from_response(result)
 
-        logger.info(f"Avatar uploaded successfully: {object_key}")
-        logger.debug(f"object_key length: {len(object_key)}")
-        return object_key
+        logger.info(f"Avatar uploaded successfully: file_id={file_id}")
+        logger.debug(f"object_key: {object_key}")
+        return {"file_id": file_id, "object_key": object_key}
 
     except requests.exceptions.Timeout:
         logger.error(f"Timeout calling Storage Service at {url}")

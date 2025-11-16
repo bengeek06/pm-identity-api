@@ -33,7 +33,8 @@ class UserSchema(SQLAlchemyAutoSchema):
         last_name (str, optional): Last name of the user.
         language (str): Preferred language of the user (en or fr).
         phone_number (str, optional): Phone number of the user.
-        avatar_url (str, optional): URL to the user's avatar.
+        avatar_file_id (str, optional): Storage Service file_id for avatar (read-only).
+        has_avatar (bool): Whether the user has an avatar uploaded (read-only).
         is_active (bool): Whether the user account is active.
         is_verified (bool): Whether the user's email is verified.
         last_login_at (datetime, optional): Timestamp of the user's last login.
@@ -88,8 +89,11 @@ class UserSchema(SQLAlchemyAutoSchema):
     phone_number = fields.String(
         validate=validate.Length(max=50), allow_none=True
     )
-    # avatar_url is excluded from dump (see Meta.exclude)
-    # Frontend should use /users/{id}/avatar endpoint instead
+    avatar_file_id = fields.String(dump_only=True, allow_none=True)
+    has_avatar = fields.Boolean(
+        load_default=False, dump_default=False, dump_only=True
+    )
+    # Note: Frontend should use GET /users/{id}/avatar endpoint for avatar image
     is_active = fields.Boolean(load_default=True, dump_default=True)
     is_verified = fields.Boolean(load_default=False, dump_default=False)
     last_login_at = fields.DateTime(allow_none=True)

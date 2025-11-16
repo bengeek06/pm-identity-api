@@ -35,8 +35,8 @@ class UserAvatarResource(Resource):
 
         This method:
         1. Looks up the user in the database
-        2. Checks if they have an avatar_url (object_key)
-        3. Calls the Storage Service to get the image
+        2. Checks if they have an avatar (has_avatar flag)
+        3. Calls the Storage Service to get the image using convention-based path
         4. Streams the image back to the client
 
         Args:
@@ -51,33 +51,14 @@ class UserAvatarResource(Resource):
             logger.warning(f"User {user_id} not found")
             return {"message": "User not found"}, 404
 
-        if not user.avatar_url:
+        if not user.has_avatar:
             logger.debug(f"User {user_id} has no avatar")
             return {"message": "User has no avatar"}, 404
 
-        # Parse the object_key to extract bucket_type, bucket_id, and logical_path
-        # Format: users/{user_id}/avatars/{filename}/{version}
-        # We need to convert this to the Storage Service format
-        object_key = user.avatar_url
-
-        # Extract components from object_key
-        # Example: "users/uuid/avatars/uuid.png/1"
-        parts = object_key.split("/")
-        if len(parts) < 3 or parts[0] != "users":
-            logger.error(f"Invalid object_key format: {object_key}")
-            return {"message": "Invalid avatar reference"}, 500
-
-        bucket_type = "users"
-        bucket_id = parts[1]  # user_id
-        # Reconstruct logical_path: everything after bucket_id,
-        # EXCLUDING the version number at the end
-        # object_key format: users/{user_id}/avatars/{filename}/{version}
-        # logical_path format: avatars/{filename} (no version)
-        path_parts = parts[2:]  # ['avatars', 'filename.ext', 'version']
-        # Remove the last part if it's a version number
-        if len(path_parts) > 0 and path_parts[-1].isdigit():
-            path_parts = path_parts[:-1]
-        logical_path = "/".join(path_parts)  # avatars/filename.ext
+        # Use convention-based logical_path
+        # Avatars are always stored as avatars/{user_id}.{ext}
+        # We use a generic extension; Storage Service will handle the correct file
+        logical_path = f"avatars/{user_id}.jpg"
 
         # Get Storage Service URL from environment
         storage_service_url = os.environ.get(
@@ -88,17 +69,16 @@ class UserAvatarResource(Resource):
         try:
             logger.debug(
                 f"Fetching avatar from Storage Service: "
-                f"bucket_type={bucket_type}, bucket_id={bucket_id}, "
+                f"bucket_type=users, bucket_id={user_id}, "
                 f"logical_path={logical_path}"
             )
 
             # Call Storage Service /download/proxy endpoint
-            # with bucket triplet
             response = requests.get(
                 f"{storage_service_url}/download/proxy",
                 params={
-                    "bucket_type": bucket_type,
-                    "bucket_id": bucket_id,
+                    "bucket_type": "users",
+                    "bucket_id": user_id,
                     "logical_path": logical_path,
                 },
                 headers={
