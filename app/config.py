@@ -16,7 +16,10 @@ Each class defines main parameters such as the secret key, database URL,
 debug mode, and SQLAlchemy modification tracking.
 """
 
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -26,11 +29,56 @@ class Config:
     Attributes:
         SQLALCHEMY_TRACK_MODIFICATIONS (bool): Disable SQLAlchemy event system.
         MAX_CONTENT_LENGTH (int): Maximum allowed request size in bytes (16 MB).
+        USE_STORAGE_SERVICE (bool): Enable/disable Storage Service integration.
     """
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Allow uploads up to 16 MB (enough for avatar images)
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
+
+    # Storage Service integration toggle
+    # Set to False to run Identity Service autonomously without Storage Service
+    USE_STORAGE_SERVICE = os.environ.get(
+        "USE_STORAGE_SERVICE", "true"
+    ).lower() in (
+        "true",
+        "yes",
+        "1",
+    )
+
+    @classmethod
+    def validate_storage_config(cls):
+        """
+        Validate Storage Service configuration coherence.
+
+        Raises:
+            ValueError: If USE_STORAGE_SERVICE is True but STORAGE_SERVICE_URL is not set.
+        """
+        if cls.USE_STORAGE_SERVICE:
+            storage_url = os.environ.get("STORAGE_SERVICE_URL")
+            if not storage_url:
+                error_msg = (
+                    "Configuration Error: USE_STORAGE_SERVICE is enabled (true) "
+                    "but STORAGE_SERVICE_URL environment variable is not set. "
+                    "Either set STORAGE_SERVICE_URL to a valid URL or disable "
+                    "Storage Service integration by setting USE_STORAGE_SERVICE=false"
+                )
+                logger.error(error_msg)
+                logger.error(
+                    "Current environment variables: "
+                    "USE_STORAGE_SERVICE=%s, STORAGE_SERVICE_URL=%s",
+                    os.environ.get("USE_STORAGE_SERVICE", "not set"),
+                    os.environ.get("STORAGE_SERVICE_URL", "not set"),
+                )
+                raise ValueError(error_msg)
+
+            logger.info("Storage Service integration enabled: %s", storage_url)
+        else:
+            logger.warning(
+                "Storage Service integration is DISABLED. "
+                "Avatar upload/download/delete operations will be skipped. "
+                "This mode is intended for development/testing only."
+            )
 
 
 class DevelopmentConfig(Config):

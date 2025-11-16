@@ -91,7 +91,7 @@ def _handle_avatar_upload(user, company_id):
         content_type = avatar_file.content_type or "image/jpeg"
         filename = avatar_file.filename or "avatar.jpg"
 
-        object_key = upload_avatar_via_proxy(
+        upload_result = upload_avatar_via_proxy(
             user_id=str(user.id),
             company_id=company_id,
             file_data=file_data,
@@ -99,9 +99,11 @@ def _handle_avatar_upload(user, company_id):
             filename=filename,
         )
 
-        user.avatar_url = object_key
+        user.set_avatar(upload_result["file_id"])
         db.session.commit()
-        logger.info(f"Avatar uploaded for new user {user.id}")
+        logger.info(
+            f"Avatar uploaded for new user {user.id}: file_id={upload_result['file_id']}"
+        )
 
     except AvatarValidationError as e:
         logger.warning(f"Avatar validation failed: {e}")
@@ -137,7 +139,7 @@ def _handle_avatar_upload_for_update(user, company_id):
         content_type = avatar_file.content_type or "image/jpeg"
         filename = avatar_file.filename or "avatar.jpg"
 
-        uploaded_avatar_url = upload_avatar_via_proxy(
+        upload_result = upload_avatar_via_proxy(
             user_id=str(user.id),
             company_id=company_id,
             file_data=file_data,
@@ -145,8 +147,10 @@ def _handle_avatar_upload_for_update(user, company_id):
             filename=filename,
         )
 
-        logger.info(f"Avatar updated for user {user.id}")
-        return uploaded_avatar_url
+        logger.info(
+            f"Avatar updated for user {user.id}: file_id={upload_result['file_id']}"
+        )
+        return upload_result["file_id"]
 
     except AvatarValidationError as e:
         logger.warning(f"Avatar validation failed: {e}")
@@ -416,9 +420,9 @@ class UserResource(Resource):
 
         try:
             # Handle avatar upload if present
-            uploaded_avatar_url = None
+            uploaded_file_id = None
             try:
-                uploaded_avatar_url = _handle_avatar_upload_for_update(
+                uploaded_file_id = _handle_avatar_upload_for_update(
                     user, company_id
                 )
             except AvatarValidationError as e:
@@ -428,9 +432,9 @@ class UserResource(Resource):
 
             updated_user = user_schema.load(json_data, instance=user)
 
-            # Update avatar_url directly on the user object (not via schema)
-            if uploaded_avatar_url:
-                updated_user.avatar_url = uploaded_avatar_url
+            # Update avatar using helper method
+            if uploaded_file_id:
+                updated_user.set_avatar(uploaded_file_id)
 
             db.session.commit()
             return user_schema.dump(updated_user), 200
@@ -491,9 +495,9 @@ class UserResource(Resource):
 
         try:
             # Handle avatar upload if present
-            uploaded_avatar_url = None
+            uploaded_file_id = None
             try:
-                uploaded_avatar_url = _handle_avatar_upload_for_update(
+                uploaded_file_id = _handle_avatar_upload_for_update(
                     user, company_id
                 )
             except AvatarValidationError as e:
@@ -507,11 +511,11 @@ class UserResource(Resource):
                 json_data, instance=user, partial=True
             )
 
-            # Update avatar_url directly on the user object (not via schema)
-            if uploaded_avatar_url:
-                updated_user.avatar_url = uploaded_avatar_url
+            # Update avatar using helper method
+            if uploaded_file_id:
+                updated_user.set_avatar(uploaded_file_id)
                 logger.debug(
-                    f"[PATCH] Set avatar_url on user object: {uploaded_avatar_url}"
+                    f"[PATCH] Set avatar file_id on user object: {uploaded_file_id}"
                 )
 
             db.session.commit()

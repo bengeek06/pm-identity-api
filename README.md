@@ -122,6 +122,10 @@ The service reads the following variables (see env.example):
 | GUARDIAN_SERVICE_TIMEOUT  | Timeout in seconds for Guardian service API calls (default: 5) |
 | JWT_SECRET                | Secret used to sign JWTs |
 | INTERNAL_AUTH_TOKEN       | Shared secret with auth service |
+| STORAGE_SERVICE_URL       | Storage service base URL for avatar management (default: http://storage-service:5000) |
+| STORAGE_REQUEST_TIMEOUT   | Timeout in seconds for Storage service API calls (default: 30) |
+| MAX_AVATAR_SIZE_MB        | Maximum avatar file size in MB (default: 5) |
+| USE_STORAGE_SERVICE       | Enable/disable Storage Service integration (true/false, default: true) |
 
 ---
 

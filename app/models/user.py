@@ -41,7 +41,8 @@ class User(db.Model):
         last_name (str): Optional last name of the user.
         language (LanguageEnum): Preferred language of the user.
         phone_number (str): Optional phone number of the user.
-        avatar_url (str): Optional URL to the user's avatar.
+        avatar_file_id (str): Storage Service file_id reference for avatar.
+        has_avatar (bool): Whether the user has an avatar uploaded.
         is_active (bool): Whether the user account is active.
         is_verified (bool): Whether the user's email is verified.
         last_login_at (datetime): Timestamp of the user's last login.
@@ -64,7 +65,8 @@ class User(db.Model):
         db.Enum(LanguageEnum), default=LanguageEnum.EN, nullable=False
     )
     phone_number = db.Column(db.String(50), nullable=True)
-    avatar_url = db.Column(db.String(255), nullable=True)
+    avatar_file_id = db.Column(db.String(36), nullable=True)
+    has_avatar = db.Column(db.Boolean, default=False, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     is_verifed = db.Column("is_verified", db.Boolean, default=False)
     last_login_at = db.Column(db.DateTime, nullable=True)
@@ -167,6 +169,21 @@ class User(db.Model):
                 "Error retrieving users for company %s: %s", company_id, str(e)
             )
             return []
+
+    def set_avatar(self, file_id: str) -> None:
+        """
+        Set user avatar file_id and flag.
+
+        Args:
+            file_id (str): Storage Service file_id for the avatar.
+        """
+        self.avatar_file_id = file_id
+        self.has_avatar = True
+
+    def remove_avatar(self) -> None:
+        """Clear user avatar reference and flag."""
+        self.avatar_file_id = None
+        self.has_avatar = False
 
     @classmethod
     def get_by_position_id(cls, position_id):

@@ -19,6 +19,19 @@ STORAGE_SERVICE_URL = os.getenv(
 REQUEST_TIMEOUT = int(os.getenv("STORAGE_REQUEST_TIMEOUT", "30"))
 MAX_AVATAR_SIZE = int(os.getenv("MAX_AVATAR_SIZE_MB", "5")) * 1024 * 1024
 
+# Storage Service integration toggle
+USE_STORAGE_SERVICE = os.getenv("USE_STORAGE_SERVICE", "true").lower() in (
+    "true",
+    "yes",
+    "1",
+)
+
+
+def is_storage_service_enabled() -> bool:
+    """Check if Storage Service integration is enabled."""
+    return USE_STORAGE_SERVICE
+
+
 # Allowed MIME types for avatars
 ALLOWED_AVATAR_TYPES = {
     "image/jpeg",
@@ -117,13 +130,13 @@ def _extract_object_key_from_response(result):
     return object_key
 
 
-def upload_avatar_via_proxy(
+def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
     user_id: str,
     company_id: str,
     file_data: bytes,
     content_type: str,
     filename: str,
-) -> str:
+) -> dict:
     """
     Upload an avatar via the Storage Service proxy endpoint.
 
@@ -137,12 +150,26 @@ def upload_avatar_via_proxy(
         filename: Original filename
 
     Returns:
-        str: The object_key to store in the database (avatar_url field)
+        dict: {
+            'file_id': 'uuid-from-storage',
+            'object_key': 'users/...'  # for legacy/debugging
+        }
+        If Storage Service is disabled, returns mock data.
 
     Raises:
         AvatarValidationError: If validation fails
         StorageServiceError: If upload fails
     """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping avatar upload for user {user_id}"
+        )
+        # Return mock file_id for autonomous mode
+        return {
+            "file_id": f"mock-file-id-{user_id}",
+            "object_key": "mock-object-key",
+        }
+
     # Validate the file
     validate_avatar(file_data, content_type)
 
@@ -181,12 +208,23 @@ def upload_avatar_via_proxy(
         result = response.json()
         logger.debug(f"Storage Service response: {result}")
 
+        # Extract file_id from response
+        file_id = result.get("file_id")
+        if not file_id and "data" in result:
+            file_id = result["data"].get("file_id")
+
+        if not file_id:
+            logger.error(
+                f"Storage Service did not return file_id. Response: {result}"
+            )
+            raise StorageServiceError("Storage Service did not return file_id")
+
         # Extract object_key from response
         object_key = _extract_object_key_from_response(result)
 
-        logger.info(f"Avatar uploaded successfully: {object_key}")
-        logger.debug(f"object_key length: {len(object_key)}")
-        return object_key
+        logger.info(f"Avatar uploaded successfully: file_id={file_id}")
+        logger.debug(f"object_key: {object_key}")
+        return {"file_id": file_id, "object_key": object_key}
 
     except requests.exceptions.Timeout:
         logger.error(f"Timeout calling Storage Service at {url}")
@@ -218,6 +256,12 @@ def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
         This function does not raise exceptions if deletion fails,
         as deletion is not critical to the update operation.
     """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping avatar deletion for user {user_id}"
+        )
+        return
+
     if not file_id:
         logger.warning("No file_id provided for deletion")
         return
@@ -280,6 +324,12 @@ def create_user_directories(user_id: str, company_id: str) -> None:
     Raises:
         StorageServiceError: If directory creation fails
     """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping directory creation for user {user_id}"
+        )
+        return
+
     url = f"{STORAGE_SERVICE_URL}/upload/proxy"
 
     headers = {
@@ -356,6 +406,12 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
     Note:
         Failures are logged but don't raise exceptions to avoid blocking user deletion.
     """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping storage deletion for user {user_id}"
+        )
+        return
+
     # Since the Storage Service doesn't have a "delete directory" endpoint,
     # we need to list all files and delete them one by one
 

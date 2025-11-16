@@ -13,6 +13,8 @@ from app import create_app
 from app.models import db
 
 os.environ["FLASK_ENV"] = "testing"
+# Disable Storage Service for tests (run in autonomous mode)
+os.environ.setdefault("USE_STORAGE_SERVICE", "false")
 load_dotenv(
     dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env.test")
 )
