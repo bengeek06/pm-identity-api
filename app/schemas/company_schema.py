@@ -66,7 +66,7 @@ class CompanySchema(SQLAlchemyAutoSchema):
             validate.Length(min=1, max=100),
         ],
     )
-    description = fields.String(validate=validate.Length(max=200))
+    description = fields.String(validate=validate.Length(max=255))
     logo_url = fields.URL(allow_none=True, validate=validate.Length(max=255))
     website = fields.URL(allow_none=True, validate=validate.Length(max=255))
     phone_number = fields.String(

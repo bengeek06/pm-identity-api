@@ -57,7 +57,7 @@ class PositionSchema(SQLAlchemyAutoSchema):
 
     description = fields.String(
         validate=validate.Length(
-            max=200, error="Description cannot exceed 200 characters."
+            max=255, error="Description cannot exceed 255 characters."
         )
     )
 

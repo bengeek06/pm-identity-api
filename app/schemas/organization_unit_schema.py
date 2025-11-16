@@ -75,7 +75,7 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
     description = fields.String(
         allow_none=True,
         validate=validate.Length(
-            max=200, error="Description cannot exceed 200 characters."
+            max=255, error="Description cannot exceed 255 characters."
         ),
     )
 

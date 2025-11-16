@@ -161,7 +161,7 @@ components:
           description: Associated company identifier (auto-assigned from JWT)
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the subcontractor
         contact_person:
           type: string
@@ -178,7 +178,7 @@ components:
           description: Email address of the subcontractor
         address:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Address of the subcontractor
         created_at:
           type: string
@@ -202,7 +202,7 @@ components:
           description: Name of the subcontractor
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the subcontractor
         contact_person:
           type: string
@@ -219,7 +219,7 @@ components:
           description: Email address of the subcontractor
         address:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Address of the subcontractor
 
     SubcontractorUpdate:
@@ -231,7 +231,7 @@ components:
           description: Name of the subcontractor
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the subcontractor
         contact_person:
           type: string
@@ -248,7 +248,7 @@ components:
           description: Email address of the subcontractor
         address:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Address of the subcontractor
     Position:
       type: object
@@ -268,7 +268,7 @@ components:
           description: Title or name of the position
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the position
         company_id:
           type: string
@@ -306,7 +306,7 @@ components:
           description: Title or name of the position
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the position
         organization_unit_id:
           type: string
@@ -328,7 +328,7 @@ components:
           description: Title or name of the position
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the position
         level:
           type: integer
@@ -344,7 +344,7 @@ components:
           description: Title or name of the position
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the position
         organization_unit_id:
           type: string
@@ -376,7 +376,7 @@ components:
           description: Associated company identifier (auto-assigned from JWT)
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the organization unit
         parent_id:
           type: string
@@ -413,7 +413,7 @@ components:
           description: Name of the organization unit
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the organization unit
         parent_id:
           type: string
@@ -430,7 +430,7 @@ components:
           description: Name of the organization unit
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the organization unit
         parent_id:
           type: string
@@ -453,7 +453,7 @@ components:
           description: Name of the company
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the company
         logo_url:
           type: string
@@ -512,7 +512,7 @@ components:
           description: Name of the company
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the company
         logo_url:
           type: string
@@ -559,7 +559,7 @@ components:
           description: Name of the company
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the company
         logo_url:
           type: string
