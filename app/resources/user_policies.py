@@ -10,14 +10,13 @@ through their role assignments.
 
 import os
 
-from flask import request, g
+import requests
+from flask import g, request
 from flask_restful import Resource
 
-import requests
-
 from app.logger import logger
-from app.utils import require_jwt_auth, check_access_required
 from app.models.user import User
+from app.utils import check_access_required, require_jwt_auth
 
 
 class UserPoliciesResource(Resource):
@@ -96,11 +95,15 @@ class UserPoliciesResource(Resource):
                 timeout=5,
             )
         except requests.exceptions.RequestException as e:
-            logger.error("Error contacting Guardian service for roles: %s", str(e))
+            logger.error(
+                "Error contacting Guardian service for roles: %s", str(e)
+            )
             return {"message": "Error fetching user roles"}, 500
 
         if roles_response.status_code != 200:
-            logger.error("Error fetching roles from Guardian: %s", roles_response.text)
+            logger.error(
+                "Error fetching roles from Guardian: %s", roles_response.text
+            )
             return {"message": "Error fetching user roles"}, 500
 
         roles_data = roles_response.json()
@@ -144,7 +147,9 @@ class UserPoliciesResource(Resource):
                 continue
 
             if policies_response.status_code == 404:
-                logger.warning("Role %s not found in Guardian, skipping", role_id)
+                logger.warning(
+                    "Role %s not found in Guardian, skipping", role_id
+                )
                 continue
 
             if policies_response.status_code != 200:
@@ -166,7 +171,9 @@ class UserPoliciesResource(Resource):
             # Handle response format (expecting a list of policies)
             if isinstance(policies_data, list):
                 policies = policies_data
-            elif isinstance(policies_data, dict) and "policies" in policies_data:
+            elif (
+                isinstance(policies_data, dict) and "policies" in policies_data
+            ):
                 policies = policies_data.get("policies", [])
             else:
                 logger.warning(

@@ -3,6 +3,7 @@ Tesst cases for the Subcontractor resource in the PM Identity API.
 """
 
 import uuid
+
 from app.models.subcontractor import Subcontractor
 from tests.conftest import create_jwt_token
 

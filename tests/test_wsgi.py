@@ -6,8 +6,8 @@ class is selected based on the FLASK_ENV environment variable.
 """
 
 import importlib
-import sys
 import os
+import sys
 
 
 def test_wsgi_forces_production_config(monkeypatch):

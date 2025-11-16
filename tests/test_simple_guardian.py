@@ -5,7 +5,7 @@ Test simple pour vérifier le format de réponse Guardian.
 import uuid
 from unittest import mock
 
-from tests.test_user import get_init_db_payload, create_jwt_token
+from tests.test_user import create_jwt_token, get_init_db_payload
 
 
 def test_guardian_direct_list_format(client):

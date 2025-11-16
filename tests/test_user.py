@@ -1,6 +1,7 @@
 """
 Test cases for the UserResource class in the PM Identity API.
 """
+# pylint: disable=too-many-locals,too-many-statements,unused-argument
 
 import os
 import uuid
@@ -11,7 +12,7 @@ import requests
 from werkzeug.security import generate_password_hash
 
 from app.models.user import User
-from tests.conftest import get_init_db_payload, create_jwt_token
+from tests.conftest import create_jwt_token, get_init_db_payload
 
 
 ##################################################

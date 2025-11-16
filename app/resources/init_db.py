@@ -29,16 +29,14 @@ from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import generate_password_hash
 
-from app.models import db
 from app.logger import logger
-
-from app.models.user import User
+from app.models import db
 from app.models.company import Company
-
+from app.models.user import User
 from app.schemas.company_schema import CompanySchema
-from app.schemas.user_schema import UserSchema
 from app.schemas.organization_unit_schema import OrganizationUnitSchema
 from app.schemas.position_schema import PositionSchema
+from app.schemas.user_schema import UserSchema
 
 
 class InitDBResource(Resource):
@@ -166,7 +164,9 @@ class InitDBResource(Resource):
             "name": "default organization",
             "company_id": company_id,
         }
-        logger.info(f"default_org_unit_data type: {type(default_org_unit_data)}")
+        logger.info(
+            f"default_org_unit_data type: {type(default_org_unit_data)}"
+        )
         logger.info("Creating default organization unit.")
         new_org_unit = org_unit_schema.load(default_org_unit_data)
         db.session.add(new_org_unit)
@@ -191,7 +191,9 @@ class InitDBResource(Resource):
             "company_id": company_id,
             "organization_unit_id": org_unit_id,
         }
-        logger.info(f"default_position_data type: {type(default_position_data)}")
+        logger.info(
+            f"default_position_data type: {type(default_position_data)}"
+        )
         logger.info("Creating default position.")
         new_position = position_schema.load(default_position_data)
         db.session.add(new_position)
@@ -221,11 +223,15 @@ class InitDBResource(Resource):
         user_data["position_id"] = position_id
 
         if "password" in user_data:
-            user_data["hashed_password"] = generate_password_hash(user_data["password"])
+            user_data["hashed_password"] = generate_password_hash(
+                user_data["password"]
+            )
             del user_data["password"]
         else:
             logger.error("User data missing 'password' field.")
-            raise ValidationError({"password": ["Missing data for required field."]})
+            raise ValidationError(
+                {"password": ["Missing data for required field."]}
+            )
 
         new_user = user_schema.load(user_data)
         new_user.company_id = company_id
@@ -313,7 +319,9 @@ class InitDBResource(Resource):
         try:
             with db.session.begin_nested():
                 # Create all entities in order
-                new_company = self._create_company(company_data, company_schema)
+                new_company = self._create_company(
+                    company_data, company_schema
+                )
                 new_org_unit = self._create_organization_unit(
                     new_company.id, org_unit_schema
                 )

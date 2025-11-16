@@ -6,6 +6,7 @@ in development and staging environments with appropriate configuration.
 """
 
 import os
+
 from dotenv import load_dotenv
 
 from app import create_app

@@ -11,15 +11,15 @@ handle database errors gracefully.
 """
 
 from flask import request
+from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from flask_restful import Resource
 
-from app.models import db
 from app.logger import logger
+from app.models import db
 from app.models.organization_unit import OrganizationUnit
 from app.schemas.organization_unit_schema import OrganizationUnitSchema
-from app.utils import require_jwt_auth, check_access_required
+from app.utils import check_access_required, require_jwt_auth
 
 
 class OrganizationUnitListResource(Resource):
@@ -81,7 +81,9 @@ class OrganizationUnitListResource(Resource):
             return {"error": str(err)}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error("Integrity error, possibly duplicate entry: %s", str(err))
+            logger.error(
+                "Integrity error, possibly duplicate entry: %s", str(err)
+            )
             return {"error": "Integrity error, possibly duplicate entry."}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
@@ -158,10 +160,14 @@ class OrganizationUnitResource(Resource):
         try:
             org_unit = OrganizationUnit.get_by_id(unit_id)
             if not org_unit:
-                logger.warning("Organization unit with ID %s not found", unit_id)
+                logger.warning(
+                    "Organization unit with ID %s not found", unit_id
+                )
                 return {"error": "Organization unit not found"}, 404
 
-            updated_org_unit = org_unit_schema.load(json_data, instance=org_unit)
+            updated_org_unit = org_unit_schema.load(
+                json_data, instance=org_unit
+            )
             updated_org_unit.context = {"current_id": unit_id}
             updated_org_unit.update_path_and_level()
             db.session.commit()
@@ -171,7 +177,9 @@ class OrganizationUnitResource(Resource):
             return {"error": str(err)}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error("Integrity error, possibly duplicate entry: %s", str(err))
+            logger.error(
+                "Integrity error, possibly duplicate entry: %s", str(err)
+            )
             return {"error": "Integrity error, possibly duplicate entry."}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
@@ -198,16 +206,22 @@ class OrganizationUnitResource(Resource):
         """
         logger.info("Partially updating organization unit with ID %s", unit_id)
         json_data = request.get_json()
-        org_unit_schema = OrganizationUnitSchema(session=db.session, partial=True)
+        org_unit_schema = OrganizationUnitSchema(
+            session=db.session, partial=True
+        )
         org_unit_schema.context = {"current_id": unit_id}
         try:
             org_unit = OrganizationUnit.get_by_id(unit_id)
             if not org_unit:
-                logger.warning("Organization unit with ID %s not found", unit_id)
+                logger.warning(
+                    "Organization unit with ID %s not found", unit_id
+                )
                 return {"error": "Organization unit not found"}, 404
 
             # Passe le contexte pour la validation de parent_id
-            updated_org_unit = org_unit_schema.load(json_data, instance=org_unit)
+            updated_org_unit = org_unit_schema.load(
+                json_data, instance=org_unit
+            )
             updated_org_unit.update_path_and_level()
             db.session.commit()
             return org_unit_schema.dump(updated_org_unit), 200
@@ -216,7 +230,9 @@ class OrganizationUnitResource(Resource):
             return {"error": str(err)}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error("Integrity error, possibly duplicate entry: %s", str(err))
+            logger.error(
+                "Integrity error, possibly duplicate entry: %s", str(err)
+            )
             return {"error": "Integrity error, possibly duplicate entry."}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
@@ -271,7 +287,9 @@ class OrganizationUnitResource(Resource):
                 "Integrity error while deleting organization unit: %s",
                 str(err),
             )
-            return {"error": "Integrity error, possibly due to FK constraints."}, 400
+            return {
+                "error": "Integrity error, possibly due to FK constraints."
+            }, 400
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error(
@@ -302,7 +320,9 @@ class OrganizationUnitChildrenResource(Resource):
             tuple: A list of serialized child organization units and HTTP
                    status code 200.
         """
-        logger.info("Retrieving children of organization unit with ID %s", unit_id)
+        logger.info(
+            "Retrieving children of organization unit with ID %s", unit_id
+        )
 
         children = OrganizationUnit.get_children(unit_id)
         org_unit_schema = OrganizationUnitSchema(session=db.session, many=True)

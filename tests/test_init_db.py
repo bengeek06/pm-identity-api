@@ -3,6 +3,7 @@ Tests for database initialization via the /init-db endpoint.
 """
 
 import pytest
+
 from app.models.company import Company
 from app.models.user import User
 

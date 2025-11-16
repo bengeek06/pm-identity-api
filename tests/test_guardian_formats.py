@@ -4,7 +4,7 @@ Test to verify handling of different Guardian service response formats.
 
 from unittest import mock
 
-from tests.conftest import get_init_db_payload, create_jwt_token
+from tests.conftest import create_jwt_token, get_init_db_payload
 
 
 def test_get_user_roles_with_direct_list_response(client):

@@ -18,38 +18,35 @@ For related user operations, see:
 
 import os
 
-from flask import request, g
-
+import jwt
+from flask import g, request
+from flask_restful import Resource
 from marshmallow import ValidationError
-
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import generate_password_hash
 
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-
-from flask_restful import Resource
-
-import jwt
-
-from app.models import db
 from app.logger import logger
-from app.utils import require_jwt_auth, check_access_required
-from app.storage_helper import (
-    upload_avatar_via_proxy,
-    create_user_directories,
-    delete_user_storage,
-    AvatarValidationError,
-    StorageServiceError,
-)
+from app.models import db
+from app.models.company import Company
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
-from app.models.company import Company
+from app.storage_helper import (
+    AvatarValidationError,
+    StorageServiceError,
+    create_user_directories,
+    delete_user_storage,
+    upload_avatar_via_proxy,
+)
+from app.utils import check_access_required, require_jwt_auth
 
 
 # Helper functions for user operations
 def _validate_avatar_url_field(avatar_url_value, context="POST"):
     """Log warning if avatar_url is sent by frontend (this is a bug)."""
     is_base64 = (
-        avatar_url_value.startswith("data:image/") if avatar_url_value else False
+        avatar_url_value.startswith("data:image/")
+        if avatar_url_value
+        else False
     )
     logger.warning(
         f"[{context}] Frontend sent avatar_url - THIS IS A BUG! "
@@ -72,7 +69,9 @@ def _parse_request_data(is_multipart, context="POST"):
 
         # Get form data but exclude file fields and avatar_url
         json_data = {
-            k: v for k, v in request.form.items() if k not in ("avatar", "avatar_url")
+            k: v
+            for k, v in request.form.items()
+            if k not in ("avatar", "avatar_url")
         }
     else:
         json_data = request.get_json() or {}
@@ -164,7 +163,9 @@ def _handle_avatar_upload_for_update(user, company_id):
 def _parse_multipart_data_with_debug(context="PATCH"):
     """Parse multipart data with detailed debug logging."""
     logger.debug(f"[{context}] request.form keys: {list(request.form.keys())}")
-    logger.debug(f"[{context}] request.files keys: {list(request.files.keys())}")
+    logger.debug(
+        f"[{context}] request.files keys: {list(request.files.keys())}"
+    )
 
     for key in request.form.keys():
         value = request.form[key]
@@ -179,7 +180,11 @@ def _parse_multipart_data_with_debug(context="PATCH"):
         _validate_avatar_url_field(request.form["avatar_url"], context)
 
     # Get form data but exclude file fields and avatar_url
-    return {k: v for k, v in request.form.items() if k not in ("avatar", "avatar_url")}
+    return {
+        k: v
+        for k, v in request.form.items()
+        if k not in ("avatar", "avatar_url")
+    }
 
 
 def _parse_patch_request_data():
@@ -294,7 +299,8 @@ class UserListResource(Resource):
 
         # Handle multipart/form-data or JSON
         is_multipart = (
-            request.content_type and "multipart/form-data" in request.content_type
+            request.content_type
+            and "multipart/form-data" in request.content_type
         ) or (request.mimetype and "multipart/form-data" in request.mimetype)
 
         # Parse request data
@@ -304,13 +310,18 @@ class UserListResource(Resource):
         user_schema = UserSchema(session=db.session)
 
         if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(json_data["password"])
+            json_data["hashed_password"] = generate_password_hash(
+                json_data["password"]
+            )
             del json_data["password"]
 
         try:
             user = user_schema.load(json_data)
             # Handle nullable company_id for superuser creation
-            if "company_id" in json_data and json_data["company_id"] is not None:
+            if (
+                "company_id" in json_data
+                and json_data["company_id"] is not None
+            ):
                 company = Company.get_by_id(json_data["company_id"])
                 if not company:
                     logger.warning(
@@ -405,7 +416,8 @@ class UserResource(Resource):
 
         # Handle multipart/form-data or JSON
         is_multipart = (
-            request.content_type and "multipart/form-data" in request.content_type
+            request.content_type
+            and "multipart/form-data" in request.content_type
         ) or (request.mimetype and "multipart/form-data" in request.mimetype)
 
         # Parse request data
@@ -423,14 +435,18 @@ class UserResource(Resource):
         user_schema = UserSchema(session=db.session, context={"user": user})
 
         if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(json_data["password"])
+            json_data["hashed_password"] = generate_password_hash(
+                json_data["password"]
+            )
             del json_data["password"]
 
         try:
             # Handle avatar upload if present
             uploaded_avatar_url = None
             try:
-                uploaded_avatar_url = _handle_avatar_upload_for_update(user, company_id)
+                uploaded_avatar_url = _handle_avatar_upload_for_update(
+                    user, company_id
+                )
             except AvatarValidationError as e:
                 return {"message": str(e)}, 400
             except StorageServiceError:
@@ -494,14 +510,18 @@ class UserResource(Resource):
         )
 
         if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(json_data["password"])
+            json_data["hashed_password"] = generate_password_hash(
+                json_data["password"]
+            )
             del json_data["password"]
 
         try:
             # Handle avatar upload if present
             uploaded_avatar_url = None
             try:
-                uploaded_avatar_url = _handle_avatar_upload_for_update(user, company_id)
+                uploaded_avatar_url = _handle_avatar_upload_for_update(
+                    user, company_id
+                )
             except AvatarValidationError as e:
                 return {"message": str(e)}, 400
             except StorageServiceError:
@@ -509,7 +529,9 @@ class UserResource(Resource):
 
             # Company_id modification is prevented by schema validation
             logger.debug(f"[PATCH] json_data before schema.load: {json_data}")
-            updated_user = user_schema.load(json_data, instance=user, partial=True)
+            updated_user = user_schema.load(
+                json_data, instance=user, partial=True
+            )
 
             # Update avatar_url directly on the user object (not via schema)
             if uploaded_avatar_url:

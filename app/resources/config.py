@@ -7,8 +7,10 @@ configuration through a REST endpoint.
 """
 
 import os
+
 from flask_restful import Resource
-from app.utils import require_jwt_auth, check_access_required
+
+from app.utils import check_access_required, require_jwt_auth
 
 
 class ConfigResource(Resource):
