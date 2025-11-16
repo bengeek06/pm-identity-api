@@ -5,8 +5,6 @@ This module defines the Flask-RESTful resource for company logo management.
 It provides endpoints for uploading, retrieving, and deleting company logos.
 """
 
-import os
-
 import requests
 from flask import Response, g, request
 from flask_restful import Resource
@@ -150,11 +148,9 @@ class CompanyLogoResource(Resource):
         # Use convention-based logical_path
         logical_path = f"logos/{company_id}.png"
 
-        # Get Storage Service URL
-        storage_service_url = os.environ.get(
-            "STORAGE_SERVICE_URL", "http://storage-service:5000"
-        )
-        timeout = int(os.environ.get("STORAGE_REQUEST_TIMEOUT", "30"))
+        # Get Storage Service configuration
+        storage_service_url = current_app.config["STORAGE_SERVICE_URL"]
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
 
         try:
             logger.debug(

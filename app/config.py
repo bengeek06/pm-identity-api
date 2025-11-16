@@ -46,6 +46,10 @@ class Config:
         "1",
     )
 
+    # Storage Service URL (validated at startup if USE_STORAGE_SERVICE=True)
+    STORAGE_SERVICE_URL = os.environ.get("STORAGE_SERVICE_URL")
+    STORAGE_REQUEST_TIMEOUT = int(os.environ.get("STORAGE_REQUEST_TIMEOUT", "30"))
+
     @classmethod
     def validate_storage_config(cls):
         """
@@ -55,8 +59,7 @@ class Config:
             ValueError: If USE_STORAGE_SERVICE is True but STORAGE_SERVICE_URL is not set.
         """
         if cls.USE_STORAGE_SERVICE:
-            storage_url = os.environ.get("STORAGE_SERVICE_URL")
-            if not storage_url:
+            if not cls.STORAGE_SERVICE_URL:
                 error_msg = (
                     "Configuration Error: USE_STORAGE_SERVICE is enabled (true) "
                     "but STORAGE_SERVICE_URL environment variable is not set. "
@@ -72,7 +75,10 @@ class Config:
                 )
                 raise ValueError(error_msg)
 
-            logger.info("Storage Service integration enabled: %s", storage_url)
+            logger.info(
+                "Storage Service integration enabled: %s",
+                cls.STORAGE_SERVICE_URL,
+            )
         else:
             logger.warning(
                 "Storage Service integration is DISABLED. "
