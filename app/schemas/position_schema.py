@@ -10,7 +10,7 @@ Position model, ensuring data integrity and proper formatting when handling API
 input and output.
 """
 
-from marshmallow import fields, validate
+from marshmallow import RAISE, fields, validate
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from app.models.position import Position
@@ -47,7 +47,8 @@ class PositionSchema(SQLAlchemyAutoSchema):
         model = Position
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at")
+        dump_only = ("id", "created_at", "updated_at", "company_id")
+        unknown = RAISE
 
     title = fields.String(
         required=True,
@@ -58,18 +59,6 @@ class PositionSchema(SQLAlchemyAutoSchema):
         validate=validate.Length(
             max=200, error="Description cannot exceed 200 characters."
         )
-    )
-
-    company_id = fields.String(
-        required=True,
-        validate=validate.Regexp(
-            r"^[a-fA-F0-9]{8}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{12}$",
-            error="Company ID must be a valid UUID.",
-        ),
     )
 
     organization_unit_id = fields.String(

@@ -10,7 +10,7 @@ model, ensuring data integrity and proper formatting when handling API input
 and output.
 """
 
-from marshmallow import ValidationError, fields, validate, validates
+from marshmallow import RAISE, ValidationError, fields, validate, validates
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from app.logger import logger
@@ -63,10 +63,14 @@ class UserSchema(SQLAlchemyAutoSchema):
         model = User
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at")
-        exclude = (
-            "avatar_url",
-        )  # Internal field, frontend should use /users/{id}/avatar endpoint
+        dump_only = (
+            "id",
+            "created_at",
+            "updated_at",
+            "last_login",
+            "company_id",
+        )
+        unknown = RAISE
 
     id = fields.UUID(dump_only=True)
     email = fields.Email(required=True, validate=validate.Length(max=100))
@@ -89,19 +93,7 @@ class UserSchema(SQLAlchemyAutoSchema):
     is_active = fields.Boolean(load_default=True, dump_default=True)
     is_verifed = fields.Boolean(load_default=False, dump_default=False)
     last_login_at = fields.DateTime(allow_none=True)
-    # Allow nullable company_id for superuser creation
-    company_id = fields.String(
-        required=False,
-        allow_none=True,
-        validate=validate.Regexp(
-            r"^[a-fA-F0-9]{8}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{12}$",
-            error="Company ID must be a valid UUID.",
-        ),
-    )
+
     position_id = fields.String(
         required=False,
         validate=validate.Regexp(

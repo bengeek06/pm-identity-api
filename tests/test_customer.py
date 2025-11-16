@@ -107,13 +107,13 @@ def test_post_customer_success(client):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    # company_id in payload is ignored; JWT company_id is used instead
-    payload = {"name": "Nouveau Client", "company_id": str(uuid.uuid4())}
+    # company_id is auto-assigned from JWT, not sent in payload
+    payload = {"name": "Nouveau Client"}
     response = client.post("/customers", json=payload)
     assert response.status_code == 201
     data = response.get_json()
     assert data["name"] == "Nouveau Client"
-    assert data["company_id"] == company_id  # JWT company_id, not payload
+    assert data["company_id"] == company_id  # Auto-assigned from JWT
     assert "id" in data
 
 
@@ -127,7 +127,7 @@ def test_post_customer_missing_name(client):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    payload = {"company_id": str(uuid.uuid4())}
+    payload = {}
     response = client.post("/customers", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -147,7 +147,6 @@ def test_post_customer_unknown_field(client):
 
     payload = {
         "name": "Client Mystère",
-        "company_id": str(uuid.uuid4()),
         "unknown_field": "valeur",
     }
     response = client.post("/customers", json=payload)
@@ -172,7 +171,7 @@ def test_post_customer_integrity_error(client, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
 
-    payload = {"name": "Test Client", "company_id": str(uuid.uuid4())}
+    payload = {"name": "Test Client"}
     response = client.post("/customers", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -195,7 +194,7 @@ def test_post_customer_sqlalchemy_error(client, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
 
-    payload = {"name": "Test Client", "company_id": str(uuid.uuid4())}
+    payload = {"name": "Test Client"}
     response = client.post("/customers", json=payload)
     assert response.status_code == 500
     data = response.get_json()
@@ -264,14 +263,13 @@ def test_put_customer_success(client, session):
     session.add(customer)
     session.commit()
 
-    new_company_id = str(uuid.uuid4())
-    payload = {"name": "NewName", "company_id": new_company_id}
+    payload = {"name": "NewName"}
     response = client.put(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == customer.id
     assert data["name"] == "NewName"
-    assert data["company_id"] == new_company_id
+    assert data["company_id"] == customer_company_id
 
 
 def test_put_customer_not_found(client):
@@ -284,7 +282,7 @@ def test_put_customer_not_found(client):
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
 
-    payload = {"name": "DoesNotExist", "company_id": str(uuid.uuid4())}
+    payload = {"name": "DoesNotExist"}
     response = client.put("/customers/doesnotexist", json=payload)
     assert response.status_code == 404
     data = response.get_json()
@@ -306,7 +304,7 @@ def test_put_customer_missing_name(client, session):
     session.add(customer)
     session.commit()
 
-    payload = {"company_id": str(uuid.uuid4())}
+    payload = {}
     response = client.put(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -330,7 +328,6 @@ def test_put_customer_unknown_field(client, session):
 
     payload = {
         "name": "StillValid",
-        "company_id": str(uuid.uuid4()),
         "unknown_field": "should fail",
     }
     response = client.put(f"/customers/{customer.id}", json=payload)
@@ -359,7 +356,7 @@ def test_put_customer_integrity_error(client, session, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
 
-    payload = {"name": "NewName", "company_id": str(uuid.uuid4())}
+    payload = {"name": "NewName"}
     response = client.put(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -386,7 +383,7 @@ def test_put_customer_sqlalchemy_error(client, session, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
 
-    payload = {"name": "NewName", "company_id": str(uuid.uuid4())}
+    payload = {"name": "NewName"}
     response = client.put(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 500
     data = response.get_json()
@@ -605,40 +602,6 @@ def test_patch_customer_address_too_long(client, customer_fixture):
     assert "address" in data["error"]
 
 
-def test_patch_customer_company_id_invalid(client, customer_fixture):
-    """
-    Test PATCH /customers/{id} with invalid company_id.
-    """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
-        f"/customers/{customer_fixture.id}", json={"company_id": 0}
-    )
-    assert response.status_code == 400
-    data = response.get_json()
-    assert "company_id" in data["error"]
-
-
-def test_patch_customer_company_id_not_int(client, customer_fixture):
-    """
-    Test PATCH /customers/{id} with non-integer company_id.
-    """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
-        f"/customers/{customer_fixture.id}", json={"company_id": "notanint"}
-    )
-    assert response.status_code == 400
-    data = response.get_json()
-    assert "company_id" in data["error"]
-
-
 def test_patch_customer_integrity_error(client, session, monkeypatch):
     """
     Test PATCH /customers/<customer_id> to simulate an IntegrityError.
@@ -658,7 +621,7 @@ def test_patch_customer_integrity_error(client, session, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
 
-    payload = {"name": "NewName", "company_id": str(uuid.uuid4())}
+    payload = {"name": "NewName"}
     response = client.patch(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -685,7 +648,7 @@ def test_patch_customer_sqlalchemy_error(client, session, monkeypatch):
 
     monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
 
-    payload = {"name": "NewName", "company_id": str(uuid.uuid4())}
+    payload = {"name": "NewName"}
     response = client.patch(f"/customers/{customer.id}", json=payload)
     assert response.status_code == 500
     data = response.get_json()

@@ -58,7 +58,8 @@ class SubcontractorListResource(Resource):
         Create a new subcontractor.
 
         Expects:
-            JSON payload with at least the 'name' and 'company_id' fields.
+            JSON payload with at least the 'name' field.
+            company_id is automatically extracted from JWT token.
 
         Returns:
             tuple: The serialized created subcontractor and HTTP status code
@@ -70,14 +71,13 @@ class SubcontractorListResource(Resource):
         json_data = request.get_json()
         subcontractor_schema = SubcontractorSchema(session=db.session)
 
-        # Inject company_id from JWT token (stored in g by require_jwt_auth)
-        json_data["company_id"] = g.company_id
-
         try:
-            subcontractor = subcontractor_schema.load(json_data)
-            db.session.add(subcontractor)
+            new_subcontractor = subcontractor_schema.load(json_data)
+            # Assign company_id from JWT after load
+            new_subcontractor.company_id = g.company_id
+            db.session.add(new_subcontractor)
             db.session.commit()
-            return subcontractor_schema.dump(subcontractor), 201
+            return subcontractor_schema.dump(new_subcontractor), 201
         except ValidationError as e:
             logger.error("Validation error: %s", e.messages)
             return {"message": "Validation error", "errors": e.messages}, 400

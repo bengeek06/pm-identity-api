@@ -53,7 +53,14 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
         model = OrganizationUnit
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at", "path", "level")
+        dump_only = (
+            "id",
+            "created_at",
+            "updated_at",
+            "path",
+            "level",
+            "company_id",
+        )
         unknown = RAISE
 
     name = fields.String(
@@ -63,11 +70,6 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
             max=100,
             error="Name must be between 1 and 100 characters.",
         ),
-    )
-
-    company_id = fields.String(
-        required=True,
-        validate=validate.Length(min=1, error="Company ID cannot be empty."),
     )
 
     description = fields.String(

@@ -10,7 +10,7 @@ Subcontractor model, ensuring data integrity and proper formatting when
 handling API input and output.
 """
 
-from marshmallow import ValidationError, fields, validate, validates
+from marshmallow import RAISE, ValidationError, fields, validate, validates
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from app.logger import logger
@@ -50,7 +50,8 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         model = Subcontractor
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at")
+        dump_only = ("id", "created_at", "updated_at", "company_id")
+        unknown = RAISE
 
     name = fields.String(
         required=True,
@@ -63,18 +64,6 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         required=False,
         validate=validate.Length(
             max=200, error="Description cannot exceed 200 characters."
-        ),
-    )
-
-    company_id = fields.String(
-        required=True,
-        validate=validate.Regexp(
-            r"^[a-fA-F0-9]{8}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{12}$",
-            error="Company ID must be a valid UUID.",
         ),
     )
 

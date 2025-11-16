@@ -16,9 +16,6 @@ For related user operations, see:
 - app.resources.user_auth: User authentication operations
 """
 
-import os
-
-import jwt
 from flask import g, request
 from flask_restful import Resource
 from marshmallow import ValidationError
@@ -264,7 +261,8 @@ class UserListResource(Resource):
 
         Expects:
             JSON payload with at least 'email', 'password', 'first_name',
-            'last_name', and 'company_id'.
+            'last_name'.
+            company_id is automatically extracted from JWT token.
             Optional: multipart/form-data with 'avatar' file.
 
         Returns:
@@ -274,29 +272,6 @@ class UserListResource(Resource):
         """
         logger.info("Creating a new user")
 
-        jwt_token = request.cookies.get("access_token")
-        if not jwt_token:
-            logger.error("Missing JWT token")
-            return {"message": "Missing JWT token"}, 401
-
-        logger.debug("Found JWT token in cookies")
-        jwt_secret = os.environ.get("JWT_SECRET")
-        if not jwt_secret:
-            logger.warning("JWT_SECRET not found in environment variables.")
-        try:
-            payload = jwt.decode(jwt_token, jwt_secret, algorithms=["HS256"])
-            company_id = payload.get("company_id")
-            if not company_id:
-                logger.error("company_id missing in JWT")
-                return {"message": "company_id missing in JWT"}, 400
-            logger.debug(f"Extracted company_id {company_id} from JWT")
-        except jwt.ExpiredSignatureError:
-            logger.error("JWT expired")
-            return {"message": "JWT expired"}, 401
-        except jwt.InvalidTokenError as e:
-            logger.error("JWT error: %s", str(e))
-            return {"message": "JWT error"}, 401
-
         # Handle multipart/form-data or JSON
         is_multipart = (
             request.content_type
@@ -305,7 +280,6 @@ class UserListResource(Resource):
 
         # Parse request data
         json_data = _parse_request_data(is_multipart, context="POST")
-        json_data["company_id"] = company_id
 
         user_schema = UserSchema(session=db.session)
 
@@ -317,15 +291,15 @@ class UserListResource(Resource):
 
         try:
             user = user_schema.load(json_data)
+            # Assign company_id from JWT after load
+            user.company_id = g.company_id
+
             # Handle nullable company_id for superuser creation
-            if (
-                "company_id" in json_data
-                and json_data["company_id"] is not None
-            ):
-                company = Company.get_by_id(json_data["company_id"])
+            if user.company_id:
+                company = Company.get_by_id(user.company_id)
                 if not company:
                     logger.warning(
-                        "Company with ID %s not found", json_data["company_id"]
+                        "Company with ID %s not found", user.company_id
                     )
                     return {"message": "Company not found"}, 404
                 user.company = company
@@ -334,10 +308,10 @@ class UserListResource(Resource):
             db.session.commit()
 
             # Create user directory structure in Storage Service
-            _create_user_storage(user.id, company_id)
+            _create_user_storage(user.id, g.company_id)
 
             # Handle avatar upload if present
-            _handle_avatar_upload(user, company_id)
+            _handle_avatar_upload(user, g.company_id)
 
             return user_schema.dump(user), 201
         except ValidationError as e:

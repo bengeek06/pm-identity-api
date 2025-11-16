@@ -57,6 +57,7 @@ class CustomerListResource(Resource):
 
         Expects:
             JSON payload with at least the 'name' field.
+            company_id is automatically extracted from JWT token.
 
         Returns:
             tuple: The serialized created customer and HTTP status code 201
@@ -68,11 +69,10 @@ class CustomerListResource(Resource):
         json_data = request.get_json()
         customer_schema = CustomerSchema(session=db.session)
 
-        # Inject company_id from JWT token (stored in g by require_jwt_auth)
-        json_data["company_id"] = g.company_id
-
         try:
             new_customer = customer_schema.load(json_data)
+            # Assign company_id from JWT after load
+            new_customer.company_id = g.company_id
             db.session.add(new_customer)
             db.session.commit()
             return customer_schema.dump(new_customer), 201

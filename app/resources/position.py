@@ -10,7 +10,7 @@ within a specific organization unit. The resources use Marshmallow schemas for
 validation and serialization, and handle database errors gracefully.
 """
 
-from flask import request
+from flask import g, request
 from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -83,12 +83,23 @@ class PositionListResource(Resource):
             )
             return {"message": "Organization unit not found"}, 404
 
+        # Valider que l'organization_unit appartient à la company du JWT
+        if org_unit.company_id != g.company_id:
+            logger.warning(
+                "Organization unit %s does not belong to company %s",
+                org_unit_id,
+                g.company_id,
+            )
+            return {
+                "message": "Organization unit does not belong to your company"
+            }, 403
+
         position_schema = PositionSchema(session=db.session)
 
         try:
             position = position_schema.load(json_data)
-            # Renseigne company_id sur l'instance après le load
-            position.company_id = org_unit.company_id
+            # Assigner company_id depuis JWT (pattern standard)
+            position.company_id = g.company_id
             db.session.add(position)
             db.session.commit()
             return position_schema.dump(position), 201
@@ -310,14 +321,25 @@ class OrganizationUnitPositionsResource(Resource):
             logger.warning("Organization unit with ID %s not found", unit_id)
             return {"error": "Organization unit not found"}, 404
 
+        # Valider que l'organization_unit appartient à la company du JWT
+        if org_unit.company_id != g.company_id:
+            logger.warning(
+                "Organization unit %s does not belong to company %s",
+                unit_id,
+                g.company_id,
+            )
+            return {
+                "error": "Organization unit does not belong to your company"
+            }, 403
+
         json_data = request.get_json()
         # Renseigne automatiquement organization_unit_id
         json_data["organization_unit_id"] = unit_id
         position_schema = PositionSchema(session=db.session)
         try:
             position = position_schema.load(json_data)
-            # Renseigne company_id sur l'instance après le load
-            position.company_id = org_unit.company_id
+            # Assigner company_id depuis JWT (pattern standard)
+            position.company_id = g.company_id
             db.session.add(position)
             db.session.commit()
             return position_schema.dump(position), 201
