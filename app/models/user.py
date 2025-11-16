@@ -43,7 +43,7 @@ class User(db.Model):
         phone_number (str): Optional phone number of the user.
         avatar_url (str): Optional URL to the user's avatar.
         is_active (bool): Whether the user account is active.
-        is_verifed (bool): Whether the user's email is verified.
+        is_verified (bool): Whether the user's email is verified.
         last_login_at (datetime): Timestamp of the user's last login.
         company_id (str): Foreign key referencing the associated company.
         position_id (str): Foreign key referencing the user's position.
@@ -66,7 +66,7 @@ class User(db.Model):
     phone_number = db.Column(db.String(50), nullable=True)
     avatar_url = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
-    is_verifed = db.Column(db.Boolean, default=False)
+    is_verifed = db.Column("is_verified", db.Boolean, default=False)
     last_login_at = db.Column(db.DateTime, nullable=True)
     # Allow nullable company_id for superuser creation
     company_id = db.Column(
