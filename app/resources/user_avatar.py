@@ -1,11 +1,9 @@
 """
 module: app.resources.user_avatar
 
-This module defines the Flask-RESTful resource for retrieving user avatars.
-It proxies requests to the Storage Service to get the avatar image.
+This module defines the Flask-RESTful resource for user avatar management.
+It provides endpoints for uploading, retrieving, and deleting user avatars.
 """
-
-import os
 
 import requests
 from flask import Response
@@ -70,11 +68,11 @@ class UserAvatarResource(Resource):
         # We use a generic extension; Storage Service will handle the correct file
         logical_path = f"avatars/{user_id}.jpg"
 
-        # Get Storage Service URL from environment
-        storage_service_url = os.environ.get(
-            "STORAGE_SERVICE_URL", "http://storage-service:5000"
-        )
-        timeout = int(os.environ.get("STORAGE_REQUEST_TIMEOUT", "30"))
+        # Get Storage Service configuration
+        from flask import current_app  # pylint: disable=import-outside-toplevel
+
+        storage_service_url = current_app.config["STORAGE_SERVICE_URL"]
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
 
         try:
             logger.debug(

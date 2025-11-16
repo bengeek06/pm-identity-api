@@ -9,15 +9,19 @@ import jwt
 from dotenv import load_dotenv
 from pytest import fixture
 
+# Set environment variables BEFORE any imports from app
+os.environ["FLASK_ENV"] = "testing"
+os.environ["USE_STORAGE_SERVICE"] = "false"
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
+# Load .env.test to override with test configuration
+load_dotenv(
+    dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env.test"),
+    override=True,
+)
+
 from app import create_app
 from app.models import db
-
-os.environ["FLASK_ENV"] = "testing"
-# Disable Storage Service for tests (run in autonomous mode)
-os.environ.setdefault("USE_STORAGE_SERVICE", "false")
-load_dotenv(
-    dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env.test")
-)
 
 
 @fixture

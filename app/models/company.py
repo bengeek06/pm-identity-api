@@ -30,7 +30,8 @@ class Company(db.Model):
         id (str): Unique identifier (UUID) for the company.
         name (str): Name of the company (required).
         description (str): Optional description of the company.
-        logo_url (str): Optional URL to the company's logo.
+        logo_file_id (str): Storage Service file_id reference for company logo.
+        has_logo (bool): Whether the company has a logo uploaded.
         website (str): Optional website URL of the company.
         phone_number (str): Optional phone number of the company.
         email (str): Optional email address of the company.
@@ -53,7 +54,8 @@ class Company(db.Model):
     )
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255), nullable=True)
-    logo_url = db.Column(db.String(255), nullable=True)
+    logo_file_id = db.Column(db.String(36), nullable=True)
+    has_logo = db.Column(db.Boolean, default=False, nullable=False)
     website = db.Column(db.String(255), nullable=True)
     phone_number = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(100), nullable=True)
@@ -132,5 +134,20 @@ class Company(db.Model):
         try:
             return cls.query.filter_by(name=name).first()
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving company by name {name}: {e}")
+            logger.error(f"Error retrieving company by name '{name}': {e}")
             return None
+
+    def set_logo(self, file_id: str) -> None:
+        """
+        Set company logo file_id and flag.
+
+        Args:
+            file_id (str): Storage Service file_id for the logo.
+        """
+        self.logo_file_id = file_id
+        self.has_logo = True
+
+    def remove_logo(self) -> None:
+        """Clear company logo reference and flag."""
+        self.logo_file_id = None
+        self.has_logo = False

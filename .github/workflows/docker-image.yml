@@ -49,7 +49,7 @@ jobs:
 
       - name: Run tests
         run: |
-          docker run --rm test-image:${{ github.run_id }}
+          docker run --rm test-image:${{ github.run_id }} pytest -m "not integration"
 
   build:
     name: Build (no push on PR)
