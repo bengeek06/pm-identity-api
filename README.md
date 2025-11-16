@@ -73,9 +73,10 @@ The **Identity Service API** is a comprehensive, production-ready microservice f
 │   │   ├── position_schema.py
 │   │   ├── subcontractor_schema.py
 │   │   └── user_schema.py
-│   └── utils.py
+│   └── utils.py
 ├── CODE_OF_CONDUCT.md
 ├── COMMERCIAL-LICENSE.txt
+├── CONTRIBUTING.md
 ├── docker-entrypoint.sh
 ├── Dockerfile
 ├── env.example
@@ -463,6 +464,11 @@ For commercial use or support, contact: **bengeek06@gmail.com**
 
 ## Contributing
 
-See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for guidelines.
+We welcome contributions! Please read our contribution guidelines:
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow, coding standards, and pull request process
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community guidelines and expectations
+
+For the overall Waterfall project workflow and branch strategy, see the [main CONTRIBUTING.md](../../CONTRIBUTING.md) at the repository root.
 
 ---
