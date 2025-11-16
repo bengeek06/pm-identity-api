@@ -10,7 +10,7 @@ The resources use Marshmallow schemas for validation and serialization, and
 handle database errors gracefully.
 """
 
-from flask import request
+from flask import g, request
 from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -57,7 +57,8 @@ class OrganizationUnitListResource(Resource):
         Create a new organization unit.
 
         Expects:
-            JSON payload with at least the 'name' and 'company_id' fields.
+            JSON payload with at least the 'name' field.
+            company_id is automatically extracted from JWT token.
 
         Returns:
             tuple: The serialized created organization unit and HTTP status
@@ -71,6 +72,8 @@ class OrganizationUnitListResource(Resource):
 
         try:
             new_org_unit = org_unit_schema.load(json_data)
+            # Assign company_id from JWT after load
+            new_org_unit.company_id = g.company_id
             db.session.add(new_org_unit)
             db.session.flush()
             new_org_unit.update_path_and_level()

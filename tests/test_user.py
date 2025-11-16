@@ -1,6 +1,7 @@
 """
 Test cases for the UserResource class in the PM Identity API.
 """
+
 # pylint: disable=too-many-locals,too-many-statements,unused-argument
 
 import os
@@ -135,7 +136,6 @@ def test_post_user_success(client):
         "password": "MySecret123!",
         "first_name": "John",
         "last_name": "Doe",
-        "company_id": company_id,
     }
     response = client.post("/users", json=payload)
     assert response.status_code == 201, response.get_json()
@@ -203,7 +203,6 @@ def test_post_user_duplicate_email(client, session):
         "password": "AnotherSecret!",
         "first_name": "Dup",
         "last_name": "User",
-        "company_id": company_id,
     }
     response = client.post("/users", json=payload)
     assert response.status_code == 400
@@ -229,7 +228,6 @@ def test_post_user_invalid_email(client):
         "password": "Secret123!",
         "first_name": "Bad",
         "last_name": "Email",
-        "company_id": company_id,
     }
     response = client.post("/users", json=payload)
     assert response.status_code == 400
@@ -332,9 +330,6 @@ def test_put_user_success(client, session):
         "password": "NewSecret123!",
         "first_name": "Updated",
         "last_name": "User",
-        "company_id": str(
-            company_id
-        ),  # Keep same company to avoid security violation
     }
     response = client.put(f"/users/{user.id}", json=payload)
     assert response.status_code == 200, response.get_json()
@@ -365,7 +360,6 @@ def test_put_user_not_found(client):
         "password": "Secret123!",
         "first_name": "No",
         "last_name": "User",
-        "company_id": str(company_id),
     }
     response = client.put(f"/users/{fake_id}", json=payload)
     assert response.status_code == 404

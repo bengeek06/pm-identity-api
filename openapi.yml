@@ -56,9 +56,10 @@ components:
           maxLength: 100
           description: Name of the customer
         company_id:
-          type: integer
-          minimum: 1
-          description: Associated company identifier (integer)
+          type: string
+          format: uuid
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
         email:
           type: string
           format: email
@@ -91,16 +92,11 @@ components:
       type: object
       required:
         - name
-        - company_id
       properties:
         name:
           type: string
           maxLength: 100
           description: Name of the customer
-        company_id:
-          type: integer
-          minimum: 1
-          description: Associated company identifier (integer)
         email:
           type: string
           format: email
@@ -126,10 +122,6 @@ components:
           type: string
           maxLength: 100
           description: Name of the customer
-        company_id:
-          type: integer
-          minimum: 1
-          description: Associated company identifier (integer)
         email:
           type: string
           format: email
@@ -165,7 +157,8 @@ components:
         company_id:
           type: string
           format: uuid
-          description: Associated company identifier
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
         description:
           type: string
           maxLength: 200
@@ -202,16 +195,11 @@ components:
       type: object
       required:
         - name
-        - company_id
       properties:
         name:
           type: string
           maxLength: 100
           description: Name of the subcontractor
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         description:
           type: string
           maxLength: 200
@@ -241,10 +229,6 @@ components:
           type: string
           maxLength: 100
           description: Name of the subcontractor
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         description:
           type: string
           maxLength: 200
@@ -289,7 +273,8 @@ components:
         company_id:
           type: string
           format: uuid
-          description: Associated company identifier
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
         organization_unit_id:
           type: string
           format: uuid
@@ -365,10 +350,6 @@ components:
           type: string
           format: uuid
           description: Organization unit identifier the position belongs to
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         level:
           type: integer
           minimum: 0
@@ -391,7 +372,8 @@ components:
         company_id:
           type: string
           format: uuid
-          description: Associated company identifier
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
         description:
           type: string
           maxLength: 200
@@ -424,16 +406,11 @@ components:
       type: object
       required:
         - name
-        - company_id
       properties:
         name:
           type: string
           maxLength: 100
           description: Name of the organization unit
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         description:
           type: string
           maxLength: 200
@@ -451,10 +428,6 @@ components:
           type: string
           maxLength: 100
           description: Name of the organization unit
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         description:
           type: string
           maxLength: 200
@@ -702,7 +675,6 @@ components:
       type: object
       required:
         - email
-        - hashed_password
       properties:
         id:
           type: string
@@ -751,7 +723,8 @@ components:
         company_id:
           type: string
           format: uuid
-          description: Associated company identifier
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
         position_id:
           type: string
           format: uuid
@@ -1316,7 +1289,9 @@ paths:
     post:
       tags: [Customers Management]
       summary: Create a new customer
-      description: Creates a new customer with the provided data
+      description: |
+        Creates a new customer with the provided data.
+        The company_id is automatically extracted from the JWT token and cannot be provided in the request body.
       requestBody:
         required: true
         content:
@@ -1447,7 +1422,9 @@ paths:
     post:
       tags: [Positions]
       summary: Create a new position
-      description: Creates a new position with the provided data; company_id is inferred from the organization unit
+      description: |
+        Creates a new position with the provided data.
+        The company_id is automatically extracted from the JWT token and validated against the organization unit's company.
       requestBody:
         required: true
         content:
@@ -1593,7 +1570,9 @@ paths:
     post:
       tags: [Positions]
       summary: Create a position for an organization unit
-      description: Creates a new position within the specified organization unit; company_id is inferred from the unit
+      description: |
+        Creates a new position within the specified organization unit.
+        The company_id is automatically extracted from the JWT token and validated against the organization unit's company.
       requestBody:
         required: true
         content:
@@ -1633,7 +1612,9 @@ paths:
     post:
       tags: [Organizations]
       summary: Create a new organization unit
-      description: Creates a new organization unit with the provided data
+      description: |
+        Creates a new organization unit with the provided data.
+        The company_id is automatically extracted from the JWT token and cannot be provided in the request body.
       requestBody:
         required: true
         content:
@@ -2014,7 +1995,9 @@ paths:
     post:
       tags: [Users]
       summary: Create a new user
-      description: Creates a new user with the provided data
+      description: |
+        Creates a new user with the provided data.
+        The company_id is automatically extracted from the JWT token and cannot be provided in the request body.
       requestBody:
         required: true
         content:
@@ -2391,7 +2374,9 @@ paths:
     post:
       tags: [Subcontractors Management]
       summary: Create a new subcontractor
-      description: Creates a new subcontractor with the provided data
+      description: |
+        Creates a new subcontractor with the provided data.
+        The company_id is automatically extracted from the JWT token and cannot be provided in the request body.
       requestBody:
         required: true
         content:

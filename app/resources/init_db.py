@@ -162,13 +162,13 @@ class InitDBResource(Resource):
         """
         default_org_unit_data = {
             "name": "default organization",
-            "company_id": company_id,
         }
         logger.info(
             f"default_org_unit_data type: {type(default_org_unit_data)}"
         )
         logger.info("Creating default organization unit.")
         new_org_unit = org_unit_schema.load(default_org_unit_data)
+        new_org_unit.company_id = company_id
         db.session.add(new_org_unit)
         db.session.flush()  # get new_org_unit.id
         return new_org_unit
@@ -188,7 +188,6 @@ class InitDBResource(Resource):
         """
         default_position_data = {
             "title": "Administrator",
-            "company_id": company_id,
             "organization_unit_id": org_unit_id,
         }
         logger.info(
@@ -196,6 +195,7 @@ class InitDBResource(Resource):
         )
         logger.info("Creating default position.")
         new_position = position_schema.load(default_position_data)
+        new_position.company_id = company_id
         db.session.add(new_position)
         db.session.flush()  # get new_position.id
         return new_position
@@ -219,7 +219,6 @@ class InitDBResource(Resource):
         """
         logger.info(f"user_data type: {type(user_data)}")
         logger.info("Creating user.")
-        user_data["company_id"] = company_id
         user_data["position_id"] = position_id
 
         if "password" in user_data:

@@ -105,7 +105,6 @@ def test_post_position_success(client, session):
     payload = {
         "title": "Engineer",
         "organization_unit_id": unit.id,
-        "company_id": company_id,
     }
     response = client.post("/positions", json=payload)
     assert response.status_code == 201, response.get_json()
@@ -125,10 +124,10 @@ def test_post_position_missing_title(client, session):
     jwt_token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    unit = OrganizationUnit(name="UnitPost2", company_id="c1")
+    unit = OrganizationUnit(name="UnitPost2", company_id=company_id)
     session.add(unit)
     session.commit()
-    payload = {"company_id": "c1", "organization_unit_id": unit.id}
+    payload = {"organization_unit_id": unit.id}
     response = client.post("/positions", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -144,7 +143,7 @@ def test_post_position_missing_organization_unit_id(client):
     jwt_token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    payload = {"title": "NoUnit", "company_id": "c1"}
+    payload = {"title": "NoUnit"}
     response = client.post("/positions", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -162,7 +161,6 @@ def test_post_position_invalid_organization_unit_id(client):
 
     payload = {
         "title": "Ghost",
-        "company_id": "c1",
         "organization_unit_id": "not-a-real-id",
     }
     response = client.post("/positions", json=payload)
@@ -178,17 +176,18 @@ def test_post_position_duplicate_title(client, session):
     jwt_token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    unit = OrganizationUnit(name="UnitDup", company_id="c1")
+    unit = OrganizationUnit(name="UnitDup", company_id=company_id)
     session.add(unit)
     session.commit()
     pos = Position(
-        title="UniqueTitle", company_id="c1", organization_unit_id=unit.id
+        title="UniqueTitle",
+        company_id=company_id,
+        organization_unit_id=unit.id,
     )
     session.add(pos)
     session.commit()
     payload = {
         "title": "UniqueTitle",
-        "company_id": "c1",
         "organization_unit_id": unit.id,
     }
     response = client.post("/positions", json=payload)
@@ -342,7 +341,6 @@ def test_post_position_for_unit_success(client, session):
     session.commit()
     payload = {
         "title": "Analyst",
-        "company_id": company_id,
         "organization_unit_id": unit.id,
     }
     response = client.post(
@@ -368,7 +366,7 @@ def test_post_position_for_unit_missing_title(client, session):
     unit = OrganizationUnit(name="UnitForPost2", company_id=company_id)
     session.add(unit)
     session.commit()
-    payload = {"company_id": company_id}
+    payload = {}
     response = client.post(
         f"/organization_units/{unit.id}/positions", json=payload
     )
@@ -387,7 +385,7 @@ def test_post_position_for_unit_invalid_unit_id(client):
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
     fake_id = str(uuid.uuid4())
-    payload = {"title": "Ghost", "company_id": company_id}
+    payload = {"title": "Ghost"}
     response = client.post(
         f"/organization_units/{fake_id}/positions", json=payload
     )
@@ -420,7 +418,7 @@ def test_post_position_for_unit_duplicate_title(client, session):
     )
     session.add(pos)
     session.commit()
-    payload = {"title": "UniqueAnalyst", "company_id": company_id}
+    payload = {"title": "UniqueAnalyst"}
     response = client.post(
         f"/organization_units/{unit.id}/positions", json=payload
     )
@@ -453,7 +451,6 @@ def test_put_position_success(client, session):
     payload = {
         "title": "NewTitle",
         "organization_unit_id": unit2.id,
-        "company_id": company_id,
     }
     response = client.put(f"/positions/{pos.id}", json=payload)
     assert response.status_code == 200, response.get_json()
@@ -479,7 +476,6 @@ def test_put_position_not_found(client, session):
     fake_id = str(uuid.uuid4())
     payload = {
         "title": "DoesNotExist",
-        "company_id": company_id,
         "organization_unit_id": unit.id,
     }
     response = client.put(f"/positions/{fake_id}", json=payload)
@@ -507,7 +503,7 @@ def test_put_position_missing_title(client, session):
     )
     session.add(pos)
     session.commit()
-    payload = {"company_id": company_id, "organization_unit_id": unit.id}
+    payload = {"organization_unit_id": unit.id}
     response = client.put(f"/positions/{pos.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -535,7 +531,6 @@ def test_put_position_invalid_organization_unit_id(client, session):
     session.commit()
     payload = {
         "title": "StillHere",
-        "company_id": company_id,
         "organization_unit_id": "not-a-uuid",
     }
     response = client.put(f"/positions/{pos.id}", json=payload)

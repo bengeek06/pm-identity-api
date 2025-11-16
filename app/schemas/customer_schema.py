@@ -48,16 +48,11 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         model = Customer
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at")
+        dump_only = ("id", "created_at", "updated_at", "company_id")
         unknown = RAISE
 
     name = fields.String(
         required=True, validate=validate.Length(min=1, max=100)
-    )
-
-    company_id = fields.String(
-        required=True,
-        validate=validate.Length(equal=36),
     )
 
     email = fields.Email(allow_none=True, validate=validate.Length(max=100))

@@ -135,12 +135,12 @@ def test_post_organization_unit_success(client):
     jwt_token = create_jwt_token(str(company_id), str(user_id))
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    payload = {"name": "RootUnit", "company_id": "c1"}
+    payload = {"name": "RootUnit"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 201
     data = response.get_json()
     assert data["name"] == "RootUnit"
-    assert data["company_id"] == "c1"
+    assert data["company_id"] == str(company_id)
     assert data["parent_id"] is None
     assert data["level"] == 0
     assert data["path"] == data["id"]
@@ -161,7 +161,7 @@ def test_post_organization_unit_with_parent(client, session):
     parent.update_path_and_level()
     session.commit()
 
-    payload = {"name": "ChildUnit", "company_id": "c1", "parent_id": parent.id}
+    payload = {"name": "ChildUnit", "parent_id": parent.id}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 201
     data = response.get_json()
@@ -179,23 +179,24 @@ def test_post_organization_unit_missing_name(client):
     jwt_token = create_jwt_token(str(company_id), str(user_id))
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    payload = {"company_id": "c1"}
+    payload = {}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "name" in data["error"]
 
 
-def test_post_organization_unit_missing_company_id(client):
+def test_post_organization_unit_company_id_rejected_if_sent(client):
     """
-    Test POST /organization_units with missing required 'company_id'.
+    Test POST /organization_units rejects company_id if sent in payload.
+    company_id is now auto-assigned from JWT token and is dump_only.
     """
     company_id = uuid.uuid4()
     user_id = uuid.uuid4()
     jwt_token = create_jwt_token(str(company_id), str(user_id))
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    payload = {"name": "NoCompany"}
+    payload = {"name": "TestUnit", "company_id": "c1"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -211,7 +212,7 @@ def test_post_organization_unit_name_too_long(client):
     jwt_token = create_jwt_token(str(company_id), str(user_id))
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    payload = {"name": "a" * 101, "company_id": "c1"}
+    payload = {"name": "a" * 101}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -227,7 +228,7 @@ def test_post_organization_unit_invalid_parent_id(client):
     jwt_token = create_jwt_token(str(company_id), str(user_id))
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    payload = {"name": "Unit", "company_id": "c1", "parent_id": "not-a-uuid"}
+    payload = {"name": "Unit", "parent_id": "not-a-uuid"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -255,7 +256,7 @@ def test_post_organization_unit_unknown_field(client):
     jwt_token = create_jwt_token(str(company_id), str(user_id))
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    payload = {"name": "Unit", "company_id": "c1", "unknown": "value"}
+    payload = {"name": "Unit", "unknown": "value"}
     response = client.post("/organization_units", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -440,19 +441,19 @@ def test_put_organization_unit_success(client, session):
     jwt_token = create_jwt_token(str(company_id), str(user_id))
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    org = OrganizationUnit(name="OldName", company_id="c1")
+    org = OrganizationUnit(name="OldName", company_id=str(company_id))
     session.add(org)
     session.commit()
     org.update_path_and_level()
     session.commit()
 
-    payload = {"name": "NewName", "company_id": "c1"}
+    payload = {"name": "NewName"}
     response = client.put(f"/organization_units/{org.id}", json=payload)
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == org.id
     assert data["name"] == "NewName"
-    assert data["company_id"] == "c1"
+    assert data["company_id"] == str(company_id)
     assert data["parent_id"] is None
     assert data["level"] == 0
     assert data["path"] == org.id
@@ -475,7 +476,7 @@ def test_put_organization_unit_change_parent(client, session):
     child.update_path_and_level()
     session.commit()
 
-    payload = {"name": "Child", "company_id": "c1", "parent_id": parent.id}
+    payload = {"name": "Child", "parent_id": parent.id}
     response = client.put(f"/organization_units/{child.id}", json=payload)
     assert response.status_code == 200
     data = response.get_json()
@@ -494,7 +495,7 @@ def test_put_organization_unit_not_found(client):
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
     fake_id = str(uuid.uuid4())
-    payload = {"name": "DoesNotExist", "company_id": "c1"}
+    payload = {"name": "DoesNotExist"}
     response = client.put(f"/organization_units/{fake_id}", json=payload)
     assert response.status_code == 404
     data = response.get_json()
@@ -517,7 +518,7 @@ def test_put_organization_unit_invalid_parent_id(client, session):
     org.update_path_and_level()
     session.commit()
 
-    payload = {"name": "Unit", "company_id": "c1", "parent_id": "not-a-uuid"}
+    payload = {"name": "Unit", "parent_id": "not-a-uuid"}
     response = client.put(f"/organization_units/{org.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -539,7 +540,7 @@ def test_put_organization_unit_cycle(client, session):
     org.update_path_and_level()
     session.commit()
 
-    payload = {"name": "Cycle", "company_id": "c1", "parent_id": org.id}
+    payload = {"name": "Cycle", "parent_id": org.id}
     response = client.put(f"/organization_units/{org.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()

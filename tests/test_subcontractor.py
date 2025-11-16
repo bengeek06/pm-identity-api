@@ -84,7 +84,7 @@ def test_post_subcontractor_success(client):
     jwt_token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    payload = {"name": "NewSub", "company_id": company_id}
+    payload = {"name": "NewSub"}
     response = client.post("/subcontractors", json=payload)
     assert response.status_code == 201, response.get_json()
     data = response.get_json()
@@ -102,7 +102,7 @@ def test_post_subcontractor_missing_name(client):
     jwt_token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    payload = {"company_id": company_id}
+    payload = {}
     response = client.post("/subcontractors", json=payload)
     assert response.status_code == 400
     data = response.get_json()
@@ -121,7 +121,7 @@ def test_post_subcontractor_duplicate_name(client, session):
     sub = Subcontractor(name="DupSub", company_id=company_id)
     session.add(sub)
     session.commit()
-    payload = {"name": "DupSub", "company_id": company_id}
+    payload = {"name": "DupSub"}
     response = client.post("/subcontractors", json=payload)
     # Si unique, 400 attendu, sinon 201
     assert response.status_code in (201, 400)
@@ -185,7 +185,7 @@ def test_put_subcontractor_success(client, session):
     sub = Subcontractor(name="OldSub", company_id=company_id)
     session.add(sub)
     session.commit()
-    payload = {"name": "UpdatedSub", "company_id": company_id}
+    payload = {"name": "UpdatedSub"}
     response = client.put(f"/subcontractors/{sub.id}", json=payload)
     assert response.status_code == 200, response.get_json()
     data = response.get_json()
@@ -222,7 +222,7 @@ def test_put_subcontractor_missing_name(client, session):
     sub = Subcontractor(name="ToBeUpdated", company_id=company_id)
     session.add(sub)
     session.commit()
-    payload = {company_id: company_id}
+    payload = {}
     response = client.put(f"/subcontractors/{sub.id}", json=payload)
     assert response.status_code == 400
     data = response.get_json()
