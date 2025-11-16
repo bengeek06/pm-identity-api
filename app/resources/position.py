@@ -11,16 +11,16 @@ validation and serialization, and handle database errors gracefully.
 """
 
 from flask import request
+from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from flask_restful import Resource
 
-from app.models import db
 from app.logger import logger
+from app.models import db
+from app.models.organization_unit import OrganizationUnit
 from app.models.position import Position
 from app.schemas.position_schema import PositionSchema
-from app.models.organization_unit import OrganizationUnit
-from app.utils import require_jwt_auth, check_access_required
+from app.utils import check_access_required, require_jwt_auth
 
 
 class PositionListResource(Resource):
@@ -78,7 +78,9 @@ class PositionListResource(Resource):
 
         org_unit = OrganizationUnit.get_by_id(org_unit_id)
         if not org_unit:
-            logger.warning("Organization unit with ID %s not found", org_unit_id)
+            logger.warning(
+                "Organization unit with ID %s not found", org_unit_id
+            )
             return {"message": "Organization unit not found"}, 404
 
         position_schema = PositionSchema(session=db.session)
@@ -282,7 +284,9 @@ class OrganizationUnitPositionsResource(Resource):
         Returns:
             tuple: List of serialized positions and HTTP status code 200.
         """
-        positions = Position.get_by_organization_unit_id(organization_unit_id=unit_id)
+        positions = Position.get_by_organization_unit_id(
+            organization_unit_id=unit_id
+        )
         schema = PositionSchema(many=True)
         return schema.dump(positions), 200
 

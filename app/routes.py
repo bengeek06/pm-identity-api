@@ -11,40 +11,35 @@ Functions:
 """
 
 from flask_restful import Api
+
 from app.logger import logger
-from app.resources.version import VersionResource
-from app.resources.config import ConfigResource
 from app.resources.company import CompanyListResource, CompanyResource
+from app.resources.config import ConfigResource
 from app.resources.customer import CustomerListResource, CustomerResource
+from app.resources.health import HealthResource
+from app.resources.init_db import InitDBResource
 from app.resources.organization_unit import (
+    OrganizationUnitChildrenResource,
     OrganizationUnitListResource,
     OrganizationUnitResource,
-    OrganizationUnitChildrenResource,
 )
 from app.resources.position import (
+    OrganizationUnitPositionsResource,
     PositionListResource,
     PositionResource,
-    OrganizationUnitPositionsResource,
 )
 from app.resources.subcontractor import (
     SubcontractorListResource,
     SubcontractorResource,
 )
-from app.resources.user import (
-    UserListResource,
-    UserResource,
-)
-from app.resources.user_avatar import UserAvatarResource
-from app.resources.user_position import UserPositionResource
-from app.resources.user_roles import (
-    UserRolesListResource,
-    UserRolesResource,
-)
-from app.resources.user_policies import UserPoliciesResource
-from app.resources.user_permissions import UserPermissionsResource
+from app.resources.user import UserListResource, UserResource
 from app.resources.user_auth import VerifyPasswordResource
-from app.resources.init_db import InitDBResource
-from app.resources.health import HealthResource
+from app.resources.user_avatar import UserAvatarResource
+from app.resources.user_permissions import UserPermissionsResource
+from app.resources.user_policies import UserPoliciesResource
+from app.resources.user_position import UserPositionResource
+from app.resources.user_roles import UserRolesListResource, UserRolesResource
+from app.resources.version import VersionResource
 
 
 def register_routes(app):
@@ -73,7 +68,9 @@ def register_routes(app):
     api.add_resource(CustomerResource, "/customers/<string:customer_id>")
 
     api.add_resource(OrganizationUnitListResource, "/organization_units")
-    api.add_resource(OrganizationUnitResource, "/organization_units/<string:unit_id>")
+    api.add_resource(
+        OrganizationUnitResource, "/organization_units/<string:unit_id>"
+    )
     api.add_resource(
         OrganizationUnitChildrenResource,
         "/organization_units/<string:unit_id>/children",
@@ -87,7 +84,9 @@ def register_routes(app):
     )
 
     api.add_resource(SubcontractorListResource, "/subcontractors")
-    api.add_resource(SubcontractorResource, "/subcontractors/<string:subcontractor_id>")
+    api.add_resource(
+        SubcontractorResource, "/subcontractors/<string:subcontractor_id>"
+    )
 
     api.add_resource(UserListResource, "/users")
     api.add_resource(UserResource, "/users/<string:user_id>")
@@ -98,9 +97,13 @@ def register_routes(app):
         "/users/<string:user_id>/roles/<string:user_role_id>",
     )
     api.add_resource(UserPoliciesResource, "/users/<string:user_id>/policies")
-    api.add_resource(UserPermissionsResource, "/users/<string:user_id>/permissions")
+    api.add_resource(
+        UserPermissionsResource, "/users/<string:user_id>/permissions"
+    )
 
-    api.add_resource(UserPositionResource, "/positions/<string:position_id>/users")
+    api.add_resource(
+        UserPositionResource, "/positions/<string:position_id>/users"
+    )
     api.add_resource(VerifyPasswordResource, "/verify_password")
 
     logger.info("Routes registered successfully.")

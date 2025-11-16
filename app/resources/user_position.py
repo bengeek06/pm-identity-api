@@ -8,13 +8,12 @@ It provides endpoints for retrieving users associated with specific positions.
 """
 
 from flask_restful import Resource
-
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.logger import logger
-from app.utils import require_jwt_auth, check_access_required
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
+from app.utils import check_access_required, require_jwt_auth
 
 
 class UserPositionResource(Resource):

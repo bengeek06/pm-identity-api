@@ -9,17 +9,16 @@ updating, and deleting customers. The resources use Marshmallow schemas for
 validation and serialization, and handle database errors gracefully.
 """
 
-from flask import request, g
+from flask import g, request
+from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from flask_restful import Resource
 
-from app.models import db
 from app.logger import logger
-
+from app.models import db
 from app.models.customer import Customer
 from app.schemas.customer_schema import CustomerSchema
-from app.utils import require_jwt_auth, check_access_required
+from app.utils import check_access_required, require_jwt_auth
 
 
 class CustomerListResource(Resource):
@@ -157,7 +156,9 @@ class CustomerResource(Resource):
                 logger.warning("Customer with ID %s not found", customer_id)
                 return {"error": "Customer not found"}, 404
 
-            updated_customer = customer_schema.load(json_data, instance=customer)
+            updated_customer = customer_schema.load(
+                json_data, instance=customer
+            )
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:

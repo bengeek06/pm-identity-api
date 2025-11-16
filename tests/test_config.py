@@ -7,6 +7,7 @@ expected configuration values.
 
 import json
 import uuid
+
 from tests.conftest import create_jwt_token
 
 

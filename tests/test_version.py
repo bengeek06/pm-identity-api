@@ -7,6 +7,7 @@ correct version information.
 
 import json
 import uuid
+
 from tests.conftest import create_jwt_token
 
 

@@ -10,11 +10,11 @@ model, ensuring data integrity and proper formatting when handling API input
 and output.
 """
 
+from marshmallow import ValidationError, fields, validate, validates
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import ValidationError, validates, fields, validate
 
-from app.models.user import User, LanguageEnum
 from app.logger import logger
+from app.models.user import LanguageEnum, User
 
 
 class UserSchema(SQLAlchemyAutoSchema):
@@ -81,7 +81,9 @@ class UserSchema(SQLAlchemyAutoSchema):
         load_default=LanguageEnum.EN,
         dump_default=LanguageEnum.EN,
     )
-    phone_number = fields.String(validate=validate.Length(max=50), allow_none=True)
+    phone_number = fields.String(
+        validate=validate.Length(max=50), allow_none=True
+    )
     # avatar_url is excluded from dump (see Meta.exclude)
     # Frontend should use /users/{id}/avatar endpoint instead
     is_active = fields.Boolean(load_default=True, dump_default=True)
@@ -131,8 +133,12 @@ class UserSchema(SQLAlchemyAutoSchema):
         _ = kwargs
 
         user = User.get_by_email(value)
-        current_user = self.context.get("user") if hasattr(self, "context") else None
-        if user and (not current_user or user.id != getattr(current_user, "id", None)):
+        current_user = (
+            self.context.get("user") if hasattr(self, "context") else None
+        )
+        if user and (
+            not current_user or user.id != getattr(current_user, "id", None)
+        ):
             logger.error(
                 "Validation error: User with email '%s' already exists.", value
             )
@@ -156,12 +162,17 @@ class UserSchema(SQLAlchemyAutoSchema):
         _ = kwargs
 
         # Get current user from context if this is an update operation
-        current_user = self.context.get("user") if hasattr(self, "context") else None
+        current_user = (
+            self.context.get("user") if hasattr(self, "context") else None
+        )
 
         # If this is an update operation (current_user exists)
         if current_user:
             # Check if company_id is being changed
-            if hasattr(current_user, "company_id") and current_user.company_id != value:
+            if (
+                hasattr(current_user, "company_id")
+                and current_user.company_id != value
+            ):
                 logger.error(
                     "Security violation: Attempt to change company_id for user %s",
                     getattr(current_user, "id", "unknown"),

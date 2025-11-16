@@ -5,11 +5,12 @@ Tests for the health check endpoint.
 """
 
 import json
-from time import sleep
-import threading
 import logging
-from unittest.mock import patch, MagicMock
+import threading
 from datetime import datetime
+from time import sleep
+from unittest.mock import MagicMock, patch
+
 from sqlalchemy.exc import SQLAlchemyError
 
 

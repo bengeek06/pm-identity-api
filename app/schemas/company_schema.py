@@ -10,8 +10,9 @@ constraints, formats (email, URL, digits), and ensures the uniqueness of the
 company name.
 """
 
+from marshmallow import RAISE, ValidationError, fields, validate, validates
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import fields, validate, RAISE, validates, ValidationError
+
 from app.models.company import Company
 
 
@@ -72,12 +73,16 @@ class CompanySchema(SQLAlchemyAutoSchema):
         allow_none=True,
         validate=[
             validate.Length(max=20),
-            validate.Regexp(r"^\d*$", error="Phone number must contain only digits."),
+            validate.Regexp(
+                r"^\d*$", error="Phone number must contain only digits."
+            ),
         ],
     )
     email = fields.Email(allow_none=True, validate=validate.Length(max=255))
     address = fields.String(allow_none=True, validate=validate.Length(max=255))
-    postal_code = fields.String(allow_none=True, validate=validate.Length(max=20))
+    postal_code = fields.String(
+        allow_none=True, validate=validate.Length(max=20)
+    )
     city = fields.String(allow_none=True, validate=validate.Length(max=100))
     country = fields.String(allow_none=True, validate=validate.Length(max=100))
 
@@ -98,6 +103,7 @@ class CompanySchema(SQLAlchemyAutoSchema):
             self.context.get("company") if hasattr(self, "context") else None
         )
         if company and (
-            not current_company or company.id != getattr(current_company, "id", None)
+            not current_company
+            or company.id != getattr(current_company, "id", None)
         ):
             raise ValidationError("Company name must be unique.")

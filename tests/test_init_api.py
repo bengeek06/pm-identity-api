@@ -7,6 +7,8 @@ and the main run logic is invoked properly.
 """
 
 from flask import Flask
+from werkzeug.exceptions import BadRequest, Forbidden, Unauthorized
+
 import app
 
 
@@ -48,7 +50,6 @@ def test_error_handler_400(client):
     """
     Test that a 400 Bad Request error returns the correct JSON response.
     """
-    from werkzeug.exceptions import BadRequest
 
     @client.application.route("/bad")
     def bad():
@@ -87,7 +88,6 @@ def test_error_handler_401(client):
     """
     Test that a 401 Unauthorized error returns the correct JSON response.
     """
-    from werkzeug.exceptions import Unauthorized
 
     @client.application.route("/unauthorized")
     def unauthorized():
@@ -106,7 +106,6 @@ def test_error_handler_403(client):
     """
     Test that a 403 Forbidden error returns the correct JSON response.
     """
-    from werkzeug.exceptions import Forbidden
 
     @client.application.route("/forbidden")
     def forbidden():

@@ -4,9 +4,11 @@
 """
 
 import os
-from pytest import fixture
-from dotenv import load_dotenv
+
 import jwt
+from dotenv import load_dotenv
+from pytest import fixture
+
 from app import create_app
 from app.models import db
 

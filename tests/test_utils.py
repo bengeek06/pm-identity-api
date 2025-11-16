@@ -5,6 +5,7 @@ Tests for utility functions in app.utils module.
 from unittest import mock
 
 import requests
+from flask import Flask
 
 from app.utils import check_access
 
@@ -273,7 +274,6 @@ class TestCheckAccess:
         }
 
         # Mock Flask request context with JWT cookie
-        from flask import Flask
 
         app = Flask(__name__)
 
@@ -316,7 +316,6 @@ class TestCheckAccess:
         }
 
         # Mock Flask request context without JWT cookie
-        from flask import Flask
 
         app = Flask(__name__)
 

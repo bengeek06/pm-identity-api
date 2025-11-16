@@ -10,9 +10,11 @@ or title.
 """
 
 import uuid
+
 from sqlalchemy.exc import SQLAlchemyError
-from app.models import db
+
 from app.logger import logger
+from app.models import db
 
 
 class Position(db.Model):
@@ -37,9 +39,13 @@ class Position(db.Model):
 
     __tablename__ = "position"
 
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = db.Column(
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     title = db.Column(db.String(100), nullable=False)
-    company_id = db.Column(db.String(36), db.ForeignKey("company.id"), nullable=False)
+    company_id = db.Column(
+        db.String(36), db.ForeignKey("company.id"), nullable=False
+    )
     organization_unit_id = db.Column(
         db.String(36), db.ForeignKey("organization_unit.id"), nullable=False
     )
@@ -114,7 +120,9 @@ class Position(db.Model):
         try:
             return cls.query.filter_by(company_id=company_id).all()
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving positions for company {company_id}: {e}")
+            logger.error(
+                f"Error retrieving positions for company {company_id}: {e}"
+            )
             return []
 
     @classmethod
@@ -148,7 +156,9 @@ class Position(db.Model):
                             organization unit.
         """
         try:
-            return cls.query.filter_by(organization_unit_id=organization_unit_id).all()
+            return cls.query.filter_by(
+                organization_unit_id=organization_unit_id
+            ).all()
         except SQLAlchemyError as e:
             logger.error(
                 "Error retrieving positions for organization unit %s: %s",

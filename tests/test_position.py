@@ -4,8 +4,8 @@ Test cases for the Position model and its associated endpoints.
 
 import uuid
 
-from app.models.position import Position
 from app.models.organization_unit import OrganizationUnit
+from app.models.position import Position
 from tests.conftest import create_jwt_token
 
 

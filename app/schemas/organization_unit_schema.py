@@ -11,8 +11,9 @@ handling API input and output.
 """
 
 from typing import Any, Dict
+
+from marshmallow import RAISE, ValidationError, fields, validate, validates
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import RAISE, fields, validate, validates, ValidationError
 
 from app.models.organization_unit import OrganizationUnit
 
@@ -111,7 +112,9 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
         # Prevent a node from being its own parent
         context = getattr(self, "context", {}) or {}
         if context.get("current_id") and value == context["current_id"]:
-            raise ValidationError("An organization unit cannot be its own parent.")
+            raise ValidationError(
+                "An organization unit cannot be its own parent."
+            )
 
         # Prevent cycles (parent_id must not be a descendant)
         current_id = context.get("current_id")
