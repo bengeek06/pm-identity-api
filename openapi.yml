@@ -815,6 +815,16 @@ components:
           type: string
           maxLength: 50
           description: Phone number
+        avatar_file_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Storage Service file_id reference for user avatar
+        has_avatar:
+          type: boolean
+          readOnly: true
+          default: false
+          description: Whether the user has an avatar uploaded
         is_active:
           type: boolean
           description: Indicates if the user account is active

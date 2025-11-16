@@ -13,6 +13,7 @@ from flask_restful import Resource
 
 from app.logger import logger
 from app.models.user import User
+from app.storage_helper import is_storage_service_enabled
 from app.utils import check_access_required, require_jwt_auth
 
 
@@ -54,6 +55,15 @@ class UserAvatarResource(Resource):
         if not user.has_avatar:
             logger.debug(f"User {user_id} has no avatar")
             return {"message": "User has no avatar"}, 404
+
+        # Check if Storage Service integration is enabled
+        if not is_storage_service_enabled():
+            logger.warning(
+                f"Storage Service disabled - cannot retrieve avatar for user {user_id}"
+            )
+            return {
+                "message": "Avatar storage is disabled in this environment"
+            }, 503
 
         # Use convention-based logical_path
         # Avatars are always stored as avatars/{user_id}.{ext}
