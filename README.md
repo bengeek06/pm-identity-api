@@ -469,6 +469,6 @@ We welcome contributions! Please read our contribution guidelines:
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow, coding standards, and pull request process
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community guidelines and expectations
 
-For the overall Waterfall project workflow and branch strategy, see the [main CONTRIBUTING.md](../../CONTRIBUTING.md) at the repository root.
+For the overall Waterfall project workflow and branch strategy, see the [main CONTRIBUTING.md](https://github.com/bengeek06/waterfall/blob/main/CONTRIBUTING.md) at the repository root.
 
 ---

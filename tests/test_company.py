@@ -608,7 +608,7 @@ def test_patch_company_description_too_long(client, session):
     session.add(company)
     session.commit()
     response = client.patch(
-        f"/companies/{company.id}", json={"description": "x" * 201}
+        f"/companies/{company.id}", json={"description": "x" * 256}
     )
     assert response.status_code == 400
     data = response.get_json()
