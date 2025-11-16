@@ -11,39 +11,87 @@ from app.models.customer import Customer
 from tests.conftest import create_jwt_token
 
 
-##################################################
-# Test cases for GET /customers
-##################################################
-def test_get_all_customers(client):
+@pytest.fixture
+def authenticated_client(client):
     """
-    Test retrieving all customers.
+    Fixture that provides an authenticated client with JWT cookie.
     """
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", token, domain="localhost")
+    return client
 
-    response = client.get("/customers")
+
+@pytest.fixture
+def test_customer_for_update(session):
+    """
+    Fixture that creates a customer for update/delete tests.
+    """
+    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
+    session.add(customer)
+    session.commit()
+    return customer
+
+
+def setup_monkeypatch_integrity_error(monkeypatch):
+    """
+    Helper function to setup monkeypatch for IntegrityError simulation.
+    """
+
+    def raise_integrity_error(*args, **kwargs):
+        raise IntegrityError("Mocked IntegrityError", None, None)
+
+    monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
+
+
+def setup_monkeypatch_sqlalchemy_error(monkeypatch):
+    """
+    Helper function to setup monkeypatch for SQLAlchemyError simulation.
+    """
+
+    def raise_sqlalchemy_error(*args, **kwargs):
+        raise SQLAlchemyError("Mocked SQLAlchemyError")
+
+    monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
+
+
+@pytest.fixture
+def authenticated_client_with_company(client):
+    """
+    Fixture that provides an authenticated client and returns both client and company_id.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", token, domain="localhost")
+    client.company_id = company_id  # Store for test access
+    return client
+
+
+##################################################
+# Test cases for GET /customers
+##################################################
+def test_get_all_customers(authenticated_client):
+    """
+    Test retrieving all customers.
+    """
+    response = authenticated_client.get("/customers")
     assert response.status_code == 200
     assert isinstance(response.json, list)
     assert response.is_json
     assert response.get_json() == []
 
 
-def test_get_customers_single(client, session):
+def test_get_customers_single(authenticated_client, session):
     """
     Test retrieving a single customer by ID.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     customer = Customer(name="Test Customer", company_id=str(uuid.uuid4()))
     session.add(customer)
     session.commit()
 
-    response = client.get("/customers")
+    response = authenticated_client.get("/customers")
     assert response.status_code == 200
     assert response.is_json
     data = response.get_json()
@@ -52,15 +100,10 @@ def test_get_customers_single(client, session):
     assert data[0]["name"] == "Test Customer"
 
 
-def test_get_customers_multiple(client, session):
+def test_get_customers_multiple(authenticated_client, session):
     """
     Test retrieving multiple customers.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     customer1 = Customer(
         name="Customer One", company_id=1, contact_person="John Doe"
     )
@@ -69,7 +112,7 @@ def test_get_customers_multiple(client, session):
     session.add(customer2)
     session.commit()
 
-    response = client.get("/customers")
+    response = authenticated_client.get("/customers")
     assert response.status_code == 200
     assert response.is_json
     data = response.get_json()
@@ -79,16 +122,11 @@ def test_get_customers_multiple(client, session):
     assert data[1]["name"] == "Customer Two"
 
 
-def test_get_customers_content_type(client):
+def test_get_customers_content_type(authenticated_client):
     """
     Test the content type of the response for GET /customers.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.get("/customers")
+    response = authenticated_client.get("/customers")
     assert response.status_code == 200
     assert response.content_type == "application/json"
 
@@ -96,106 +134,79 @@ def test_get_customers_content_type(client):
 ##################################################
 # Test cases for POST /customers
 ##################################################
-def test_post_customer_success(client):
+def test_post_customer_success(authenticated_client_with_company):
     """
     Test POST /customers with valid data.
     Should create a new customer and return 201 with the customer data.
     Note: company_id is extracted from JWT token, not from the payload.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     # company_id is auto-assigned from JWT, not sent in payload
     payload = {"name": "Nouveau Client"}
-    response = client.post("/customers", json=payload)
+    response = authenticated_client_with_company.post(
+        "/customers", json=payload
+    )
     assert response.status_code == 201
     data = response.get_json()
     assert data["name"] == "Nouveau Client"
-    assert data["company_id"] == company_id  # Auto-assigned from JWT
+    assert (
+        data["company_id"] == authenticated_client_with_company.company_id
+    )  # Auto-assigned from JWT
     assert "id" in data
 
 
-def test_post_customer_missing_name(client):
+def test_post_customer_missing_name(authenticated_client):
     """
     Test POST /customers with missing required 'name' field.
     Should return 400 with a validation error.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     payload = {}
-    response = client.post("/customers", json=payload)
+    response = authenticated_client.post("/customers", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "name" in data["error"]
 
 
-def test_post_customer_unknown_field(client):
+def test_post_customer_unknown_field(authenticated_client):
     """
     Test POST /customers with an unknown field.
     Should return 400 with a validation error if unknown=RAISE in schema.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     payload = {
         "name": "Client Mystère",
         "unknown_field": "valeur",
     }
-    response = client.post("/customers", json=payload)
+    response = authenticated_client.post("/customers", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "unknown_field" in data["error"]
 
 
-def test_post_customer_integrity_error(client, monkeypatch):
+def test_post_customer_integrity_error(authenticated_client, monkeypatch):
     """
     Test POST /customers to simulate an IntegrityError.
     Should return 400 with an integrity error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    def raise_integrity_error(*args, **kwargs):
-        raise IntegrityError("Mocked IntegrityError", None, None)
-
-    monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
+    setup_monkeypatch_integrity_error(monkeypatch)
 
     payload = {"name": "Test Client"}
-    response = client.post("/customers", json=payload)
+    response = authenticated_client.post("/customers", json=payload)
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "integrity error" in data["error"].lower()
 
 
-def test_post_customer_sqlalchemy_error(client, monkeypatch):
+def test_post_customer_sqlalchemy_error(authenticated_client, monkeypatch):
     """
     Test POST /customers to simulate a SQLAlchemyError.
     Should return 500 with an error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    def raise_sqlalchemy_error(*args, **kwargs):
-        raise SQLAlchemyError("Mocked SQLAlchemyError")
-
-    monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
+    setup_monkeypatch_sqlalchemy_error(monkeypatch)
 
     payload = {"name": "Test Client"}
-    response = client.post("/customers", json=payload)
+    response = authenticated_client.post("/customers", json=payload)
     assert response.status_code == 500
     data = response.get_json()
     assert "error" in data
@@ -205,22 +216,17 @@ def test_post_customer_sqlalchemy_error(client, monkeypatch):
 ##################################################
 # Test cases for GET /customers/<customer_id>
 ##################################################
-def test_get_customer_by_id_success(client, session):
+def test_get_customer_by_id_success(authenticated_client, session):
     """
     Test GET /customers/<customer_id> with a valid ID.
     Should return the customer data and status 200.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     customer_company_id = str(uuid.uuid4())
     customer = Customer(name="FindMe", company_id=customer_company_id)
     session.add(customer)
     session.commit()
 
-    response = client.get(f"/customers/{customer.id}")
+    response = authenticated_client.get(f"/customers/{customer.id}")
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == customer.id
@@ -228,17 +234,12 @@ def test_get_customer_by_id_success(client, session):
     assert data["company_id"] == customer_company_id
 
 
-def test_get_customer_by_id_not_found(client):
+def test_get_customer_by_id_not_found(authenticated_client):
     """
     Test GET /customers/<customer_id> with a non-existent ID.
     Should return 404 and an error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.get("/customers/doesnotexist")
+    response = authenticated_client.get("/customers/doesnotexist")
     assert response.status_code == 404
     data = response.get_json()
     assert "message" in data
@@ -248,23 +249,20 @@ def test_get_customer_by_id_not_found(client):
 ##################################################
 # Test cases for PUT /customers/<customer_id>
 ##################################################
-def test_put_customer_success(client, session):
+def test_put_customer_success(authenticated_client, session):
     """
     Test PUT /customers/<customer_id> with valid data.
     Should update the customer and return 200 with updated data.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     customer_company_id = str(uuid.uuid4())
     customer = Customer(name="OldName", company_id=customer_company_id)
     session.add(customer)
     session.commit()
 
     payload = {"name": "NewName"}
-    response = client.put(f"/customers/{customer.id}", json=payload)
+    response = authenticated_client.put(
+        f"/customers/{customer.id}", json=payload
+    )
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == customer.id
@@ -272,119 +270,90 @@ def test_put_customer_success(client, session):
     assert data["company_id"] == customer_company_id
 
 
-def test_put_customer_not_found(client):
+def test_put_customer_not_found(authenticated_client):
     """
     Test PUT /customers/<customer_id> with a non-existent ID.
     Should return 404 and an error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     payload = {"name": "DoesNotExist"}
-    response = client.put("/customers/doesnotexist", json=payload)
+    response = authenticated_client.put(
+        "/customers/doesnotexist", json=payload
+    )
     assert response.status_code == 404
     data = response.get_json()
     assert "error" in data
     assert "not found" in data["error"].lower()
 
 
-def test_put_customer_missing_name(client, session):
+def test_put_customer_missing_name(
+    authenticated_client, test_customer_for_update
+):
     """
     Test PUT /customers/<customer_id> with missing required 'name' field.
     Should return 400 with a validation error.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
-    session.add(customer)
-    session.commit()
-
     payload = {}
-    response = client.put(f"/customers/{customer.id}", json=payload)
+    response = authenticated_client.put(
+        f"/customers/{test_customer_for_update.id}", json=payload
+    )
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "name" in data["error"]
 
 
-def test_put_customer_unknown_field(client, session):
+def test_put_customer_unknown_field(
+    authenticated_client, test_customer_for_update
+):
     """
     Test PUT /customers/<customer_id> with an unknown field.
     Should return 400 with a validation error if unknown=RAISE in schema.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
-    session.add(customer)
-    session.commit()
-
     payload = {
         "name": "StillValid",
         "unknown_field": "should fail",
     }
-    response = client.put(f"/customers/{customer.id}", json=payload)
+    response = authenticated_client.put(
+        f"/customers/{test_customer_for_update.id}", json=payload
+    )
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "unknown_field" in data["error"]
 
 
-def test_put_customer_integrity_error(client, session, monkeypatch):
+def test_put_customer_integrity_error(
+    authenticated_client, test_customer_for_update, monkeypatch
+):
     """
     Test PUT /customers/<customer_id> to simulate an IntegrityError.
     Should return 400 with an integrity error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
-    session.add(customer)
-    session.commit()
-
-    def raise_integrity_error(*args, **kwargs):
-        raise IntegrityError("Mocked IntegrityError", None, None)
-
-    monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
+    setup_monkeypatch_integrity_error(monkeypatch)
 
     payload = {"name": "NewName"}
-    response = client.put(f"/customers/{customer.id}", json=payload)
+    response = authenticated_client.put(
+        f"/customers/{test_customer_for_update.id}", json=payload
+    )
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "integrity error" in data["error"].lower()
 
 
-def test_put_customer_sqlalchemy_error(client, session, monkeypatch):
+def test_put_customer_sqlalchemy_error(
+    authenticated_client, test_customer_for_update, monkeypatch
+):
     """
     Test PUT /customers/<customer_id> to simulate a SQLAlchemyError.
     Should return 500 with an error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
-    session.add(customer)
-    session.commit()
-
-    def raise_sqlalchemy_error(*args, **kwargs):
-        raise SQLAlchemyError("Mocked SQLAlchemyError")
-
-    monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
+    setup_monkeypatch_sqlalchemy_error(monkeypatch)
 
     payload = {"name": "NewName"}
-    response = client.put(f"/customers/{customer.id}", json=payload)
+    response = authenticated_client.put(
+        f"/customers/{test_customer_for_update.id}", json=payload
+    )
     assert response.status_code == 500
     data = response.get_json()
     assert "error" in data
@@ -405,18 +374,15 @@ def customer_fixture(session):
     return cust
 
 
-def test_patch_customer_success(client, customer_fixture):
+def test_patch_customer_success(authenticated_client, customer_fixture):
     """
     Test PATCH /customers/<customer_id> with valid partial data.
     Should update only the provided fields and return 200.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     payload = {"contact_person": "Jane Doe"}
-    response = client.patch(f"/customers/{customer_fixture.id}", json=payload)
+    response = authenticated_client.patch(
+        f"/customers/{customer_fixture.id}", json=payload
+    )
     assert response.status_code == 200
     data = response.get_json()
     assert data["id"] == customer_fixture.id
@@ -424,57 +390,41 @@ def test_patch_customer_success(client, customer_fixture):
     assert data["name"] == "PatchMe"  # unchanged
 
 
-def test_patch_customer_not_found(client):
+def test_patch_customer_not_found(authenticated_client):
     """
     Test PATCH /customers/<customer_id> with a non-existent ID.
     Should return 404 and an error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     payload = {"contact_person": "Jane Doe"}
-    response = client.patch("/customers/doesnotexist", json=payload)
+    response = authenticated_client.patch(
+        "/customers/doesnotexist", json=payload
+    )
     assert response.status_code == 404
     data = response.get_json()
     assert "error" in data
     assert "not found" in data["error"].lower()
 
 
-def test_patch_customer_unknown_field(client, customer_fixture):
+def test_patch_customer_unknown_field(authenticated_client, customer_fixture):
     """
     Test PATCH /customers/<customer_id> with an unknown field.
     Should return 400 with a validation error.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
     payload = {"unknown_field": "should fail"}
-    response = client.patch(f"/customers/{customer_fixture.id}", json=payload)
+    response = authenticated_client.patch(
+        f"/customers/{customer_fixture.id}", json=payload
+    )
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "unknown_field" in data["error"]
 
 
-def test_patch_customer_name_too_long(client, customer_fixture):
+def test_patch_customer_name_too_long(authenticated_client, customer_fixture):
     """
     Test PATCH /customers/{id} with name exceeding maximum length.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
+    response = authenticated_client.patch(
         f"/customers/{customer_fixture.id}", json={"name": "a" * 101}
     )
     assert response.status_code == 400
@@ -482,16 +432,11 @@ def test_patch_customer_name_too_long(client, customer_fixture):
     assert "name" in data["error"]
 
 
-def test_patch_customer_name_empty(client, customer_fixture):
+def test_patch_customer_name_empty(authenticated_client, customer_fixture):
     """
     Test PATCH /customers/{id} with empty name.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
+    response = authenticated_client.patch(
         f"/customers/{customer_fixture.id}", json={"name": ""}
     )
     assert response.status_code == 400
@@ -499,16 +444,11 @@ def test_patch_customer_name_empty(client, customer_fixture):
     assert "name" in data["error"]
 
 
-def test_patch_customer_email_invalid(client, customer_fixture):
+def test_patch_customer_email_invalid(authenticated_client, customer_fixture):
     """
     Test PATCH /customers/{id} with invalid email format.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
+    response = authenticated_client.patch(
         f"/customers/{customer_fixture.id}", json={"email": "notanemail"}
     )
     assert response.status_code == 400
@@ -516,16 +456,11 @@ def test_patch_customer_email_invalid(client, customer_fixture):
     assert "email" in data["error"]
 
 
-def test_patch_customer_email_too_long(client, customer_fixture):
+def test_patch_customer_email_too_long(authenticated_client, customer_fixture):
     """
     Test PATCH /customers/{id} with email exceeding maximum length.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
+    response = authenticated_client.patch(
         f"/customers/{customer_fixture.id}",
         json={"email": "a@" + "b" * 100 + ".com"},
     )
@@ -534,16 +469,13 @@ def test_patch_customer_email_too_long(client, customer_fixture):
     assert "email" in data["error"]
 
 
-def test_patch_customer_contact_person_too_long(client, customer_fixture):
+def test_patch_customer_contact_person_too_long(
+    authenticated_client, customer_fixture
+):
     """
     Test PATCH /customers/{id} with contact_person exceeding maximum length.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
+    response = authenticated_client.patch(
         f"/customers/{customer_fixture.id}", json={"contact_person": "a" * 101}
     )
     assert response.status_code == 400
@@ -551,16 +483,13 @@ def test_patch_customer_contact_person_too_long(client, customer_fixture):
     assert "contact_person" in data["error"]
 
 
-def test_patch_customer_phone_number_too_long(client, customer_fixture):
+def test_patch_customer_phone_number_too_long(
+    authenticated_client, customer_fixture
+):
     """
     Test PATCH /customers/{id} with phone_number exceeding maximum length.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
+    response = authenticated_client.patch(
         f"/customers/{customer_fixture.id}", json={"phone_number": "1" * 51}
     )
     assert response.status_code == 400
@@ -568,16 +497,13 @@ def test_patch_customer_phone_number_too_long(client, customer_fixture):
     assert "phone_number" in data["error"]
 
 
-def test_patch_customer_phone_number_not_digits(client, customer_fixture):
+def test_patch_customer_phone_number_not_digits(
+    authenticated_client, customer_fixture
+):
     """
     Test PATCH /customers/{id} with phone_number containing non-digit characters.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
+    response = authenticated_client.patch(
         f"/customers/{customer_fixture.id}", json={"phone_number": "abc123"}
     )
     assert response.status_code == 400
@@ -585,16 +511,13 @@ def test_patch_customer_phone_number_not_digits(client, customer_fixture):
     assert "phone_number" in data["error"]
 
 
-def test_patch_customer_address_too_long(client, customer_fixture):
+def test_patch_customer_address_too_long(
+    authenticated_client, customer_fixture
+):
     """
     Test PATCH /customers/{id} with address exceeding maximum length.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.patch(
+    response = authenticated_client.patch(
         f"/customers/{customer_fixture.id}", json={"address": "a" * 256}
     )
     assert response.status_code == 400
@@ -602,54 +525,38 @@ def test_patch_customer_address_too_long(client, customer_fixture):
     assert "address" in data["error"]
 
 
-def test_patch_customer_integrity_error(client, session, monkeypatch):
+def test_patch_customer_integrity_error(
+    authenticated_client, test_customer_for_update, monkeypatch
+):
     """
     Test PATCH /customers/<customer_id> to simulate an IntegrityError.
     Should return 400 with an integrity error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
-    session.add(customer)
-    session.commit()
-
-    def raise_integrity_error(*args, **kwargs):
-        raise IntegrityError("Mocked IntegrityError", None, None)
-
-    monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
+    setup_monkeypatch_integrity_error(monkeypatch)
 
     payload = {"name": "NewName"}
-    response = client.patch(f"/customers/{customer.id}", json=payload)
+    response = authenticated_client.patch(
+        f"/customers/{test_customer_for_update.id}", json=payload
+    )
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "integrity error" in data["error"].lower()
 
 
-def test_patch_customer_sqlalchemy_error(client, session, monkeypatch):
+def test_patch_customer_sqlalchemy_error(
+    authenticated_client, test_customer_for_update, monkeypatch
+):
     """
     Test PATCH /customers/<customer_id> to simulate a SQLAlchemyError.
     Should return 500 with an error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    customer = Customer(name="ToBeUpdated", company_id=str(uuid.uuid4()))
-    session.add(customer)
-    session.commit()
-
-    def raise_sqlalchemy_error(*args, **kwargs):
-        raise SQLAlchemyError("Mocked SQLAlchemyError")
-
-    monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
+    setup_monkeypatch_sqlalchemy_error(monkeypatch)
 
     payload = {"name": "NewName"}
-    response = client.patch(f"/customers/{customer.id}", json=payload)
+    response = authenticated_client.patch(
+        f"/customers/{test_customer_for_update.id}", json=payload
+    )
     assert response.status_code == 500
     data = response.get_json()
     assert "error" in data
@@ -659,90 +566,66 @@ def test_patch_customer_sqlalchemy_error(client, session, monkeypatch):
 ##################################################
 # Test cases for DELETE /customers/<customer_id>
 ##################################################
-def test_delete_customer_success(client, session):
+def test_delete_customer_success(
+    authenticated_client, test_customer_for_update
+):
     """
     Test DELETE /customers/<customer_id> with a valid ID.
     Should delete the customer and return 204.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    customer = Customer(name="DeleteMe", company_id=str(uuid.uuid4()))
-    session.add(customer)
-    session.commit()
-
-    response = client.delete(f"/customers/{customer.id}")
+    response = authenticated_client.delete(
+        f"/customers/{test_customer_for_update.id}"
+    )
     assert response.status_code == 204
     # Optionally, check that the customer is really gone
-    get_response = client.get(f"/customers/{customer.id}")
+    get_response = authenticated_client.get(
+        f"/customers/{test_customer_for_update.id}"
+    )
     assert get_response.status_code == 404
 
 
-def test_delete_customer_not_found(client):
+def test_delete_customer_not_found(authenticated_client):
     """
     Test DELETE /customers/<customer_id> with a non-existent ID.
     Should return 404 and an error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    response = client.delete("/customers/doesnotexist")
+    response = authenticated_client.delete("/customers/doesnotexist")
     assert response.status_code == 404
     data = response.get_json()
     assert "error" in data
     assert "not found" in data["error"].lower()
 
 
-def test_delete_customer_integrity_error(client, session, monkeypatch):
+def test_delete_customer_integrity_error(
+    authenticated_client, test_customer_for_update, monkeypatch
+):
     """
     Test DELETE /customers/<customer_id> to simulate an IntegrityError.
     Should return 400 with an integrity error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
+    setup_monkeypatch_integrity_error(monkeypatch)
 
-    customer = Customer(name="DeleteMe", company_id=str(uuid.uuid4()))
-    session.add(customer)
-    session.commit()
-
-    def raise_integrity_error(*args, **kwargs):
-        raise IntegrityError("Mocked IntegrityError", None, None)
-
-    monkeypatch.setattr("app.models.db.session.commit", raise_integrity_error)
-
-    response = client.delete(f"/customers/{customer.id}")
+    response = authenticated_client.delete(
+        f"/customers/{test_customer_for_update.id}"
+    )
     assert response.status_code == 400
     data = response.get_json()
     assert "error" in data
     assert "integrity error" in data["error"].lower()
 
 
-def test_delete_customer_sqlalchemy_error(client, session, monkeypatch):
+def test_delete_customer_sqlalchemy_error(
+    authenticated_client, test_customer_for_update, monkeypatch
+):
     """
     Test DELETE /customers/<customer_id> to simulate a SQLAlchemyError.
     Should return 500 with an error message.
     """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
+    setup_monkeypatch_sqlalchemy_error(monkeypatch)
 
-    customer = Customer(name="DeleteMe", company_id=str(uuid.uuid4()))
-    session.add(customer)
-    session.commit()
-
-    def raise_sqlalchemy_error(*args, **kwargs):
-        raise SQLAlchemyError("Mocked SQLAlchemyError")
-
-    monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
-
-    response = client.delete(f"/customers/{customer.id}")
+    response = authenticated_client.delete(
+        f"/customers/{test_customer_for_update.id}"
+    )
     assert response.status_code == 500
     data = response.get_json()
     assert "error" in data
@@ -757,7 +640,7 @@ def test_get_all_sqlalchemy_error(client, monkeypatch):
     Test Customer.get_all() handles SQLAlchemyError gracefully.
     Should return an empty list and log the error.
     """
-    _ = client
+    _ = client  # Needed for Flask application context
 
     def raise_sqlalchemy_error(*args, **kwargs):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
@@ -773,7 +656,7 @@ def test_get_by_id_sqlalchemy_error(client, monkeypatch):
     Test Customer.get_by_id() handles SQLAlchemyError gracefully.
     Should return None and log the error.
     """
-    _ = client
+    _ = client  # Needed for Flask application context
 
     def raise_sqlalchemy_error(*args, **kwargs):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
@@ -789,7 +672,7 @@ def test_get_by_company_id_sqlalchemy_error(client, monkeypatch):
     Test Customer.get_by_company_id() handles SQLAlchemyError gracefully.
     Should return an empty list and log the error.
     """
-    _ = client
+    _ = client  # Needed for Flask application context
 
     def raise_sqlalchemy_error(*args, **kwargs):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
@@ -814,7 +697,7 @@ def test_get_by_name_sqlalchemy_error(client, monkeypatch):
     Test Customer.get_by_name() handles SQLAlchemyError gracefully.
     Should return None and log the error.
     """
-    _ = client
+    _ = client  # Needed for Flask application context
 
     def raise_sqlalchemy_error(*args, **kwargs):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
