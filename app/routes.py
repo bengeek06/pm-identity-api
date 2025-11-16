@@ -14,6 +14,7 @@ from flask_restful import Api
 
 from app.logger import logger
 from app.resources.company import CompanyListResource, CompanyResource
+from app.resources.company_logo import CompanyLogoResource
 from app.resources.config import ConfigResource
 from app.resources.customer import CustomerListResource, CustomerResource
 from app.resources.health import HealthResource
@@ -63,6 +64,9 @@ def register_routes(app):
 
     api.add_resource(CompanyListResource, "/companies")
     api.add_resource(CompanyResource, "/companies/<string:company_id>")
+    api.add_resource(
+        CompanyLogoResource, "/companies/<string:company_id>/logo"
+    )
 
     api.add_resource(CustomerListResource, "/customers")
     api.add_resource(CustomerResource, "/customers/<string:customer_id>")

@@ -27,7 +27,8 @@ class CompanySchema(SQLAlchemyAutoSchema):
     Fields:
         name (str): Required. 1-100 characters.
         description (str): Optional. Max 200 characters.
-        logo_url (str): Optional. Must be a valid URL, max 255 characters.
+        logo_file_id (str): Optional. UUID from Storage Service (dump_only).
+        has_logo (bool): Whether company has logo (dump_only).
         website (str): Optional. Must be a valid URL, max 255 characters.
         phone_number (str): Optional. Digits only, max 20 characters.
         email (str): Optional. Must be a valid email, max 255 characters.
@@ -57,7 +58,13 @@ class CompanySchema(SQLAlchemyAutoSchema):
         model = Company
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at")
+        dump_only = (
+            "id",
+            "created_at",
+            "updated_at",
+            "logo_file_id",
+            "has_logo",
+        )
         unknown = RAISE
 
     name = fields.String(
@@ -67,7 +74,10 @@ class CompanySchema(SQLAlchemyAutoSchema):
         ],
     )
     description = fields.String(validate=validate.Length(max=255))
-    logo_url = fields.URL(allow_none=True, validate=validate.Length(max=255))
+    logo_file_id = fields.String(dump_only=True, allow_none=True)
+    has_logo = fields.Boolean(
+        load_default=False, dump_default=False, dump_only=True
+    )
     website = fields.URL(allow_none=True, validate=validate.Length(max=255))
     phone_number = fields.String(
         allow_none=True,

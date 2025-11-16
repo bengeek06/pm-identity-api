@@ -616,50 +616,6 @@ def test_patch_company_description_too_long(client, session):
     assert "than maximum length" in data["errors"]["description"][0].lower()
 
 
-def test_patch_company_logo_url_invalid(client, session):
-    """
-    Test PATCH /companies/{id} with invalid logo URL format.
-    """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    company = Company(name="ValidName")
-    session.add(company)
-    session.commit()
-    response = client.patch(
-        f"/companies/{company.id}", json={"logo_url": "ftp://invalid"}
-    )
-    assert response.status_code == 400
-    data = response.get_json()
-    assert "logo_url" in data["errors"]
-    assert "not a valid url" in data["errors"]["logo_url"][0].lower()
-
-
-def test_patch_company_logo_url_too_long(client, session):
-    """
-    Test PATCH /companies/{id} with logo_url exceeding maximum length.
-    """
-    company_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    token = create_jwt_token(company_id, user_id)
-    client.set_cookie("access_token", token, domain="localhost")
-
-    company = Company(name="ValidName")
-    session.add(company)
-    session.commit()
-    response = client.patch(
-        f"/companies/{company.id}",
-        json={"logo_url": "http://" + "a" * 250 + ".com"},
-    )
-    assert response.status_code == 400
-    data = response.get_json()
-    assert "logo_url" in data["errors"]
-    msg = data["errors"]["logo_url"][0].lower()
-    assert "longer than maximum length" in msg or "not a valid url" in msg
-
-
 def test_patch_company_website_invalid(client, session):
     """
     Test PATCH /companies/{id} with invalid website URL format.
@@ -1039,3 +995,92 @@ def test_company_repr():
     assert "<Company TestCo>" in repr_str
     assert "ID: 1234" in repr_str
     assert "Description: A test company" in repr_str
+
+
+# ============================================================================
+# Company Logo Tests
+# ============================================================================
+
+
+def test_company_logo_fields_are_dump_only(client, session):
+    """
+    Test that logo_file_id and has_logo cannot be set via API.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", token, domain="localhost")
+
+    company = Company(name="TestCompany")
+    session.add(company)
+    session.commit()
+
+    # Try to set logo_file_id and has_logo via PATCH
+    response = client.patch(
+        f"/companies/{company.id}",
+        json={
+            "logo_file_id": "some-file-id",
+            "has_logo": True,
+        },
+    )
+    assert response.status_code == 400
+    data = response.get_json()
+    # Marshmallow should reject unknown fields
+    assert "errors" in data
+
+
+def test_company_logo_fields_in_response(client, session):
+    """
+    Test that logo_file_id and has_logo are present in GET response.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", token, domain="localhost")
+
+    company = Company(name="TestCompany")
+    company.set_logo("test-file-id-123")
+    session.add(company)
+    session.commit()
+
+    response = client.get(f"/companies/{company.id}")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["logo_file_id"] == "test-file-id-123"
+    assert data["has_logo"] is True
+
+
+def test_company_set_logo_helper(session):
+    """
+    Test the set_logo helper method on Company model.
+    """
+    company = Company(name="TestCompany")
+    session.add(company)
+    session.commit()
+
+    assert company.logo_file_id is None
+    assert company.has_logo is False
+
+    company.set_logo("new-file-id")
+    session.commit()
+
+    assert company.logo_file_id == "new-file-id"
+    assert company.has_logo is True
+
+
+def test_company_remove_logo_helper(session):
+    """
+    Test the remove_logo helper method on Company model.
+    """
+    company = Company(name="TestCompany")
+    company.set_logo("file-id-123")
+    session.add(company)
+    session.commit()
+
+    assert company.has_logo is True
+
+    company.remove_logo()
+    session.commit()
+
+    assert company.logo_file_id is None
+    assert company.has_logo is False

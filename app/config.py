@@ -92,8 +92,13 @@ class DevelopmentConfig(Config):
 
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError("DATABASE_URL environment variable is not set.")
+
+    @classmethod
+    def validate_config(cls):
+        """Validate development configuration."""
+        if not cls.SQLALCHEMY_DATABASE_URI:
+            raise ValueError("DATABASE_URL environment variable is not set.")
+        cls.validate_storage_config()
 
 
 class TestingConfig(Config):
@@ -107,8 +112,13 @@ class TestingConfig(Config):
 
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError("DATABASE_URL environment variable is not set.")
+
+    @classmethod
+    def validate_config(cls):
+        """Validate testing configuration."""
+        if not cls.SQLALCHEMY_DATABASE_URI:
+            raise ValueError("DATABASE_URL environment variable is not set.")
+        cls.validate_storage_config()
 
 
 class StagingConfig(Config):
@@ -122,8 +132,13 @@ class StagingConfig(Config):
 
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError("DATABASE_URL environment variable is not set.")
+
+    @classmethod
+    def validate_config(cls):
+        """Validate staging configuration."""
+        if not cls.SQLALCHEMY_DATABASE_URI:
+            raise ValueError("DATABASE_URL environment variable is not set.")
+        cls.validate_storage_config()
 
 
 class ProductionConfig(Config):
@@ -137,5 +152,10 @@ class ProductionConfig(Config):
 
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError("DATABASE_URL environment variable is not set.")
+
+    @classmethod
+    def validate_config(cls):
+        """Validate production configuration."""
+        if not cls.SQLALCHEMY_DATABASE_URI:
+            raise ValueError("DATABASE_URL environment variable is not set.")
+        cls.validate_storage_config()

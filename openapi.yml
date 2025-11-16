@@ -455,11 +455,15 @@ components:
           type: string
           maxLength: 255
           description: Optional description of the company
-        logo_url:
+        logo_file_id:
           type: string
-          format: uri
-          maxLength: 255
-          description: URL to the company's logo
+          maxLength: 36
+          readOnly: true
+          description: File ID reference from Storage Service for company logo
+        has_logo:
+          type: boolean
+          readOnly: true
+          description: Indicates if the company has a logo uploaded
         website:
           type: string
           format: uri
@@ -514,11 +518,6 @@ components:
           type: string
           maxLength: 255
           description: Optional description of the company
-        logo_url:
-          type: string
-          format: uri
-          maxLength: 255
-          description: URL to the company's logo
         website:
           type: string
           format: uri
@@ -561,11 +560,6 @@ components:
           type: string
           maxLength: 255
           description: Optional description of the company
-        logo_url:
-          type: string
-          format: uri
-          maxLength: 255
-          description: URL to the company's logo
         website:
           type: string
           format: uri
@@ -1891,6 +1885,125 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+
+  /companies/{company_id}/logo:
+    parameters:
+      - name: company_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the company
+
+    post:
+      tags: [Companies]
+      summary: Upload company logo
+      description: Upload a logo image for the company. The logo is stored in the Storage Service and a file_id reference is saved.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - logo
+              properties:
+                logo:
+                  type: string
+                  format: binary
+                  description: Logo image file (PNG, JPG, JPEG)
+      responses:
+        '201':
+          description: Logo uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logo uploaded successfully
+                  logo_file_id:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  has_logo:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot manage other company's logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          description: Service Unavailable - Storage Service disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Companies]
+      summary: Get company logo
+      description: Retrieve the company logo image from Storage Service
+      responses:
+        '200':
+          description: Logo image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Company not found or has no logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Companies]
+      summary: Delete company logo
+      description: Remove the company logo from Storage Service and clear the reference
+      responses:
+        '204':
+          description: Logo deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot delete other company's logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Company not found or has no logo to delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /health:
     get:
       tags: [System]

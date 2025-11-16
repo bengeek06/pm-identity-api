@@ -220,7 +220,7 @@ def create_app(config_class):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Validate Storage Service configuration coherence
+    # Validate configuration
     # If config_class is a string, import it to get the actual class
     if isinstance(config_class, str):
         module_name, class_name = config_class.rsplit(".", 1)
@@ -229,7 +229,12 @@ def create_app(config_class):
     else:
         actual_config_class = config_class
 
-    actual_config_class.validate_storage_config()
+    # Validate configuration if validate_config method exists
+    if hasattr(actual_config_class, "validate_config"):
+        actual_config_class.validate_config()
+    else:
+        # Fallback to validate_storage_config only
+        actual_config_class.validate_storage_config()
 
     env = os.getenv("FLASK_ENV", "development")
     logger.info("Creating app in environment.", environment=env)
