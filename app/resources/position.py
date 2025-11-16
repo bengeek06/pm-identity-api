@@ -23,6 +23,29 @@ from app.schemas.position_schema import PositionSchema
 from app.utils import check_access_required, require_jwt_auth
 
 
+def validate_organization_unit_ownership(org_unit, org_unit_id):
+    """
+    Validate that an organization unit belongs to the authenticated company.
+
+    Args:
+        org_unit: The OrganizationUnit instance to validate
+        org_unit_id (str): The organization unit ID for logging
+
+    Returns:
+        tuple: (error_dict, status_code) if validation fails, None otherwise
+    """
+    if org_unit.company_id != g.company_id:
+        logger.warning(
+            "Organization unit %s does not belong to company %s",
+            org_unit_id,
+            g.company_id,
+        )
+        return {
+            "message": "Organization unit does not belong to your company"
+        }, 403
+    return None
+
+
 class PositionListResource(Resource):
     """
     Resource for managing the collection of positions.
@@ -84,15 +107,11 @@ class PositionListResource(Resource):
             return {"message": "Organization unit not found"}, 404
 
         # Valider que l'organization_unit appartient à la company du JWT
-        if org_unit.company_id != g.company_id:
-            logger.warning(
-                "Organization unit %s does not belong to company %s",
-                org_unit_id,
-                g.company_id,
-            )
-            return {
-                "message": "Organization unit does not belong to your company"
-            }, 403
+        validation_error = validate_organization_unit_ownership(
+            org_unit, org_unit_id
+        )
+        if validation_error:
+            return validation_error
 
         position_schema = PositionSchema(session=db.session)
 
@@ -319,18 +338,14 @@ class OrganizationUnitPositionsResource(Resource):
         org_unit = OrganizationUnit.get_by_id(unit_id)
         if not org_unit:
             logger.warning("Organization unit with ID %s not found", unit_id)
-            return {"error": "Organization unit not found"}, 404
+            return {"message": "Organization unit not found"}, 404
 
         # Valider que l'organization_unit appartient à la company du JWT
-        if org_unit.company_id != g.company_id:
-            logger.warning(
-                "Organization unit %s does not belong to company %s",
-                unit_id,
-                g.company_id,
-            )
-            return {
-                "error": "Organization unit does not belong to your company"
-            }, 403
+        validation_error = validate_organization_unit_ownership(
+            org_unit, unit_id
+        )
+        if validation_error:
+            return validation_error
 
         json_data = request.get_json()
         # Renseigne automatiquement organization_unit_id
