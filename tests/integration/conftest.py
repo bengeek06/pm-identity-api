@@ -112,14 +112,16 @@ def real_user(integration_session, real_company):
     """
     Create a real user for integration tests.
     """
+    from werkzeug.security import generate_password_hash
+    
     user = User(
         id=str(uuid.uuid4()),
         email="integration@test.com",
         first_name="Integration",
         last_name="Test",
         company_id=real_company.id,
+        hashed_password=generate_password_hash("integration-password"),
     )
-    user.set_password("integration-password")
     integration_session.add(user)
     integration_session.commit()
     yield user

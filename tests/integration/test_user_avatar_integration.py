@@ -229,13 +229,15 @@ def test_avatar_isolation_between_users(
     from app.models.user import User
 
     # Create second user
+    from werkzeug.security import generate_password_hash
+    
     user_b = User(
         email="userb@integration.test",
         first_name="User",
         last_name="B",
         company_id=real_company.id,
+        hashed_password=generate_password_hash("password"),
     )
-    user_b.set_password("password")
     integration_session.add(user_b)
     integration_session.commit()
 
