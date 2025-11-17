@@ -53,7 +53,9 @@ def validate_avatar(
     from flask import current_app  # pylint: disable=import-outside-toplevel
 
     if max_size is None:
-        max_size = current_app.config.get("MAX_AVATAR_SIZE_MB", 5) * 1024 * 1024
+        max_size = (
+            current_app.config.get("MAX_AVATAR_SIZE_MB", 5) * 1024 * 1024
+        )
 
     if not file_data:
         logger.error("Avatar file is empty")
@@ -85,7 +87,11 @@ def _prepare_avatar_upload_request(
     filename: str,
 ):
     """Prepare upload request data for avatar."""
-    extension = filename.rsplit(".", 1)[-1] if "." in filename else "jpg"
+    # Normalisation: toujours utiliser .png comme extension
+    # Le vrai type (JPEG, PNG, etc.) est préservé dans content_type
+    # et sera retourné par le Storage Service au download via le header Content-Type HTTP
+    # Le navigateur lit le Content-Type HTTP, pas l'extension de l'URL
+    extension = "png"
     logical_path = f"avatars/{user_id}.{extension}"
     logger.debug(f"Logical path for avatar: {logical_path}")
 
@@ -101,6 +107,40 @@ def _prepare_avatar_upload_request(
     data = {
         "bucket_type": "users",
         "bucket_id": user_id,
+        "logical_path": logical_path,
+    }
+
+    return headers, files, data
+
+
+def _prepare_logo_upload_request(
+    company_id: str,
+    user_id: str,
+    file_data: bytes,
+    content_type: str,
+    filename: str,
+):
+    """Prepare upload request data for company logo."""
+    # Normalisation: toujours utiliser .png comme extension
+    # Le vrai type (JPEG, PNG, etc.) est préservé dans content_type
+    # et sera retourné par le Storage Service au download via le header Content-Type HTTP
+    # Le navigateur lit le Content-Type HTTP, pas l'extension de l'URL
+    extension = "png"
+    logical_path = f"logos/{company_id}.{extension}"
+    logger.debug(f"Logical path for logo: {logical_path}")
+
+    headers = {
+        "X-User-ID": user_id,
+        "X-Company-ID": company_id,
+    }
+
+    files = {
+        "file": (filename, file_data, content_type),
+    }
+
+    data = {
+        "bucket_type": "companies",
+        "bucket_id": company_id,
         "logical_path": logical_path,
     }
 
@@ -237,6 +277,120 @@ def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
         raise StorageServiceError(f"Storage Service error: {error_msg}") from e
 
 
+def upload_logo_via_proxy(  # pylint: disable=too-many-locals
+    company_id: str,
+    user_id: str,
+    file_data: bytes,
+    content_type: str,
+    filename: str,
+) -> dict:
+    """
+    Upload a company logo via the Storage Service proxy endpoint.
+
+    Args:
+        company_id: UUID of the company
+        user_id: UUID of the user (for auth)
+        file_data: Binary file data
+        content_type: MIME type (e.g., "image/jpeg")
+        filename: Original filename
+
+    Returns:
+        dict: {
+            'file_id': 'uuid-from-storage',
+            'object_key': 'companies/...'
+        }
+        If Storage Service is disabled, returns mock data.
+
+    Raises:
+        AvatarValidationError: If validation fails
+        StorageServiceError: If upload fails
+    """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping logo upload for company {company_id}"
+        )
+        # Return mock file_id for autonomous mode
+        return {
+            "file_id": f"mock-file-id-{company_id}",
+            "object_key": "mock-object-key",
+        }
+
+    # Validate the file (use same validation as avatars)
+    validate_avatar(file_data, content_type)
+
+    # Prepare request components
+    headers, files, data = _prepare_logo_upload_request(
+        company_id, user_id, file_data, content_type, filename
+    )
+
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    url = f"{current_app.config['STORAGE_SERVICE_URL']}/upload/proxy"
+    logger.debug(f"Uploading logo for company {company_id} to {url}")
+
+    try:
+        logger.info(
+            f"Uploading logo for company {company_id}: {len(file_data)} bytes"
+        )
+
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
+        response = requests.post(
+            url,
+            files=files,
+            data=data,
+            headers=headers,
+            timeout=timeout,
+        )
+
+        logger.debug(
+            f"Storage Service response status: {response.status_code}"
+        )
+
+        # Accept both 200 and 201 as success
+        if response.status_code not in (200, 201):
+            logger.error(
+                f"Failed to upload logo: {response.status_code} {response.text}"
+            )
+            response.raise_for_status()
+
+        result = response.json()
+        logger.debug(f"Storage Service response: {result}")
+
+        # Extract file_id from response
+        file_id = result.get("file_id")
+        if not file_id and "data" in result:
+            file_id = result["data"].get("file_id")
+
+        if not file_id:
+            logger.error(
+                f"Storage Service did not return file_id. Response: {result}"
+            )
+            raise StorageServiceError("Storage Service did not return file_id")
+
+        # Extract object_key from response
+        object_key = _extract_object_key_from_response(result)
+
+        logger.info(f"Logo uploaded successfully: file_id={file_id}")
+        logger.debug(f"object_key: {object_key}")
+        return {"file_id": file_id, "object_key": object_key}
+
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout calling Storage Service at {url}")
+        raise StorageServiceError("Storage Service timeout") from None
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error calling Storage Service: {e}")
+        if hasattr(e, "response") and e.response is not None:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("message", str(e))
+            except ValueError:
+                error_msg = str(e)
+        else:
+            error_msg = str(e)
+        raise StorageServiceError(f"Storage Service error: {error_msg}") from e
+
+
 def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
     """
     Delete a user's avatar from the Storage Service.
@@ -304,6 +458,75 @@ def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
         logger.error(f"Error deleting avatar: {e}")
         # Don't raise - deletion is not critical
         logger.warning("Avatar deletion failed, but continuing")
+
+
+def delete_logo(company_id: str, user_id: str, file_id: str) -> None:
+    """
+    Delete a company's logo from the Storage Service.
+
+    Args:
+        company_id (str): The company's ID
+        user_id (str): The user's ID (for auth)
+        file_id (str): The file ID of the logo to delete (from file_id field)
+
+    Note:
+        This function does not raise exceptions if deletion fails,
+        as deletion is not critical to the update operation.
+    """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping logo deletion for company {company_id}"
+        )
+        return
+
+    if not file_id:
+        logger.warning("No file_id provided for deletion")
+        return
+
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    url = f"{current_app.config['STORAGE_SERVICE_URL']}/delete"
+
+    headers = {
+        "X-User-ID": user_id,
+        "X-Company-ID": company_id,
+        "Content-Type": "application/json",
+    }
+
+    # The Storage Service DELETE endpoint expects file_id
+    payload = {
+        "file_id": file_id,
+        "physical": True,  # Permanent deletion
+    }
+
+    try:
+        logger.info(f"Deleting logo with file_id: {file_id}")
+
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
+        response = requests.delete(
+            url, json=payload, headers=headers, timeout=timeout
+        )
+
+        # Accept both 200 and 404 (already deleted)
+        if response.status_code in (200, 204, 404):
+            logger.info(f"Logo deleted successfully: file_id={file_id}")
+            return
+
+        # Log the error response for debugging
+        logger.error(
+            f"Failed to delete logo: {response.status_code} - {response.text}"
+        )
+        response.raise_for_status()
+
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout calling Storage Service at {url}")
+        # Don't raise - deletion is not critical
+        logger.warning("Logo deletion failed, but continuing")
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error deleting logo: {e}")
+        # Don't raise - deletion is not critical
+        logger.warning("Logo deletion failed, but continuing")
 
 
 def create_user_directories(user_id: str, company_id: str) -> None:

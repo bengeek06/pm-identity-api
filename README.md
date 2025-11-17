@@ -250,6 +250,70 @@ You can visualize it with [Swagger Editor](https://editor.swagger.io/) or [Redoc
 | GET    | /users/{user_id}/roles/{role_id} | Get specific role assignment for a user     |✅            |
 | DELETE | /users/{user_id}/roles/{role_id} | Remove specific role from a user            |✅            |
 | GET    | /positions/{position_id}/users   | Get users assigned to a specific position   |✅            |
+| POST   | /users/{user_id}/avatar          | Upload user avatar image                    |✅            |
+| GET    | /users/{user_id}/avatar          | Download user avatar image                  |✅            |
+| DELETE | /users/{user_id}/avatar          | Delete user avatar image                    |✅            |
+
+#### 📷 **User Avatar Management**
+
+User avatars are managed through the Storage Service integration. The workflow is designed to avoid 404 errors on the frontend:
+
+**Upload Avatar:**
+```bash
+POST /users/{user_id}/avatar
+Content-Type: multipart/form-data
+
+# Form data:
+avatar: [image file - JPG, PNG, GIF, BMP, WEBP]
+```
+- Maximum file size: 5 MB (configurable via `MAX_AVATAR_SIZE_MB`)
+- Supported formats: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.webp`
+- Access control: Only the user themselves can upload their avatar
+- Response includes `file_id` for tracking
+
+**Download Avatar (Frontend Integration):**
+```bash
+GET /users/{user_id}/avatar
+```
+
+**⚠️ Important for Frontend**: Before attempting to download an avatar, **check the `has_avatar` field** from the user object:
+```json
+GET /users/{user_id}
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "email": "user@example.com",
+  "has_avatar": true,  // ← Check this before downloading
+  ...
+}
+```
+
+**Recommended Frontend Pattern:**
+```javascript
+// 1. Fetch user data
+const user = await fetch('/users/{user_id}').then(r => r.json());
+
+// 2. Only download avatar if has_avatar is true
+if (user.has_avatar) {
+  const avatarUrl = '/users/{user_id}/avatar';
+  // Display avatar
+} else {
+  // Show default avatar placeholder
+}
+```
+
+This approach prevents unnecessary 404 requests when users don't have avatars uploaded.
+
+**Delete Avatar:**
+```bash
+DELETE /users/{user_id}/avatar
+```
+- Access control: Only the user themselves can delete their avatar
+- After deletion, `has_avatar` will be set to `false`
+
+**Storage Service Configuration:**
+- Avatars are stored with normalized `.png` extensions (browser reads `Content-Type` header, not extension)
+- Set `USE_STORAGE_SERVICE=false` to disable avatar features (for testing/development)
+- When disabled, all avatar endpoints return 503 Service Unavailable
 
 ### 🎭 **User Roles Management**
 

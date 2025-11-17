@@ -6,7 +6,7 @@ It provides endpoints for uploading, retrieving, and deleting company logos.
 """
 
 import requests
-from flask import Response, g, request
+from flask import Response, current_app, g, request
 from flask_restful import Resource
 
 from app.logger import logger
@@ -15,7 +15,8 @@ from app.models.company import Company
 from app.storage_helper import (
     AvatarValidationError,
     StorageServiceError,
-    upload_avatar_via_proxy,
+    delete_logo,
+    upload_logo_via_proxy,
 )
 from app.utils import check_access_required, require_jwt_auth
 
@@ -55,6 +56,7 @@ class CompanyLogoResource(Resource):
         # Verify company_id matches JWT
         jwt_data = getattr(g, "jwt_data", {})
         jwt_company_id = jwt_data.get("company_id")
+        jwt_user_id = jwt_data.get("user_id")
         if jwt_company_id != company_id:
             logger.warning(
                 f"Access denied: JWT company_id {jwt_company_id} != {company_id}"
@@ -68,13 +70,9 @@ class CompanyLogoResource(Resource):
             return {"message": "No logo file provided"}, 400
 
         # Check if USE_STORAGE_SERVICE is enabled
-        from flask import current_app  # pylint: disable=import-outside-toplevel
-
         if not current_app.config.get("USE_STORAGE_SERVICE", True):
             logger.warning("Storage Service is disabled, skipping logo upload")
-            return {
-                "message": "Logo upload unavailable (Storage Service disabled)"
-            }, 503
+            return {"message": "Storage Service disabled"}, 503
 
         logo_file = request.files["logo"]
 
@@ -84,9 +82,9 @@ class CompanyLogoResource(Resource):
             filename = logo_file.filename or "logo.png"
 
             # Upload to Storage Service
-            upload_result = upload_avatar_via_proxy(
-                user_id=company_id,  # Use company_id as user_id for bucket structure
+            upload_result = upload_logo_via_proxy(
                 company_id=company_id,
+                user_id=jwt_user_id,  # User ID for auth
                 file_data=file_data,
                 content_type=content_type,
                 filename=f"logo_{filename}",
@@ -137,18 +135,18 @@ class CompanyLogoResource(Resource):
             return {"message": "Company has no logo"}, 404
 
         # Check if USE_STORAGE_SERVICE is enabled
-        from flask import current_app  # pylint: disable=import-outside-toplevel
-
         if not current_app.config.get("USE_STORAGE_SERVICE", True):
             logger.warning("Storage Service is disabled")
-            return {
-                "message": "Logo unavailable (Storage Service disabled)"
-            }, 404
+            return {"message": "Storage Service disabled"}, 404
 
         # Use convention-based logical_path
+        # Logos sont toujours stockés comme logos/{company_id}.png
+        # L'extension .png est normalisée (voir storage_helper.py)
+        # Le vrai format (JPEG, PNG, WebP, etc.) est dans le Content-Type HTTP
+        # que le Storage Service retourne au download (le navigateur lit ça, pas l'extension)
         logical_path = f"logos/{company_id}.png"
 
-        # Get Storage Service configuration
+        # Get Storage Service config
         storage_service_url = current_app.config["STORAGE_SERVICE_URL"]
         timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
 
@@ -237,8 +235,6 @@ class CompanyLogoResource(Resource):
             return {"message": "Company has no logo to delete"}, 404
 
         # Check if USE_STORAGE_SERVICE is enabled
-        from flask import current_app  # pylint: disable=import-outside-toplevel
-
         if not current_app.config.get("USE_STORAGE_SERVICE", True):
             logger.warning("Storage Service is disabled")
             # Still clear the flag in database
@@ -248,10 +244,12 @@ class CompanyLogoResource(Resource):
 
         # Delete from Storage Service (if file_id is available)
         if company.logo_file_id:
-            from app.storage_helper import delete_avatar  # pylint: disable=import-outside-toplevel
+            # Get user_id from JWT for auth
+            jwt_data = getattr(g, "jwt_data", {})
+            jwt_user_id = jwt_data.get("user_id")
 
             try:
-                delete_avatar(company_id, company_id, company.logo_file_id)
+                delete_logo(company_id, jwt_user_id, company.logo_file_id)
             except Exception as e:  # pylint: disable=broad-except
                 # Catch all exceptions to ensure database cleanup happens
                 logger.warning(f"Failed to delete logo from storage: {e}")

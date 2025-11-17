@@ -132,9 +132,7 @@ class SubcontractorResource(Resource):
 
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
-            logger.warning(
-                ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
-            )
+            logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
             return {"error": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
         schema = SubcontractorSchema(session=db.session)
@@ -166,9 +164,7 @@ class SubcontractorResource(Resource):
         try:
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
-                logger.warning(
-                    ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
-                )
+                logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
                 return {"error": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
             updated_subcontractor = subcontractor_schema.load(
@@ -218,9 +214,7 @@ class SubcontractorResource(Resource):
         try:
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
-                logger.warning(
-                    ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
-                )
+                logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
                 return {"message": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
             updated_subcontractor = subcontractor_schema.load(
@@ -255,9 +249,7 @@ class SubcontractorResource(Resource):
         """
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
-            logger.warning(
-                ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
-            )
+            logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
             return {"message": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
         try:
