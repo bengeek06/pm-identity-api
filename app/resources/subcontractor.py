@@ -20,6 +20,9 @@ from app.models.subcontractor import Subcontractor
 from app.schemas.subcontractor_schema import SubcontractorSchema
 from app.utils import check_access_required, require_jwt_auth
 
+# Error message constants
+ERROR_SUBCONTRACTOR_NOT_FOUND = "Subcontractor with ID %s not found"
+
 
 class SubcontractorListResource(Resource):
     """
@@ -128,9 +131,9 @@ class SubcontractorResource(Resource):
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
             logger.warning(
-                "Subcontractor with ID %s not found", subcontractor_id
+                ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
             )
-            return {"message": "Subcontractor not found"}, 404
+            return {"error": "Subcontractor not found"}, 404
 
         schema = SubcontractorSchema(session=db.session)
         return schema.dump(subcontractor), 200
@@ -162,9 +165,9 @@ class SubcontractorResource(Resource):
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
                 logger.warning(
-                    "Subcontractor with ID %s not found", subcontractor_id
+                    ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
                 )
-                return {"message": "Subcontractor not found"}, 404
+                return {"error": "Subcontractor not found"}, 404
 
             updated_subcontractor = subcontractor_schema.load(
                 json_data, instance=subcontractor

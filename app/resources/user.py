@@ -36,6 +36,9 @@ from app.storage_helper import (
 )
 from app.utils import check_access_required, require_jwt_auth
 
+# Content type constants
+CONTENT_TYPE_MULTIPART = "multipart/form-data"
+
 
 # Helper functions for user operations
 def _validate_avatar_url_field(avatar_url_value, context="POST"):
@@ -51,7 +54,7 @@ def _validate_avatar_url_field(avatar_url_value, context="POST"):
         f"Is base64 data URI: {is_base64}, "
         f"Preview: {avatar_url_value[:50]}... "
         f"EXPECTED: Frontend should send file via "
-        f"'avatar' field in multipart/form-data, "
+        f"'avatar' field in {CONTENT_TYPE_MULTIPART}, "
         f"NOT avatar_url. The backend manages avatar_url "
         f"after upload to Storage Service."
     )
@@ -196,26 +199,44 @@ def _parse_patch_request_data():
         f"[PATCH] Has form: {bool(request.form)}, Has files: {bool(request.files)}"
     )
 
-    # Handle multipart/form-data or JSON
+    # Check if request has multipart data
     has_form_data = len(request.form) > 0 or len(request.files) > 0
     is_multipart_content = (
         request.content_type and "multipart" in request.content_type
     ) or (request.mimetype and "multipart" in request.mimetype)
 
     if has_form_data or is_multipart_content:
-        json_data = _parse_multipart_data_with_debug(context="PATCH")
-    else:
-        # Try to parse as JSON
-        json_data = request.get_json(force=True, silent=True) or {}
-        logger.debug(f"[PATCH] Parsed JSON data: {bool(json_data)}")
+        return _parse_multipart_data_with_debug(context="PATCH")
 
-        # Remove avatar_url from JSON data if present
-        if "avatar_url" in json_data:
-            _validate_avatar_url_field(json_data["avatar_url"], "PATCH")
-            json_data.pop("avatar_url", None)
+    # Parse as JSON
+    json_data = request.get_json(force=True, silent=True) or {}
+    logger.debug(f"[PATCH] Parsed JSON data: {bool(json_data)}")
+
+    # Remove avatar_url from JSON data if present
+    if "avatar_url" in json_data:
+        _validate_avatar_url_field(json_data["avatar_url"], "PATCH")
+        json_data.pop("avatar_url", None)
 
     logger.debug(f"[PATCH] json_data after filtering: {json_data}")
     return json_data
+
+
+def _process_avatar_upload_for_patch(user, company_id):
+    """
+    Handle avatar upload for PATCH operation.
+
+    Returns:
+        str or None: File ID if avatar was uploaded, None otherwise.
+
+    Raises:
+        ValidationError: If upload fails.
+    """
+    try:
+        return _handle_avatar_upload_for_update(user, company_id)
+    except AvatarValidationError as e:
+        raise ValidationError({"avatar": [str(e)]}) from e
+    except StorageServiceError as exc:
+        raise ValidationError({"avatar": ["Failed to upload avatar"]}) from exc
 
 
 class UserListResource(Resource):
@@ -279,8 +300,8 @@ class UserListResource(Resource):
         # Handle multipart/form-data or JSON
         is_multipart = (
             request.content_type
-            and "multipart/form-data" in request.content_type
-        ) or (request.mimetype and "multipart/form-data" in request.mimetype)
+            and CONTENT_TYPE_MULTIPART in request.content_type
+        ) or (request.mimetype and CONTENT_TYPE_MULTIPART in request.mimetype)
 
         # Parse request data
         json_data = _parse_request_data(is_multipart, context="POST")
@@ -395,8 +416,8 @@ class UserResource(Resource):
         # Handle multipart/form-data or JSON
         is_multipart = (
             request.content_type
-            and "multipart/form-data" in request.content_type
-        ) or (request.mimetype and "multipart/form-data" in request.mimetype)
+            and CONTENT_TYPE_MULTIPART in request.content_type
+        ) or (request.mimetype and CONTENT_TYPE_MULTIPART in request.mimetype)
 
         # Parse request data
         json_data = _parse_request_data(is_multipart, context="PUT")
@@ -495,15 +516,9 @@ class UserResource(Resource):
 
         try:
             # Handle avatar upload if present
-            uploaded_file_id = None
-            try:
-                uploaded_file_id = _handle_avatar_upload_for_update(
-                    user, company_id
-                )
-            except AvatarValidationError as e:
-                return {"message": str(e)}, 400
-            except StorageServiceError:
-                return {"message": "Failed to upload avatar"}, 500
+            uploaded_file_id = _process_avatar_upload_for_patch(
+                user, company_id
+            )
 
             # Company_id modification is prevented by schema validation
             logger.debug(f"[PATCH] json_data before schema.load: {json_data}")
