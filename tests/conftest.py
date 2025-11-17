@@ -9,19 +9,42 @@ import jwt
 from dotenv import load_dotenv
 from pytest import fixture
 
-# Set environment variables BEFORE any imports from app
+# Load .env.test FIRST, before any imports from app
+# This ensures config.py reads the correct environment variables
+# Chargement de l'environnement de test
 os.environ["FLASK_ENV"] = "testing"
-os.environ["USE_STORAGE_SERVICE"] = "false"
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-
-# Load .env.test to override with test configuration
 load_dotenv(
-    dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env.test"),
-    override=True,
+    dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env.test")
 )
+
+# Set additional environment variables for testing
+# These override .env.test if needed
+# os.environ["FLASK_ENV"] = "testing"
+# os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 from app import create_app
 from app.models import db
+
+
+@fixture(autouse=True, scope="function")
+def reset_test_environment():
+    """
+    Automatically reset test environment variables before each test.
+    This ensures integration tests don't pollute unit tests with their config.
+    """
+    # Save current values
+    original_use_storage = os.environ.get("USE_STORAGE_SERVICE")
+
+    # Force test environment values for unit tests
+    # (integration tests will override these in their own fixtures)
+    os.environ["USE_STORAGE_SERVICE"] = "false"
+    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
+    yield
+
+    # Restore original if it existed, otherwise remove
+    if original_use_storage is not None:
+        os.environ["USE_STORAGE_SERVICE"] = original_use_storage
 
 
 @fixture
@@ -31,6 +54,13 @@ def app():
     This fixture sets up the application context, initializes the database,
     and ensures that the database is created before tests run and dropped after tests complete.
     """
+    # Force reload of config by reimporting it
+    import importlib
+
+    from app import config
+
+    importlib.reload(config)
+
     app = create_app("app.config.TestingConfig")
     with app.app_context():
         db.create_all()

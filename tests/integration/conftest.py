@@ -57,7 +57,9 @@ def check_services_health(integration_config):
 
 
 @pytest.fixture
-def integration_app(integration_config, check_services_health):  # pylint: disable=unused-argument
+def integration_app(
+    integration_config, check_services_health
+):  # pylint: disable=unused-argument
     """
     Flask app configured for integration testing with real Storage Service.
 
@@ -65,6 +67,15 @@ def integration_app(integration_config, check_services_health):  # pylint: disab
         integration_config: Configuration dictionary for integration tests
         check_services_health: Fixture that verifies services are healthy (implicit dependency)
     """
+    # Save original environment variables to restore after tests
+    original_env = {
+        "USE_STORAGE_SERVICE": os.environ.get("USE_STORAGE_SERVICE"),
+        "STORAGE_SERVICE_URL": os.environ.get("STORAGE_SERVICE_URL"),
+        "JWT_SECRET": os.environ.get("JWT_SECRET"),
+        "DATABASE_URL": os.environ.get("DATABASE_URL"),
+        "FLASK_ENV": os.environ.get("FLASK_ENV"),
+    }
+
     # Set environment variables for real services
     os.environ["USE_STORAGE_SERVICE"] = "true"
     os.environ["STORAGE_SERVICE_URL"] = integration_config[
@@ -80,6 +91,13 @@ def integration_app(integration_config, check_services_health):  # pylint: disab
         db.create_all()
         yield app
         db.drop_all()
+
+    # Restore original environment variables
+    for key, value in original_env.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
 
 
 @pytest.fixture
@@ -152,10 +170,41 @@ def storage_api_client(integration_config):
         def __init__(self, base_url):
             self.base_url = base_url
 
-        def get_file_metadata(self, file_id, company_id, user_id):
-            """Get file metadata from Storage Service."""
+        def get_file_metadata(
+            self,
+            file_id,
+            company_id,
+            user_id,
+            bucket="users",
+            resource_type="avatars",
+        ):
+            """
+            Get file metadata from Storage Service using /metadata endpoint.
+
+            Args:
+                file_id: File ID (for reference, not used in API call)
+                company_id: Company ID - used as bucket_id for company logos
+                user_id: User ID - used as bucket_id for user avatars
+                bucket: Bucket type ("users" for avatars, "companies" for logos)
+                resource_type: Resource type ("avatars" or "logos")
+
+            Returns:
+                Response object with status_code and json() method
+            """
+            # Determine bucket_id based on bucket type
+            bucket_id = company_id if bucket == "companies" else user_id
+
+            # Determine logical path based on resource type
+            logical_path = f"{resource_type}/{bucket_id}.png"
+
             response = requests.get(
-                f"{self.base_url}/files/{file_id}",
+                f"{self.base_url}/metadata",
+                params={
+                    "bucket": bucket,
+                    "id": bucket_id,
+                    "logical_path": logical_path,
+                    "include_versions": False,
+                },
                 headers={
                     "X-Company-ID": company_id,
                     "X-User-ID": user_id,
@@ -165,9 +214,10 @@ def storage_api_client(integration_config):
             return response
 
         def delete_file(self, file_id, company_id, user_id):
-            """Delete file via Storage Service."""
+            """Delete file via Storage Service /delete endpoint."""
             response = requests.delete(
-                f"{self.base_url}/files/{file_id}",
+                f"{self.base_url}/delete",
+                json={"file_id": file_id, "physical": True},
                 headers={
                     "X-Company-ID": company_id,
                     "X-User-ID": user_id,
