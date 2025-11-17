@@ -50,6 +50,9 @@ class Config:
     STORAGE_SERVICE_URL = os.environ.get("STORAGE_SERVICE_URL")
     STORAGE_REQUEST_TIMEOUT = int(os.environ.get("STORAGE_REQUEST_TIMEOUT", "30"))
 
+    # Maximum avatar file size in MB
+    MAX_AVATAR_SIZE_MB = int(os.environ.get("MAX_AVATAR_SIZE_MB", "5"))
+
     @classmethod
     def validate_storage_config(cls):
         """

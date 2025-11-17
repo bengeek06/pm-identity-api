@@ -21,6 +21,9 @@ from app.models.organization_unit import OrganizationUnit
 from app.schemas.organization_unit_schema import OrganizationUnitSchema
 from app.utils import check_access_required, require_jwt_auth
 
+# Error message constants
+ERROR_INTEGRITY_DUPLICATE = "Integrity error, possibly duplicate entry."
+
 
 class OrganizationUnitListResource(Resource):
     """
@@ -87,7 +90,7 @@ class OrganizationUnitListResource(Resource):
             logger.error(
                 "Integrity error, possibly duplicate entry: %s", str(err)
             )
-            return {"error": "Integrity error, possibly duplicate entry."}, 400
+            return {"error": ERROR_INTEGRITY_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error("Database error: %s", str(err))
@@ -183,7 +186,7 @@ class OrganizationUnitResource(Resource):
             logger.error(
                 "Integrity error, possibly duplicate entry: %s", str(err)
             )
-            return {"error": "Integrity error, possibly duplicate entry."}, 400
+            return {"error": ERROR_INTEGRITY_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error("Database error: %s", str(err))
@@ -236,7 +239,7 @@ class OrganizationUnitResource(Resource):
             logger.error(
                 "Integrity error, possibly duplicate entry: %s", str(err)
             )
-            return {"error": "Integrity error, possibly duplicate entry."}, 400
+            return {"error": ERROR_INTEGRITY_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error("Database error: %s", str(err))

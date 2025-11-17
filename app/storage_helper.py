@@ -6,30 +6,16 @@ Helper functions for interacting with the Storage Service.
 Provides avatar upload/delete functionality for the Identity Service.
 """
 
-import os
-
 import requests
 
 from app.logger import logger
 
-# Configuration
-STORAGE_SERVICE_URL = os.getenv(
-    "STORAGE_SERVICE_URL", "http://storage-service:5000"
-)
-REQUEST_TIMEOUT = int(os.getenv("STORAGE_REQUEST_TIMEOUT", "30"))
-MAX_AVATAR_SIZE = int(os.getenv("MAX_AVATAR_SIZE_MB", "5")) * 1024 * 1024
-
-# Storage Service integration toggle
-USE_STORAGE_SERVICE = os.getenv("USE_STORAGE_SERVICE", "true").lower() in (
-    "true",
-    "yes",
-    "1",
-)
-
 
 def is_storage_service_enabled() -> bool:
     """Check if Storage Service integration is enabled."""
-    return USE_STORAGE_SERVICE
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    return current_app.config.get("USE_STORAGE_SERVICE", False)
 
 
 # Allowed MIME types for avatars
@@ -51,7 +37,7 @@ class AvatarValidationError(Exception):
 
 
 def validate_avatar(
-    file_data: bytes, content_type: str, max_size: int = MAX_AVATAR_SIZE
+    file_data: bytes, content_type: str, max_size: int = None
 ) -> None:
     """
     Validate an avatar file.
@@ -59,11 +45,16 @@ def validate_avatar(
     Args:
         file_data: Binary file data
         content_type: MIME type of the file
-        max_size: Maximum size in bytes
+        max_size: Maximum size in bytes (default from config)
 
     Raises:
         AvatarValidationError: If validation fails
     """
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    if max_size is None:
+        max_size = current_app.config.get("MAX_AVATAR_SIZE_MB", 5) * 1024 * 1024
+
     if not file_data:
         logger.error("Avatar file is empty")
         raise AvatarValidationError("Avatar file is empty")
@@ -178,7 +169,9 @@ def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
         user_id, company_id, file_data, content_type, filename
     )
 
-    url = f"{STORAGE_SERVICE_URL}/upload/proxy"
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    url = f"{current_app.config['STORAGE_SERVICE_URL']}/upload/proxy"
     logger.debug(f"Uploading avatar for user {user_id} to {url}")
 
     try:
@@ -186,12 +179,13 @@ def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
             f"Uploading avatar for user {user_id}: {len(file_data)} bytes"
         )
 
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
         response = requests.post(
             url,
             files=files,
             data=data,
             headers=headers,
-            timeout=REQUEST_TIMEOUT,
+            timeout=timeout,
         )
 
         logger.debug(
@@ -266,7 +260,9 @@ def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
         logger.warning("No file_id provided for deletion")
         return
 
-    url = f"{STORAGE_SERVICE_URL}/delete"
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    url = f"{current_app.config['STORAGE_SERVICE_URL']}/delete"
 
     headers = {
         "X-User-ID": user_id,
@@ -283,8 +279,9 @@ def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
     try:
         logger.info(f"Deleting avatar with file_id: {file_id}")
 
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
         response = requests.delete(
-            url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT
+            url, json=payload, headers=headers, timeout=timeout
         )
 
         # Accept both 200 and 404 (already deleted)
@@ -330,7 +327,9 @@ def create_user_directories(user_id: str, company_id: str) -> None:
         )
         return
 
-    url = f"{STORAGE_SERVICE_URL}/upload/proxy"
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    url = f"{current_app.config['STORAGE_SERVICE_URL']}/upload/proxy"
 
     headers = {
         "X-User-ID": user_id,
@@ -361,12 +360,13 @@ def create_user_directories(user_id: str, company_id: str) -> None:
                 f"Creating directory marker: {logical_path} for user {user_id}"
             )
 
+            timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
             response = requests.post(
                 url,
                 files=files,
                 data=data,
                 headers=headers,
-                timeout=REQUEST_TIMEOUT,
+                timeout=timeout,
             )
 
             response.raise_for_status()
@@ -415,8 +415,10 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
     # Since the Storage Service doesn't have a "delete directory" endpoint,
     # we need to list all files and delete them one by one
 
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
     # First, try to list all files for this user
-    list_url = f"{STORAGE_SERVICE_URL}/list"
+    list_url = f"{current_app.config['STORAGE_SERVICE_URL']}/list"
 
     headers = {
         "X-User-ID": user_id,
@@ -432,8 +434,9 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
     try:
         logger.info(f"Listing files for user {user_id} to delete")
 
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
         response = requests.get(
-            list_url, params=params, headers=headers, timeout=REQUEST_TIMEOUT
+            list_url, params=params, headers=headers, timeout=timeout
         )
 
         if response.status_code == 404:
@@ -447,7 +450,7 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
         logger.info(f"Found {len(files)} files to delete for user {user_id}")
 
         # Delete each file
-        delete_url = f"{STORAGE_SERVICE_URL}/delete"
+        delete_url = f"{current_app.config['STORAGE_SERVICE_URL']}/delete"
 
         for file_meta in files:
             file_id = file_meta.get("file_id")
@@ -464,7 +467,7 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
                     delete_url,
                     json=delete_payload,
                     headers=headers,
-                    timeout=REQUEST_TIMEOUT,
+                    timeout=timeout,
                 )
 
                 if del_response.status_code in (200, 204, 404):

@@ -10,6 +10,7 @@ import uuid
 
 import pytest
 import requests
+from werkzeug.security import generate_password_hash
 
 from app import create_app
 from app.models import db
@@ -48,7 +49,7 @@ def check_services_health(integration_config):
             response.status_code == 200
         ), f"Storage Service unhealthy: {response.status_code}"
         print(f"✓ Storage Service healthy at {storage_url}")
-    except Exception as e:
+    except (requests.exceptions.RequestException, AssertionError) as e:
         pytest.skip(
             f"Storage Service not available at {storage_url}: {e}\n"
             "Run: docker-compose -f docker-compose.integration.yml up -d"
@@ -56,9 +57,13 @@ def check_services_health(integration_config):
 
 
 @pytest.fixture
-def integration_app(integration_config, check_services_health):
+def integration_app(integration_config, check_services_health):  # pylint: disable=unused-argument
     """
     Flask app configured for integration testing with real Storage Service.
+
+    Args:
+        integration_config: Configuration dictionary for integration tests
+        check_services_health: Fixture that verifies services are healthy (implicit dependency)
     """
     # Set environment variables for real services
     os.environ["USE_STORAGE_SERVICE"] = "true"
@@ -118,8 +123,8 @@ def real_user(integration_session, real_company):
         first_name="Integration",
         last_name="Test",
         company_id=real_company.id,
+        hashed_password=generate_password_hash("integration-password"),
     )
-    user.set_password("integration-password")
     integration_session.add(user)
     integration_session.commit()
     yield user
@@ -142,6 +147,8 @@ def storage_api_client(integration_config):
     """
 
     class StorageAPIClient:
+        """Helper class for making authenticated requests to Storage Service API."""
+
         def __init__(self, base_url):
             self.base_url = base_url
 

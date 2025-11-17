@@ -20,6 +20,11 @@ from app.models.subcontractor import Subcontractor
 from app.schemas.subcontractor_schema import SubcontractorSchema
 from app.utils import check_access_required, require_jwt_auth
 
+# Error message constants
+ERROR_SUBCONTRACTOR_NOT_FOUND = "Subcontractor with ID %s not found"
+MSG_SUBCONTRACTOR_NOT_FOUND = "Subcontractor not found"
+MSG_SUBCONTRACTOR_DELETED = "Subcontractor deleted successfully"
+
 
 class SubcontractorListResource(Resource):
     """
@@ -128,9 +133,9 @@ class SubcontractorResource(Resource):
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
             logger.warning(
-                "Subcontractor with ID %s not found", subcontractor_id
+                ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
             )
-            return {"message": "Subcontractor not found"}, 404
+            return {"error": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
         schema = SubcontractorSchema(session=db.session)
         return schema.dump(subcontractor), 200
@@ -162,9 +167,9 @@ class SubcontractorResource(Resource):
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
                 logger.warning(
-                    "Subcontractor with ID %s not found", subcontractor_id
+                    ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
                 )
-                return {"message": "Subcontractor not found"}, 404
+                return {"error": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
             updated_subcontractor = subcontractor_schema.load(
                 json_data, instance=subcontractor
@@ -214,9 +219,9 @@ class SubcontractorResource(Resource):
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
                 logger.warning(
-                    "Subcontractor with ID %s not found", subcontractor_id
+                    ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
                 )
-                return {"message": "Subcontractor not found"}, 404
+                return {"message": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
             updated_subcontractor = subcontractor_schema.load(
                 json_data, instance=subcontractor, partial=True
@@ -251,14 +256,14 @@ class SubcontractorResource(Resource):
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
             logger.warning(
-                "Subcontractor with ID %s not found", subcontractor_id
+                ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id
             )
-            return {"message": "Subcontractor not found"}, 404
+            return {"message": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
         try:
             db.session.delete(subcontractor)
             db.session.commit()
-            return {"message": "Subcontractor deleted successfully"}, 204
+            return {"message": MSG_SUBCONTRACTOR_DELETED}, 204
         except SQLAlchemyError as e:
             db.session.rollback()
             logger.error("Database error: %s", str(e))
