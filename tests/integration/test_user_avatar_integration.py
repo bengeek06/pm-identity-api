@@ -226,11 +226,11 @@ def test_avatar_isolation_between_users(
     Test that avatars are properly isolated between users.
     User A should not be able to access User B's avatar.
     """
-    from app.models.user import User
+    from werkzeug.security import generate_password_hash  # pylint: disable=import-outside-toplevel
+
+    from app.models.user import User  # pylint: disable=import-outside-toplevel
 
     # Create second user
-    from werkzeug.security import generate_password_hash
-    
     user_b = User(
         email="userb@integration.test",
         first_name="User",
