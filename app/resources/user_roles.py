@@ -8,10 +8,8 @@ It provides endpoints for listing roles assigned to a user, adding new role
 assignments, retrieving specific role assignments, and removing role assignments.
 """
 
-import os
-
 import requests
-from flask import g, request
+from flask import current_app, g, request
 from flask_restful import Resource
 from werkzeug.exceptions import BadRequest
 
@@ -158,11 +156,14 @@ class UserRolesListResource(Resource):
             )
             return {"message": "Access denied"}, 403
 
-        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            logger.error("GUARDIAN_SERVICE_URL not set")
-            return {"message": "Internal server error"}, 500
+        # If Guardian Service is disabled, return empty roles
+        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+            logger.debug(
+                "Guardian Service is disabled - returning empty roles list"
+            )
+            return {"roles": []}, 200
 
+        guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
         # Get JWT token from cookies to forward to Guardian service
         jwt_token = request.cookies.get("access_token")
         headers = {}
@@ -175,7 +176,7 @@ class UserRolesListResource(Resource):
                 f"{guardian_url}/user-roles",
                 params={"user_id": user_id},
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))
@@ -247,11 +248,14 @@ class UserRolesListResource(Resource):
         if error:
             return error
 
-        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            logger.error("GUARDIAN_SERVICE_URL not set")
-            return {"message": "Internal server error"}, 500
+        # If Guardian Service is disabled, return success without calling Guardian
+        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+            logger.debug(
+                "Guardian Service is disabled - cannot assign role (operation skipped)"
+            )
+            return {"message": "Guardian Service is disabled"}, 503
 
+        guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
         # Get JWT token from cookies to forward to Guardian service
         jwt_token = request.cookies.get("access_token")
         headers = {}
@@ -264,7 +268,7 @@ class UserRolesListResource(Resource):
                 f"{guardian_url}/user-roles",
                 json={"user_id": user_id, "role_id": role_id},
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))
@@ -318,11 +322,12 @@ class UserRolesResource(Resource):
             )
             return {"message": "User not found or access denied"}, 404
 
-        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            logger.error("GUARDIAN_SERVICE_URL not set")
-            return {"message": "Internal server error"}, 500
+        # If Guardian Service is disabled, return service unavailable
+        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+            logger.debug("Guardian Service is disabled - cannot retrieve role")
+            return {"message": "Guardian Service is disabled"}, 503
 
+        guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
         # Get JWT token from cookies to forward to Guardian service
         jwt_token = request.cookies.get("access_token")
         headers = {}
@@ -334,7 +339,7 @@ class UserRolesResource(Resource):
             response = requests.get(
                 f"{guardian_url}/user-roles/{user_role_id}",
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))
@@ -401,11 +406,12 @@ class UserRolesResource(Resource):
             )
             return {"message": "User not found or access denied"}, 404
 
-        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            logger.error("GUARDIAN_SERVICE_URL not set")
-            return {"message": "Internal server error"}, 500
+        # If Guardian Service is disabled, return service unavailable
+        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+            logger.debug("Guardian Service is disabled - cannot delete role")
+            return {"message": "Guardian Service is disabled"}, 503
 
+        guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
         # Get JWT token from cookies to forward to Guardian service
         jwt_token = request.cookies.get("access_token")
         headers = {}
@@ -417,7 +423,7 @@ class UserRolesResource(Resource):
             get_response = requests.get(
                 f"{guardian_url}/user-roles/{user_role_id}",
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))
@@ -448,7 +454,7 @@ class UserRolesResource(Resource):
             response = requests.delete(
                 f"{guardian_url}/user-roles/{user_role_id}",
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))

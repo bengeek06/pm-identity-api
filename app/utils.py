@@ -231,23 +231,36 @@ def check_access(user_id, resource_name, operation):
     Returns:
         tuple: (access_granted (bool), reason (str), status (int or str))
     """
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
     logger.debug(
         f"Checking access for user_id: {user_id}, "
         f"resource_name: {resource_name}, operation: {operation}"
     )
 
-    flask_env = os.environ.get("FLASK_ENV", "production").lower()
-    if flask_env in ["testing", "development"]:
-        logger.debug("check_access: testing/development environment")
-        return True, "Access granted in testing/development environment.", 200
+    # Check if Guardian Service is enabled
+    use_guardian = current_app.config.get("USE_GUARDIAN_SERVICE", True)
 
-    guardian_service_url = os.environ.get("GUARDIAN_SERVICE_URL")
+    if not use_guardian:
+        logger.warning(
+            "Guardian Service is DISABLED - bypassing access control check"
+        )
+        return (
+            True,
+            "Access granted - Guardian Service disabled",
+            200,
+        )
+
+    # Guardian Service is enabled - get URL from config
+    guardian_service_url = current_app.config.get("GUARDIAN_SERVICE_URL")
+
     if not guardian_service_url:
-        logger.error("GUARDIAN_SERVICE_URL not set")
-        return False, "Internal server error", 500
+        logger.error("Guardian Service URL not configured")
+        return (False, "Internal server error", 500)
+
+    timeout = current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5)
 
     try:
-        timeout = float(os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5"))
 
         # Get JWT token from cookies to forward to Guardian service (if in request context)
         headers = {}
