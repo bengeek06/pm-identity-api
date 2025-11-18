@@ -7,6 +7,7 @@ All interactions go through Storage Service API, never directly to MinIO.
 
 import os
 import uuid
+import jwt
 
 import pytest
 import requests
@@ -16,7 +17,6 @@ from app import create_app
 from app.models import db
 from app.models.company import Company
 from app.models.user import User
-from tests.conftest import create_jwt_token
 
 
 @pytest.fixture(scope="session")
@@ -172,7 +172,6 @@ def storage_api_client(integration_config):
 
         def get_file_metadata(
             self,
-            file_id,
             company_id,
             user_id,
             bucket="users",
@@ -227,3 +226,9 @@ def storage_api_client(integration_config):
             return response
 
     return StorageAPIClient(integration_config["STORAGE_SERVICE_URL"])
+
+def create_jwt_token(company_id, user_id):
+    """Helper function to create a JWT token for testing."""
+    jwt_secret = os.environ.get("JWT_SECRET", "test_secret")
+    payload = {"company_id": company_id, "user_id": user_id}
+    return jwt.encode(payload, jwt_secret, algorithm="HS256")

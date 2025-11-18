@@ -74,7 +74,7 @@ class UserPoliciesResource(Resource):
             return {"message": "Access denied"}, 403
 
         # If Guardian Service is disabled, return empty policies
-        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+        if not current_app.config.get("USE_GUARDIAN_SERVICE"):
             logger.debug(
                 "Guardian Service is disabled - returning empty policies list"
             )

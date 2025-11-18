@@ -7,7 +7,7 @@ from functools import wraps
 
 import jwt
 import requests
-from flask import g, request
+from flask import g, request, current_app
 
 from app.logger import logger
 
@@ -231,15 +231,13 @@ def check_access(user_id, resource_name, operation):
     Returns:
         tuple: (access_granted (bool), reason (str), status (int or str))
     """
-    from flask import current_app  # pylint: disable=import-outside-toplevel
-
     logger.debug(
         f"Checking access for user_id: {user_id}, "
         f"resource_name: {resource_name}, operation: {operation}"
     )
 
     # Check if Guardian Service is enabled
-    use_guardian = current_app.config.get("USE_GUARDIAN_SERVICE", True)
+    use_guardian = current_app.config.get("USE_GUARDIAN_SERVICE")
 
     if not use_guardian:
         logger.warning(

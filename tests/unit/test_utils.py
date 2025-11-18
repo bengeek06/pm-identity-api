@@ -6,28 +6,12 @@ from unittest import mock
 
 import pytest
 import requests
-from flask import Flask
 
 from app.utils import check_access
 
 
 class TestCheckAccess:
     """Test cases for check_access function."""
-
-    @pytest.mark.skip(reason="Need refactor")
-    def test_check_access_guardian_disabled(self, app):
-        """Test that check_access returns True when Guardian Service is disabled."""
-        with app.app_context():
-            app.config["USE_GUARDIAN_SERVICE"] = False
-            access_granted, reason, status = check_access(
-                "user123", "user", "list"
-            )
-            assert access_granted is True
-            assert (
-                "guardian service is disabled" in reason.lower()
-                or "bypassing" in reason.lower()
-            )
-            assert status == 200
 
     def test_check_access_guardian_enabled_success(self, app):
         """Test successful access check with Guardian service enabled and returning 200."""

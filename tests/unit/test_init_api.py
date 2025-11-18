@@ -46,15 +46,17 @@ def test_handle_404(client):
     assert response.get_json()["message"] == "Resource not found"
 
 
-def test_error_handler_400(client):
+def test_error_handler_400():
     """
     Test that a 400 Bad Request error returns the correct JSON response.
     """
+    application = app.create_app("app.config.TestingConfig")
 
-    @client.application.route("/bad")
+    @application.route("/bad")
     def bad():
         raise BadRequest()
 
+    client = application.test_client()
     response = client.get("/bad")
     assert response.status_code == 400
     data = response.get_json()
@@ -64,17 +66,19 @@ def test_error_handler_400(client):
     assert "request_id" in data
 
 
-def test_error_handler_500(client):
+def test_error_handler_500():
     """
     Test that a 500 Internal Server Error returns the correct JSON response.
     """
+    application = app.create_app("app.config.TestingConfig")
     # Désactive la propagation pour tester le handler 500
-    client.application.config["PROPAGATE_EXCEPTIONS"] = False
+    application.config["PROPAGATE_EXCEPTIONS"] = False
 
-    @client.application.route("/fail")
+    @application.route("/fail")
     def fail():
         raise RuntimeError("fail!")  # pylint: disable=broad-exception-raised
 
+    client = application.test_client()
     response = client.get("/fail")
     assert response.status_code == 500
     data = response.get_json()
@@ -84,15 +88,17 @@ def test_error_handler_500(client):
     assert "request_id" in data
 
 
-def test_error_handler_401(client):
+def test_error_handler_401():
     """
     Test that a 401 Unauthorized error returns the correct JSON response.
     """
+    application = app.create_app("app.config.TestingConfig")
 
-    @client.application.route("/unauthorized")
+    @application.route("/unauthorized")
     def unauthorized():
         raise Unauthorized()
 
+    client = application.test_client()
     response = client.get("/unauthorized")
     assert response.status_code == 401
     data = response.get_json()
@@ -102,15 +108,17 @@ def test_error_handler_401(client):
     assert "request_id" in data
 
 
-def test_error_handler_403(client):
+def test_error_handler_403():
     """
     Test that a 403 Forbidden error returns the correct JSON response.
     """
+    application = app.create_app("app.config.TestingConfig")
 
-    @client.application.route("/forbidden")
+    @application.route("/forbidden")
     def forbidden():
         raise Forbidden()
 
+    client = application.test_client()
     response = client.get("/forbidden")
     assert response.status_code == 403
     data = response.get_json()

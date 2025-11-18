@@ -83,8 +83,7 @@ def test_get_organization_units_hierarchy(client, session):
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
-    # On doit avoir au moins 2 unités
-    assert len(data) >= 2
+    assert len(data) == 2
     # Vérifie que chaque unité a les bons champs
     for item in data:
         assert "id" in item
