@@ -8,10 +8,8 @@ It provides endpoints for retrieving all policies assigned to a user
 through their role assignments.
 """
 
-import os
-
 import requests
-from flask import g, request
+from flask import current_app, g, request
 from flask_restful import Resource
 
 from app.logger import logger
@@ -75,11 +73,14 @@ class UserPoliciesResource(Resource):
             )
             return {"message": "Access denied"}, 403
 
-        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            logger.error("GUARDIAN_SERVICE_URL not set")
-            return {"message": "Internal server error"}, 500
+        # If Guardian Service is disabled, return empty policies
+        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+            logger.debug(
+                "Guardian Service is disabled - returning empty policies list"
+            )
+            return {"policies": []}, 200
 
+        guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
         # Get JWT token from cookies to forward to Guardian service
         jwt_token = request.cookies.get("access_token")
         headers = {}
@@ -92,7 +93,7 @@ class UserPoliciesResource(Resource):
                 f"{guardian_url}/user-roles",
                 params={"user_id": user_id},
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error(
@@ -135,7 +136,9 @@ class UserPoliciesResource(Resource):
                 policies_response = requests.get(
                     f"{guardian_url}/roles/{role_id}/policies",
                     headers=headers,
-                    timeout=5,
+                    timeout=current_app.config.get(
+                        "GUARDIAN_SERVICE_TIMEOUT", 5
+                    ),
                 )
             except requests.exceptions.RequestException as e:
                 logger.error(

@@ -55,6 +55,58 @@ class Config:
     # Maximum avatar file size in MB
     MAX_AVATAR_SIZE_MB = int(os.environ.get("MAX_AVATAR_SIZE_MB", "5"))
 
+    # Guardian Service integration toggle
+    # Set to False to run Identity Service without Guardian RBAC
+    USE_GUARDIAN_SERVICE = os.environ.get(
+        "USE_GUARDIAN_SERVICE", "true"
+    ).lower() in (
+        "true",
+        "yes",
+        "1",
+    )
+
+    # Guardian Service URL (validated at startup if USE_GUARDIAN_SERVICE=True)
+    GUARDIAN_SERVICE_URL = os.environ.get("GUARDIAN_SERVICE_URL")
+    GUARDIAN_SERVICE_TIMEOUT = float(
+        os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5")
+    )
+
+    @classmethod
+    def validate_guardian_config(cls):
+        """
+        Validate Guardian Service configuration coherence.
+
+        Raises:
+            ValueError: If USE_GUARDIAN_SERVICE is True but GUARDIAN_SERVICE_URL is not set.
+        """
+        if cls.USE_GUARDIAN_SERVICE:
+            if not cls.GUARDIAN_SERVICE_URL:
+                error_msg = (
+                    "Configuration Error: USE_GUARDIAN_SERVICE is enabled (true) "
+                    "but GUARDIAN_SERVICE_URL environment variable is not set. "
+                    "Either set GUARDIAN_SERVICE_URL to a valid URL or disable "
+                    "Guardian Service integration by setting USE_GUARDIAN_SERVICE=false"
+                )
+                logger.error(error_msg)
+                logger.error(
+                    "Current environment variables: "
+                    "USE_GUARDIAN_SERVICE=%s, GUARDIAN_SERVICE_URL=%s",
+                    os.environ.get("USE_GUARDIAN_SERVICE", "not set"),
+                    os.environ.get("GUARDIAN_SERVICE_URL", "not set"),
+                )
+                raise ValueError(error_msg)
+
+            logger.info(
+                "Guardian Service integration enabled: %s",
+                cls.GUARDIAN_SERVICE_URL,
+            )
+        else:
+            logger.warning(
+                "Guardian Service integration is DISABLED. "
+                "Access control checks will be bypassed. "
+                "This mode is intended for development/testing only."
+            )
+
     @classmethod
     def validate_storage_config(cls):
         """
@@ -109,6 +161,7 @@ class DevelopmentConfig(Config):
         """Validate development configuration."""
         if not cls.SQLALCHEMY_DATABASE_URI:
             raise ValueError("DATABASE_URL environment variable is not set.")
+        cls.validate_guardian_config()
         cls.validate_storage_config()
 
 
@@ -129,6 +182,7 @@ class TestingConfig(Config):
         """Validate testing configuration."""
         if not cls.SQLALCHEMY_DATABASE_URI:
             raise ValueError("DATABASE_URL environment variable is not set.")
+        cls.validate_guardian_config()
         cls.validate_storage_config()
 
 
@@ -149,6 +203,7 @@ class StagingConfig(Config):
         """Validate staging configuration."""
         if not cls.SQLALCHEMY_DATABASE_URI:
             raise ValueError("DATABASE_URL environment variable is not set.")
+        cls.validate_guardian_config()
         cls.validate_storage_config()
 
 
@@ -169,4 +224,5 @@ class ProductionConfig(Config):
         """Validate production configuration."""
         if not cls.SQLALCHEMY_DATABASE_URI:
             raise ValueError("DATABASE_URL environment variable is not set.")
+        cls.validate_guardian_config()
         cls.validate_storage_config()
