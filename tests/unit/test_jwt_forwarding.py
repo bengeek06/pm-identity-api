@@ -5,16 +5,16 @@ Test to demonstrate that JWT cookies are properly forwarded to Guardian service.
 import uuid
 from unittest import mock
 
-import pytest
-
-from tests.unit.test_user import create_jwt_token, get_init_db_payload
+from tests.unit.conftest import create_jwt_token, get_init_db_payload
 
 
-@pytest.mark.skip(reason="Need refactor")
-def test_jwt_cookie_forwarding_to_guardian(client):
+def test_jwt_cookie_forwarding_to_guardian(client, app):
     """
     Test that JWT cookies are properly forwarded to Guardian service calls.
     """
+    # Enable Guardian Service for this test
+    app.config["USE_GUARDIAN_SERVICE"] = True
+    app.config["GUARDIAN_SERVICE_URL"] = "http://guardian:8000"
     # Create test data
     init_db_payload = get_init_db_payload()
     resp = client.post("/init-db", json=init_db_payload)
@@ -31,10 +31,17 @@ def test_jwt_cookie_forwarding_to_guardian(client):
     mock_response.status_code = 200
     mock_response.json.return_value = {"roles": ["admin", "user"]}
 
+    # Mock check_access response
+    mock_check_access = mock.Mock()
+    mock_check_access.status_code = 200
+    mock_check_access.json.return_value = {
+        "access_granted": True,
+        "reason": "Access granted",
+        "status": 200,
+    }
+
     with mock.patch("requests.get", return_value=mock_response) as mock_get:
-        with mock.patch.dict(
-            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
-        ):
+        with mock.patch("requests.post", return_value=mock_check_access):
             response = client.get(f"/users/{user_id}/roles")
 
             # Verify the response
@@ -60,11 +67,13 @@ def test_jwt_cookie_forwarding_to_guardian(client):
             )
 
 
-@pytest.mark.skip(reason="Need refactor")
-def test_post_role_jwt_cookie_forwarding(client):
+def test_post_role_jwt_cookie_forwarding(client, app):
     """
     Test that JWT cookies are forwarded in POST requests to Guardian service.
     """
+    # Enable Guardian Service for this test
+    app.config["USE_GUARDIAN_SERVICE"] = True
+    app.config["GUARDIAN_SERVICE_URL"] = "http://guardian:8000"
     # Create test data
     init_db_payload = get_init_db_payload()
     resp = client.post("/init-db", json=init_db_payload)
@@ -87,41 +96,60 @@ def test_post_role_jwt_cookie_forwarding(client):
         "role_id": mock_role_id,
     }
 
-    with mock.patch("requests.post", return_value=mock_response) as mock_post:
-        with mock.patch.dict(
-            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
-        ):
-            payload = {"role_id": mock_role_id}
-            response = client.post(f"/users/{user_id}/roles", json=payload)
+    # Mock check_access response
+    mock_check_access = mock.Mock()
+    mock_check_access.status_code = 200
+    mock_check_access.json.return_value = {
+        "access_granted": True,
+        "reason": "Access granted",
+        "status": 200,
+    }
 
-            # Verify the response
-            assert response.status_code == 201
+    def post_side_effect(url, **kwargs):
+        """Return different responses based on URL."""
+        if "check-access" in url:
+            return mock_check_access
+        return mock_response
 
-            # Verify that the JWT cookie was forwarded to Guardian
-            mock_post.assert_called_once_with(
-                "http://guardian:8000/user-roles",
-                json={"user_id": user_id, "role_id": mock_role_id},
-                headers={"Cookie": f"access_token={jwt_token}"},
-                timeout=5,
-            )
+    with mock.patch("requests.post", side_effect=post_side_effect) as mock_post:
+        payload = {"role_id": mock_role_id}
+        response = client.post(f"/users/{user_id}/roles", json=payload)
 
-            # Extract the Cookie header that was sent to Guardian
-            call_args = mock_post.call_args
-            headers = call_args[1]["headers"]
-            cookie_header = headers["Cookie"]
+        # Verify the response
+        assert response.status_code == 201
 
-            # Verify the cookie contains our JWT token
-            assert f"access_token={jwt_token}" in cookie_header
-            print(
-                f"✅ JWT token successfully forwarded to Guardian in POST: {cookie_header[:50]}..."
-            )
+        # Find the call to user-roles endpoint (not check-access)
+        user_roles_calls = [
+            call for call in mock_post.call_args_list
+            if "user-roles" in call[0][0]
+        ]
+        assert len(user_roles_calls) == 1
+
+        # Verify that the JWT cookie was forwarded to Guardian
+        call_args = user_roles_calls[0]
+        assert call_args[0][0] == "http://guardian:8000/user-roles"
+        assert call_args[1]["json"] == {"user_id": user_id, "role_id": mock_role_id}
+        assert call_args[1]["headers"] == {"Cookie": f"access_token={jwt_token}"}
+        assert call_args[1]["timeout"] == 5
+
+        # Extract the Cookie header that was sent to Guardian
+        headers = call_args[1]["headers"]
+        cookie_header = headers["Cookie"]
+
+        # Verify the cookie contains our JWT token
+        assert f"access_token={jwt_token}" in cookie_header
+        print(
+            f"✅ JWT token successfully forwarded to Guardian in POST: {cookie_header[:50]}..."
+        )
 
 
-@pytest.mark.skip(reason="Need refactor")
-def test_individual_role_jwt_forwarding(client):
+def test_individual_role_jwt_forwarding(client, app):
     """
     Test JWT forwarding for individual role operations (GET and DELETE).
     """
+    # Enable Guardian Service for this test
+    app.config["USE_GUARDIAN_SERVICE"] = True
+    app.config["GUARDIAN_SERVICE_URL"] = "http://guardian:8000"
     # Create test data
     init_db_payload = get_init_db_payload()
     resp = client.post("/init-db", json=init_db_payload)
@@ -145,12 +173,19 @@ def test_individual_role_jwt_forwarding(client):
         "role_id": mock_role_id,
     }
 
+    # Mock check_access response
+    mock_check_access = mock.Mock()
+    mock_check_access.status_code = 200
+    mock_check_access.json.return_value = {
+        "access_granted": True,
+        "reason": "Access granted",
+        "status": 200,
+    }
+
     with mock.patch(
         "requests.get", return_value=mock_get_response
     ) as mock_get:
-        with mock.patch.dict(
-            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
-        ):
+        with mock.patch("requests.post", return_value=mock_check_access):
             response = client.get(
                 f"/users/{user_id}/roles/{mock_user_role_id}"
             )
@@ -163,9 +198,7 @@ def test_individual_role_jwt_forwarding(client):
                 headers={"Cookie": f"access_token={jwt_token}"},
                 timeout=5,
             )
-            print("✅ JWT forwarded in individual role GET")
-
-    # Test DELETE individual role
+            print("✅ JWT forwarded in individual role GET")    # Test DELETE individual role
     mock_delete_response = mock.Mock()
     mock_delete_response.status_code = 204
 
@@ -175,9 +208,7 @@ def test_individual_role_jwt_forwarding(client):
         with mock.patch(
             "requests.delete", return_value=mock_delete_response
         ) as mock_delete:
-            with mock.patch.dict(
-                "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
-            ):
+            with mock.patch("requests.post", return_value=mock_check_access):
                 response = client.delete(
                     f"/users/{user_id}/roles/{mock_user_role_id}"
                 )

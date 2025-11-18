@@ -9,7 +9,6 @@ import pytest
 from tests.unit.conftest import create_jwt_token, get_init_db_payload
 
 
-@pytest.mark.skip(reason="Need refactor")
 def test_get_user_roles_with_direct_list_response(client, app):
     """
     Test GET /users/<user_id>/roles when Guardian returns a direct list.
@@ -37,8 +36,18 @@ def test_get_user_roles_with_direct_list_response(client, app):
     mock_response.status_code = 200
     mock_response.json.return_value = roles_data  # Direct list
 
+    # Mock check_access response
+    mock_check_access = mock.Mock()
+    mock_check_access.status_code = 200
+    mock_check_access.json.return_value = {
+        "access_granted": True,
+        "reason": "Access granted",
+        "status": 200,
+    }
+
     with mock.patch("requests.get", return_value=mock_response):
-        response = client.get(f"/users/{user_id}/roles")
+        with mock.patch("requests.post", return_value=mock_check_access):
+            response = client.get(f"/users/{user_id}/roles")
 
         # Verify the response
         assert response.status_code == 200
@@ -48,7 +57,6 @@ def test_get_user_roles_with_direct_list_response(client, app):
         print("✅ Direct list format handled correctly")
 
 
-@pytest.mark.skip(reason="Need refactor")
 def test_get_user_roles_with_object_response(client, app):
     """
     Test GET /users/<user_id>/roles when Guardian returns an object with roles key.
@@ -78,8 +86,18 @@ def test_get_user_roles_with_object_response(client, app):
         "roles": roles_data
     }  # Object with roles key
 
+    # Mock check_access response
+    mock_check_access = mock.Mock()
+    mock_check_access.status_code = 200
+    mock_check_access.json.return_value = {
+        "access_granted": True,
+        "reason": "Access granted",
+        "status": 200,
+    }
+
     with mock.patch("requests.get", return_value=mock_response):
-        response = client.get(f"/users/{user_id}/roles")
+        with mock.patch("requests.post", return_value=mock_check_access):
+            response = client.get(f"/users/{user_id}/roles")
 
         # Verify the response
         assert response.status_code == 200
@@ -89,7 +107,6 @@ def test_get_user_roles_with_object_response(client, app):
         print("✅ Object with roles key format handled correctly")
 
 
-@pytest.mark.skip(reason="Need refactor")
 def test_get_user_roles_with_invalid_response_format(client, app):
     """
     Test GET /users/<user_id>/roles when Guardian returns an unexpected format.
@@ -116,8 +133,18 @@ def test_get_user_roles_with_invalid_response_format(client, app):
         "unexpected": "format"
     }  # Invalid format
 
+    # Mock check_access response
+    mock_check_access = mock.Mock()
+    mock_check_access.status_code = 200
+    mock_check_access.json.return_value = {
+        "access_granted": True,
+        "reason": "Access granted",
+        "status": 200,
+    }
+
     with mock.patch("requests.get", return_value=mock_response):
-        response = client.get(f"/users/{user_id}/roles")
+        with mock.patch("requests.post", return_value=mock_check_access):
+            response = client.get(f"/users/{user_id}/roles")
 
         # Verify graceful handling: returns 200 with empty roles list
         assert response.status_code == 200
@@ -127,7 +154,6 @@ def test_get_user_roles_with_invalid_response_format(client, app):
         print("✅ Invalid response format handled gracefully with empty roles")
 
 
-@pytest.mark.skip(reason="Need refactor")
 def test_get_user_roles_empty_list(client, app):
     """
     Test GET /users/<user_id>/roles when user has no roles (empty list).
@@ -151,8 +177,18 @@ def test_get_user_roles_empty_list(client, app):
     mock_response.status_code = 200
     mock_response.json.return_value = []  # Empty list
 
+    # Mock check_access response
+    mock_check_access = mock.Mock()
+    mock_check_access.status_code = 200
+    mock_check_access.json.return_value = {
+        "access_granted": True,
+        "reason": "Access granted",
+        "status": 200,
+    }
+
     with mock.patch("requests.get", return_value=mock_response):
-        response = client.get(f"/users/{user_id}/roles")
+        with mock.patch("requests.post", return_value=mock_check_access):
+            response = client.get(f"/users/{user_id}/roles")
 
         # Verify the response
         assert response.status_code == 200
