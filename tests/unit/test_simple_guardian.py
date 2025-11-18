@@ -3,10 +3,11 @@ Test simple pour vérifier le format de réponse Guardian.
 """
 
 import uuid
-import pytest
 from unittest import mock
 
-from tests.test_user import create_jwt_token, get_init_db_payload
+import pytest
+
+from tests.unit.test_user import create_jwt_token, get_init_db_payload
 
 
 @pytest.mark.skip(reason="Need refactor")

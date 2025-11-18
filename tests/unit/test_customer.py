@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.models.customer import Customer
-from tests.conftest import create_jwt_token
+from tests.unit.conftest import create_jwt_token
 
 
 @pytest.fixture

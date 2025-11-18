@@ -2,10 +2,11 @@
 Test to verify handling of different Guardian service response formats.
 """
 
-import pytest
 from unittest import mock
 
-from tests.conftest import create_jwt_token, get_init_db_payload
+import pytest
+
+from tests.unit.conftest import create_jwt_token, get_init_db_payload
 
 
 @pytest.mark.skip(reason="Need refactor")

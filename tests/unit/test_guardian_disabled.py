@@ -2,7 +2,7 @@
 Test to verify Guardian Service can be disabled via USE_GUARDIAN_SERVICE config.
 """
 
-from tests.conftest import create_jwt_token, get_init_db_payload
+from tests.unit.conftest import create_jwt_token, get_init_db_payload
 
 
 def test_guardian_service_disabled_returns_empty_roles(client, app):

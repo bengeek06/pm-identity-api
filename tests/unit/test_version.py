@@ -8,7 +8,7 @@ correct version information.
 import json
 import uuid
 
-from tests.conftest import create_jwt_token
+from tests.unit.conftest import create_jwt_token
 
 
 def test_version_endpoint(client):

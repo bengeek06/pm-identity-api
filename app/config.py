@@ -19,7 +19,22 @@ debug mode, and SQLAlchemy modification tracking.
 import logging
 import os
 
+from dotenv import load_dotenv
+
 logger = logging.getLogger(__name__)
+
+# Load .env file ONLY if not running in Docker
+# This hook ensures environment variables are loaded for flask commands
+if not os.environ.get("IN_DOCKER_CONTAINER") and not os.environ.get(
+    "APP_MODE"
+):
+    env = os.environ.get("FLASK_ENV", "development")
+    ENV_FILE = f".env.{env}"
+    if os.path.exists(ENV_FILE):
+        load_dotenv(ENV_FILE)
+    # Fallback to generic .env if environment-specific file doesn't exist
+    elif os.path.exists(".env"):
+        load_dotenv(".env")
 
 
 class Config:
@@ -36,51 +51,64 @@ class Config:
     # Allow uploads up to 16 MB (enough for avatar images)
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
 
-    # Storage Service integration toggle
-    # Set to False to run Identity Service autonomously without Storage Service
-    USE_STORAGE_SERVICE = os.environ.get(
-        "USE_STORAGE_SERVICE", "true"
-    ).lower() in (
-        "true",
-        "yes",
-        "1",
-    )
+    # Validate critical environment variables
+    JWT_SECRET = os.environ.get("JWT_SECRET")
+    if not JWT_SECRET:
+        raise ValueError("JWT_SECRET environment variable is not set.")
 
-    # Storage Service URL (validated at startup if USE_STORAGE_SERVICE=True)
-    STORAGE_SERVICE_URL = os.environ.get("STORAGE_SERVICE_URL")
-    STORAGE_REQUEST_TIMEOUT = int(
-        os.environ.get("STORAGE_REQUEST_TIMEOUT", "30")
-    )
+    FLASK_ENV = os.environ.get("FLASK_ENV")
+    if not FLASK_ENV:
+        raise ValueError("FLASK_ENV environment variable is not set.")
 
-    # Maximum avatar file size in MB
-    MAX_AVATAR_SIZE_MB = int(os.environ.get("MAX_AVATAR_SIZE_MB", "5"))
+    use_storage_env = os.environ.get("USE_STORAGE_SERVICE")
+    if use_storage_env is None:
+        USE_STORAGE_SERVICE = False
+    else:
+        USE_STORAGE_SERVICE = use_storage_env.lower() in ("true", "yes", "1")
 
-    # Guardian Service integration toggle
-    # Set to False to run Identity Service without Guardian RBAC
-    USE_GUARDIAN_SERVICE = os.environ.get(
-        "USE_GUARDIAN_SERVICE", "true"
-    ).lower() in (
-        "true",
-        "yes",
-        "1",
-    )
+    if USE_STORAGE_SERVICE:
+        # Storage Service URL (validated at startup if USE_STORAGE_SERVICE=True)
+        STORAGE_SERVICE_URL = os.environ.get("STORAGE_SERVICE_URL")
+        if not STORAGE_SERVICE_URL:
+            error_msg = (
+                "Configuration Error: USE_GUARDIAN_SERVICE is enabled (true) "
+                "but GUARDIAN_SERVICE_URL environment variable is not set. "
+                "Either set GUARDIAN_SERVICE_URL to a valid URL or disable "
+                "Guardian Service integration by setting USE_GUARDIAN_SERVICE=false"
+            )
+            logger.error(error_msg)
+            logger.error(
+                "Current environment variables: "
+                "USE_GUARDIAN_SERVICE=%s, GUARDIAN_SERVICE_URL=%s",
+                os.environ.get("USE_GUARDIAN_SERVICE", "not set"),
+                os.environ.get("GUARDIAN_SERVICE_URL", "not set"),
+            )
+            raise ValueError(
+                "STORAGE_SERVICE_URL environment variable is not set "
+                "while USE_STORAGE_SERVICE is enabled."
+            )
+        STORAGE_REQUEST_TIMEOUT = int(
+            os.environ.get("STORAGE_REQUEST_TIMEOUT", "30")
+        )
 
-    # Guardian Service URL (validated at startup if USE_GUARDIAN_SERVICE=True)
-    GUARDIAN_SERVICE_URL = os.environ.get("GUARDIAN_SERVICE_URL")
-    GUARDIAN_SERVICE_TIMEOUT = float(
-        os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5")
-    )
+        # Maximum avatar file size in MB
+        MAX_AVATAR_SIZE_MB = int(os.environ.get("MAX_AVATAR_SIZE_MB", "5"))
 
-    @classmethod
-    def validate_guardian_config(cls):
-        """
-        Validate Guardian Service configuration coherence.
+        # Guardian Service integration toggle
+        use_guardian_env = os.environ.get("USE_GUARDIAN_SERVICE", "true")
+        if use_guardian_env is None:
+            USE_GUARDIAN_SERVICE = False
+        else:
+            USE_GUARDIAN_SERVICE = use_guardian_env.lower() in (
+                "true",
+                "yes",
+                "1",
+            )
 
-        Raises:
-            ValueError: If USE_GUARDIAN_SERVICE is True but GUARDIAN_SERVICE_URL is not set.
-        """
-        if cls.USE_GUARDIAN_SERVICE:
-            if not cls.GUARDIAN_SERVICE_URL:
+        if USE_GUARDIAN_SERVICE:
+            # Guardian Service URL (validated at startup if USE_GUARDIAN_SERVICE=True)
+            GUARDIAN_SERVICE_URL = os.environ.get("GUARDIAN_SERVICE_URL")
+            if not GUARDIAN_SERVICE_URL:
                 error_msg = (
                     "Configuration Error: USE_GUARDIAN_SERVICE is enabled (true) "
                     "but GUARDIAN_SERVICE_URL environment variable is not set. "
@@ -94,54 +122,14 @@ class Config:
                     os.environ.get("USE_GUARDIAN_SERVICE", "not set"),
                     os.environ.get("GUARDIAN_SERVICE_URL", "not set"),
                 )
-                raise ValueError(error_msg)
-
-            logger.info(
-                "Guardian Service integration enabled: %s",
-                cls.GUARDIAN_SERVICE_URL,
-            )
-        else:
-            logger.warning(
-                "Guardian Service integration is DISABLED. "
-                "Access control checks will be bypassed. "
-                "This mode is intended for development/testing only."
-            )
-
-    @classmethod
-    def validate_storage_config(cls):
-        """
-        Validate Storage Service configuration coherence.
-
-        Raises:
-            ValueError: If USE_STORAGE_SERVICE is True but STORAGE_SERVICE_URL is not set.
-        """
-        if cls.USE_STORAGE_SERVICE:
-            if not cls.STORAGE_SERVICE_URL:
-                error_msg = (
-                    "Configuration Error: USE_STORAGE_SERVICE is enabled (true) "
-                    "but STORAGE_SERVICE_URL environment variable is not set. "
-                    "Either set STORAGE_SERVICE_URL to a valid URL or disable "
-                    "Storage Service integration by setting USE_STORAGE_SERVICE=false"
+                raise ValueError(
+                    "GUARDIAN_SERVICE_URL environment variable is not set "
+                    "while USE_GUARDIAN_SERVICE is enabled."
                 )
-                logger.error(error_msg)
-                logger.error(
-                    "Current environment variables: "
-                    "USE_STORAGE_SERVICE=%s, STORAGE_SERVICE_URL=%s",
-                    os.environ.get("USE_STORAGE_SERVICE", "not set"),
-                    os.environ.get("STORAGE_SERVICE_URL", "not set"),
-                )
-                raise ValueError(error_msg)
 
-            logger.info(
-                "Storage Service integration enabled: %s",
-                cls.STORAGE_SERVICE_URL,
-            )
-        else:
-            logger.warning(
-                "Storage Service integration is DISABLED. "
-                "Avatar upload/download/delete operations will be skipped. "
-                "This mode is intended for development/testing only."
-            )
+        GUARDIAN_SERVICE_TIMEOUT = float(
+            os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5")
+        )
 
 
 class DevelopmentConfig(Config):
@@ -161,8 +149,6 @@ class DevelopmentConfig(Config):
         """Validate development configuration."""
         if not cls.SQLALCHEMY_DATABASE_URI:
             raise ValueError("DATABASE_URL environment variable is not set.")
-        cls.validate_guardian_config()
-        cls.validate_storage_config()
 
 
 class TestingConfig(Config):
@@ -182,8 +168,6 @@ class TestingConfig(Config):
         """Validate testing configuration."""
         if not cls.SQLALCHEMY_DATABASE_URI:
             raise ValueError("DATABASE_URL environment variable is not set.")
-        cls.validate_guardian_config()
-        cls.validate_storage_config()
 
 
 class StagingConfig(Config):
@@ -203,8 +187,6 @@ class StagingConfig(Config):
         """Validate staging configuration."""
         if not cls.SQLALCHEMY_DATABASE_URI:
             raise ValueError("DATABASE_URL environment variable is not set.")
-        cls.validate_guardian_config()
-        cls.validate_storage_config()
 
 
 class ProductionConfig(Config):
@@ -224,5 +206,3 @@ class ProductionConfig(Config):
         """Validate production configuration."""
         if not cls.SQLALCHEMY_DATABASE_URI:
             raise ValueError("DATABASE_URL environment variable is not set.")
-        cls.validate_guardian_config()
-        cls.validate_storage_config()

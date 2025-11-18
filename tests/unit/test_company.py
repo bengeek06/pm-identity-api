@@ -10,7 +10,7 @@ import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.models.company import Company
-from tests.conftest import create_jwt_token
+from tests.unit.conftest import create_jwt_token
 
 
 ##################################################

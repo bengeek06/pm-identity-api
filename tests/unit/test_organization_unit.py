@@ -7,7 +7,7 @@ from marshmallow import ValidationError
 
 from app.models.organization_unit import OrganizationUnit
 from app.schemas.organization_unit_schema import OrganizationUnitSchema
-from tests.conftest import create_jwt_token
+from tests.unit.conftest import create_jwt_token
 
 
 ##################################################

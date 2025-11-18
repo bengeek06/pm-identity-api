@@ -10,7 +10,7 @@ import io
 import uuid
 
 from app.models.company import Company
-from tests.conftest import create_jwt_token
+from tests.unit.conftest import create_jwt_token
 
 
 def test_post_company_logo_service_disabled(client, session):

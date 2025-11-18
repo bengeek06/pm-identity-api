@@ -3,10 +3,11 @@ Test to demonstrate that JWT cookies are properly forwarded to Guardian service.
 """
 
 import uuid
-import pytest
 from unittest import mock
 
-from tests.test_user import create_jwt_token, get_init_db_payload
+import pytest
+
+from tests.unit.test_user import create_jwt_token, get_init_db_payload
 
 
 @pytest.mark.skip(reason="Need refactor")

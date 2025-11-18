@@ -6,15 +6,15 @@ Test cases for the UserResource class in the PM Identity API.
 
 import os
 import uuid
-import pytest
 from unittest import mock
 
 import jwt
+import pytest
 import requests
 from werkzeug.security import generate_password_hash
 
 from app.models.user import User
-from tests.conftest import create_jwt_token, get_init_db_payload
+from tests.unit.conftest import create_jwt_token, get_init_db_payload
 
 
 ##################################################

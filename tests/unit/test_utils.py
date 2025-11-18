@@ -2,9 +2,9 @@
 Tests for utility functions in app.utils module.
 """
 
-import pytest
 from unittest import mock
 
+import pytest
 import requests
 from flask import Flask
 
