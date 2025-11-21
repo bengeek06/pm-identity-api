@@ -31,9 +31,12 @@ def test_get_positions_empty(client):
 
     response = client.get("/positions")
     assert response.status_code == 200
-    data = response.get_json()
-    assert isinstance(data, list)
-    assert len(data) == 0
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    assert isinstance(result["data"], list)
+    assert len(result["data"]) == 0
+    assert result["pagination"]["total"] == 0
 
 
 def test_get_positions_single(client, session):
@@ -55,9 +58,13 @@ def test_get_positions_single(client, session):
     session.commit()
     response = client.get("/positions")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 1
+    assert result["pagination"]["total"] == 1
     item = data[0]
     assert item["title"] == "Manager"
     assert item["company_id"] == company_id
@@ -88,7 +95,11 @@ def test_get_positions_multiple(client, session):
     session.commit()
     response = client.get("/positions")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
+    assert result["pagination"]["total"] == 2
     titles = [item["title"] for item in data]
     assert "Dev" in titles
     assert "Lead" in titles
@@ -126,9 +137,13 @@ def test_get_positions_filter_by_title(client, session):
     # Test filtering by title
     response = client.get("/positions?title=Manager")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 2
+    assert result["pagination"]["total"] == 2
     for item in data:
         assert item["title"] == "Manager"
 
@@ -155,9 +170,13 @@ def test_get_positions_filter_by_title_no_match(client, session):
     # Test filtering with non-existent title
     response = client.get("/positions?title=NonExistent")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 0
+    assert result["pagination"]["total"] == 0
 
 
 def test_get_positions_without_filter_returns_all(client, session):
@@ -185,9 +204,16 @@ def test_get_positions_without_filter_returns_all(client, session):
     # Test without filter
     response = client.get("/positions")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 2
+    assert result["pagination"]["total"] == 2
+    titles = [item["title"] for item in data]
+    assert "Manager" in titles
+    assert "Developer" in titles
 
 
 ##################################################

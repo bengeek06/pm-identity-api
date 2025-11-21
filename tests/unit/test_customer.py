@@ -86,9 +86,14 @@ def test_get_all_customers(authenticated_client):
     """
     response = authenticated_client.get("/customers")
     assert response.status_code == 200
-    assert isinstance(response.json, list)
     assert response.is_json
-    assert response.get_json() == []
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
+    assert isinstance(data, list)
+    assert len(data) == 0
+    assert result["pagination"]["total"] == 0
 
 
 def test_get_customers_single(authenticated_client, session):
@@ -102,9 +107,13 @@ def test_get_customers_single(authenticated_client, session):
     response = authenticated_client.get("/customers")
     assert response.status_code == 200
     assert response.is_json
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 1
+    assert result["pagination"]["total"] == 1
     assert data[0]["name"] == "Test Customer"
 
 
@@ -123,9 +132,13 @@ def test_get_customers_multiple(authenticated_client, session):
     response = authenticated_client.get("/customers")
     assert response.status_code == 200
     assert response.is_json
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 2
+    assert result["pagination"]["total"] == 2
     assert data[0]["name"] == "Customer One"
     assert data[1]["name"] == "Customer Two"
 

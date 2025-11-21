@@ -47,9 +47,13 @@ def test_get_users_empty(client, session):
 
     response = client.get("/users")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 0
+    assert result["pagination"]["total"] == 0
 
 
 def test_get_users_single(client, session):
@@ -73,9 +77,13 @@ def test_get_users_single(client, session):
 
     response = client.get("/users")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 1
+    assert result["pagination"]["total"] == 1
     assert data[0]["email"] == "test1@example.com"
     assert data[0]["first_name"] == "Alice"
     assert data[0]["last_name"] == "Smith"
@@ -111,7 +119,11 @@ def test_get_users_multiple(client, session):
 
     response = client.get("/users")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
+    assert result["pagination"]["total"] == 2
     emails = [item["email"] for item in data]
     assert "test2@example.com" in emails
     assert "test3@example.com" in emails
@@ -148,9 +160,13 @@ def test_get_users_filter_by_email(client, session):
     # Test filtering by email
     response = client.get("/users?email=alice@example.com")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 1
+    assert result["pagination"]["total"] == 1
     assert data[0]["email"] == "alice@example.com"
     assert data[0]["first_name"] == "Alice"
 
@@ -176,9 +192,13 @@ def test_get_users_filter_no_match(client, session):
     # Test filtering with non-existent email
     response = client.get("/users?email=nonexistent@example.com")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 0
+    assert result["pagination"]["total"] == 0
 
 
 ##################################################

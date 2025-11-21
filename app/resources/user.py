@@ -257,13 +257,19 @@ class UserListResource(Resource):
     @check_access_required("list")
     def get(self):
         """
-        Get all users from the authenticated user's company with optional filtering.
+        Get all users from the authenticated user's company.
+
+        Supports optional filtering, pagination, and sorting.
 
         Query Parameters:
             email (str, optional): Filter by exact email match
+            page (int, optional): Page number (default: 1, min: 1)
+            limit (int, optional): Items per page (default: 50, max: 1000)
+            sort (str, optional): Sort by (created_at, updated_at, email)
+            order (str, optional): Sort order (asc, desc, default: asc)
 
         Returns:
-            tuple: List of serialized users and HTTP status code 200.
+            tuple: Paginated response with data and metadata, HTTP 200
         """
         logger.info("Fetching all users")
         try:
@@ -282,9 +288,51 @@ class UserListResource(Resource):
             if email:
                 query = query.filter_by(email=email)
 
-            users = query.all()
+            # Pagination parameters
+            page = request.args.get("page", 1, type=int)
+            limit = request.args.get("limit", 50, type=int)
+
+            # Validate and constrain pagination params
+            page = max(1, page)
+            limit = min(max(1, limit), 1000)
+
+            # Sorting parameters
+            sort_field = request.args.get("sort", "created_at")
+            sort_order = request.args.get("order", "asc")
+
+            # Validate sort field
+            allowed_sorts = ["created_at", "updated_at", "email"]
+            if sort_field not in allowed_sorts:
+                sort_field = "created_at"
+
+            # Apply sorting
+            if sort_order == "desc":
+                query = query.order_by(getattr(User, sort_field).desc())
+            else:
+                query = query.order_by(getattr(User, sort_field).asc())
+
+            # Execute pagination
+            paginated = query.paginate(
+                page=page, per_page=limit, error_out=False
+            )
+
             schema = UserSchema(many=True)
-            return schema.dump(users), 200
+            # Manually exclude sensitive fields after dump
+            result_data = schema.dump(paginated.items)
+            for user in result_data:
+                user.pop("hashed_password", None)
+
+            return {
+                "data": result_data,
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": paginated.total,
+                    "pages": paginated.pages,
+                    "has_next": paginated.has_next,
+                    "has_prev": paginated.has_prev,
+                },
+            }, 200
         except SQLAlchemyError as e:
             logger.error("Error fetching users: %s", str(e))
             return {"message": "Error fetching users"}, 500

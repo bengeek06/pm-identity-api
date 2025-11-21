@@ -6,12 +6,17 @@
 #
 # See LICENSE and LICENSE.md files in the root directory for full license text.
 # For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
+# pylint: disable=too-many-lines
 """
 storage_helper.py
 =================
 
 Helper functions for interacting with the Storage Service.
 Provides avatar upload/delete functionality for the Identity Service.
+
+Note: This file is large due to repetitive patterns for different resource types
+(avatars, company logos, customer logos, subcontractor logos).
+Future refactoring could extract common patterns into a base class.
 """
 
 import requests

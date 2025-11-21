@@ -36,9 +36,13 @@ def test_get_organization_units_empty(client, session):
     session.commit()
     response = client.get("/organization_units")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 0
+    assert result["pagination"]["total"] == 0
 
 
 def test_get_organization_units_single(client, session):
@@ -55,9 +59,13 @@ def test_get_organization_units_single(client, session):
     session.commit()
     response = client.get("/organization_units")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 1
+    assert result["pagination"]["total"] == 1
     item = data[0]
     assert item["name"] == "Root"
     assert item["company_id"] == "c1"
@@ -89,9 +97,13 @@ def test_get_organization_units_hierarchy(client, session):
 
     response = client.get("/organization_units")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 2
+    assert result["pagination"]["total"] == 2
     # Vérifie que chaque unité a les bons champs
     for item in data:
         assert "id" in item
@@ -124,7 +136,11 @@ def test_get_organization_units_multiple_companies(client, session):
     session.commit()
     response = client.get("/organization_units")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
+    assert isinstance(data, list)
     names = [item["name"] for item in data]
     assert "UnitA" in names
     assert "UnitB" in names
