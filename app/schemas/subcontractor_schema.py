@@ -30,7 +30,7 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
     Marshmallow schema for the Subcontractor model.
 
     This schema serializes and validates Subcontractor objects, enforcing field
-    types, length constraints, and format (UUID, email, digits, etc.). It also
+    types, length constraints, and format (UUID, email, phone, etc.). It also
     ensures proper deserialization and serialization for API input/output.
 
     Fields:
@@ -39,7 +39,8 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         description (str): Description of the subcontractor.
         company_id (str): Foreign key to the associated company (UUID).
         contact_person (str): Optional contact person for the subcontractor.
-        phone_number (str): Optional phone number of the subcontractor.
+        phone_number (str): Optional phone number. International format allowed
+            (digits, +, spaces, (), -), max 50 characters.
         email (str): Optional email address of the subcontractor.
         address (str): Optional address of the subcontractor.
     """
@@ -87,7 +88,8 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         validate=[
             validate.Length(max=50),
             validate.Regexp(
-                r"^\d*$", error="Phone number must contain only digits."
+                r"^[\d\s+()-]*$",
+                error="Phone number can only contain digits, spaces, +, (), and -",
             ),
         ],
     )

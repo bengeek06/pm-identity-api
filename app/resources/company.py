@@ -22,15 +22,10 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from app.constants import (
-    LOG_DATABASE_ERROR,
-    LOG_INTEGRITY_ERROR,
-    LOG_VALIDATION_ERROR,
-    MSG_COMPANY_NOT_FOUND,
-    MSG_DATABASE_ERROR,
-    MSG_INTEGRITY_ERROR,
-    MSG_VALIDATION_ERROR,
-)
+from app.constants import (LOG_DATABASE_ERROR, LOG_INTEGRITY_ERROR,
+                           LOG_VALIDATION_ERROR, MSG_COMPANY_NOT_FOUND,
+                           MSG_DATABASE_ERROR, MSG_INTEGRITY_ERROR,
+                           MSG_VALIDATION_ERROR)
 from app.logger import logger
 from app.models import db
 from app.models.company import Company
