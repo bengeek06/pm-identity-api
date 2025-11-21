@@ -47,9 +47,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run tests
+      - name: Run unit tests
         run: |
-          docker run --rm test-image:${{ github.run_id }} pytest -m "not integration"
+          docker run --rm test-image:${{ github.run_id }} pytest tests/unit/
 
   build:
     name: Build (no push on PR)
