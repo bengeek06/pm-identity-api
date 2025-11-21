@@ -33,6 +33,26 @@ def test_config_endpoit(client):
 
     data = json.loads(response.data)
     assert isinstance(data, dict)
+
+    # Core environment variables
     assert "FLASK_ENV" in data
     assert "LOG_LEVEL" in data
-    assert "DATABASE_URI" in data
+    assert "DATABASE_URL" in data
+
+    # Guardian Service configuration
+    assert "USE_GUARDIAN_SERVICE" in data
+    assert "GUARDIAN_SERVICE_URL" in data
+    assert "GUARDIAN_SERVICE_TIMEOUT" in data
+
+    # Storage Service configuration
+    assert "USE_STORAGE_SERVICE" in data
+    assert "STORAGE_SERVICE_URL" in data
+    assert "STORAGE_REQUEST_TIMEOUT" in data
+    assert "MAX_AVATAR_SIZE_MB" in data
+
+    # Security tokens (should only show if set, not the actual values)
+    assert "JWT_SECRET_SET" in data
+    assert "INTERNAL_AUTH_TOKEN_SET" in data
+    assert isinstance(data["JWT_SECRET_SET"], bool)
+    assert isinstance(data["INTERNAL_AUTH_TOKEN_SET"], bool)
+
