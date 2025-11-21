@@ -42,10 +42,10 @@ handler.setFormatter(
 )
 
 # Set log level from LOG_LEVEL env var, default to INFO
-log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-if log_level not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
-    log_level = "INFO"
-logging.basicConfig(level=getattr(logging, log_level), handlers=[handler])
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+if LOG_LEVEL not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+    LOG_LEVEL = "INFO"
+logging.basicConfig(level=getattr(logging, LOG_LEVEL), handlers=[handler])
 
 # Choose renderer based on environment
 if env in ("development", "testing"):
