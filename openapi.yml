@@ -60,6 +60,15 @@ components:
           format: uuid
           readOnly: true
           description: Associated company identifier (auto-assigned from JWT)
+        logo_file_id:
+          type: string
+          maxLength: 36
+          readOnly: true
+          description: File ID reference from Storage Service for customer logo
+        has_logo:
+          type: boolean
+          readOnly: true
+          description: Indicates if the customer has a logo uploaded
         email:
           type: string
           format: email
@@ -159,6 +168,15 @@ components:
           format: uuid
           readOnly: true
           description: Associated company identifier (auto-assigned from JWT)
+        logo_file_id:
+          type: string
+          maxLength: 36
+          readOnly: true
+          description: File ID reference from Storage Service for subcontractor logo
+        has_logo:
+          type: boolean
+          readOnly: true
+          description: Indicates if the subcontractor has a logo uploaded
         description:
           type: string
           maxLength: 255
@@ -1403,6 +1421,125 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+
+  /customers/{customer_id}/logo:
+    parameters:
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the customer
+
+    post:
+      tags: [Customers Management]
+      summary: Upload customer logo
+      description: Upload a logo image for the customer. The logo is stored in the Storage Service and a file_id reference is saved.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - logo
+              properties:
+                logo:
+                  type: string
+                  format: binary
+                  description: Logo image file (PNG, JPG, JPEG)
+      responses:
+        '201':
+          description: Logo uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logo uploaded successfully
+                  logo_file_id:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  has_logo:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot manage other company's customer logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          description: Service Unavailable - Storage Service disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Customers Management]
+      summary: Get customer logo
+      description: Retrieve the customer logo image from Storage Service
+      responses:
+        '200':
+          description: Logo image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Customer not found or has no logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Customers Management]
+      summary: Delete customer logo
+      description: Remove the customer logo from Storage Service and clear the reference
+      responses:
+        '204':
+          description: Logo deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot delete other company's customer logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Customer not found or has no logo to delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /positions:
     get:
       tags: [Positions]
@@ -2606,6 +2743,124 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subcontractors/{subcontractor_id}/logo:
+    parameters:
+      - name: subcontractor_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the subcontractor
+
+    post:
+      tags: [Subcontractors Management]
+      summary: Upload subcontractor logo
+      description: Upload a logo image for the subcontractor. The logo is stored in the Storage Service and a file_id reference is saved.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - logo
+              properties:
+                logo:
+                  type: string
+                  format: binary
+                  description: Logo image file (PNG, JPG, JPEG)
+      responses:
+        '201':
+          description: Logo uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logo uploaded successfully
+                  logo_file_id:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  has_logo:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot manage other company's subcontractor logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          description: Service Unavailable - Storage Service disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Subcontractors Management]
+      summary: Get subcontractor logo
+      description: Retrieve the subcontractor logo image from Storage Service
+      responses:
+        '200':
+          description: Logo image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Subcontractor not found or has no logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Subcontractors Management]
+      summary: Delete subcontractor logo
+      description: Remove the subcontractor logo from Storage Service and clear the reference
+      responses:
+        '204':
+          description: Logo deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot delete other company's subcontractor logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subcontractor not found or has no logo to delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
