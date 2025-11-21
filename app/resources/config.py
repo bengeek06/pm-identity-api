@@ -40,15 +40,21 @@ class ConfigResource(Resource):
             dict: A dictionary containing the application configuration and
             HTTP status code 200.
         """
-        jwt_secret_is_set = os.getenv("JWT_SECRET_KEY") is not None
-        internal_secret_is_set = os.getenv("INTERNAL_SECRET_KEY") is not None
+        jwt_secret_is_set = os.getenv("JWT_SECRET") is not None
+        internal_auth_token_is_set = os.getenv("INTERNAL_AUTH_TOKEN") is not None
 
         config = {
             "FLASK_ENV": os.getenv("FLASK_ENV"),
             "LOG_LEVEL": os.getenv("LOG_LEVEL"),
-            "DATABASE_URI": os.getenv("DATABASE_URI"),
+            "DATABASE_URL": os.getenv("DATABASE_URL"),
+            "USE_GUARDIAN_SERVICE": os.getenv("USE_GUARDIAN_SERVICE"),
             "GUARDIAN_SERVICE_URL": os.getenv("GUARDIAN_SERVICE_URL"),
-            "JWT_SECRET": jwt_secret_is_set,
-            "INTERNAL_AUTH_TOKEN": internal_secret_is_set,
+            "GUARDIAN_SERVICE_TIMEOUT": os.getenv("GUARDIAN_SERVICE_TIMEOUT"),
+            "USE_STORAGE_SERVICE": os.getenv("USE_STORAGE_SERVICE"),
+            "STORAGE_SERVICE_URL": os.getenv("STORAGE_SERVICE_URL"),
+            "STORAGE_REQUEST_TIMEOUT": os.getenv("STORAGE_REQUEST_TIMEOUT"),
+            "MAX_AVATAR_SIZE_MB": os.getenv("MAX_AVATAR_SIZE_MB"),
+            "JWT_SECRET_SET": jwt_secret_is_set,
+            "INTERNAL_AUTH_TOKEN_SET": internal_auth_token_is_set,
         }
         return config, 200
