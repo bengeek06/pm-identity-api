@@ -65,7 +65,7 @@ services:
       FLASK_ENV: development
       LOG_LEVEL: DEBUG
       # Use temp file DB - persists across Flask reloader restarts
-      # Cleaned by run-integration-tests.sh before each run
+      # Cleaned by scripts/run-integration-tests.sh before each run
       DATABASE_URL: "sqlite:////tmp/guardian_test.db"
       JWT_SECRET: integration-test-secret-key
       # Docker-specific flags

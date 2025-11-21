@@ -5,8 +5,8 @@ These tests require external services (MinIO, Storage Service) to be running.
 Run them with: pytest -m integration
 
 To start services:
-    docker-compose -f docker-compose.integration.yml up -d
+    docker-compose -f docker-compose.test.yml --profile guardian up -d
 
 To stop services:
-    docker-compose -f docker-compose.integration.yml down
+    docker-compose -f docker-compose.test.yml --profile guardian down
 """

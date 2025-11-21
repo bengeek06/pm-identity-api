@@ -12,8 +12,9 @@
 
 set -e
 
-COMPOSE_FILE="docker-compose.integration.yml"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+COMPOSE_FILE="$PROJECT_ROOT/docker-compose.test.yml"
 WITH_GUARDIAN=true
 
 # Parse arguments
@@ -45,12 +46,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-cd "$SCRIPT_DIR"
+cd "$PROJECT_ROOT"
 
-# Load .env.integration if exists
-if [ -f ".env.integration" ]; then
+# Load integration.conf if exists
+if [ -f "$SCRIPT_DIR/integration.conf" ]; then
     set -a
-    source .env.integration
+    source "$SCRIPT_DIR/integration.conf"
     set +a
 fi
 

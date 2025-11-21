@@ -52,7 +52,7 @@ def check_services_health(integration_config):
     except (requests.exceptions.RequestException, AssertionError) as e:
         pytest.skip(
             f"Storage Service not available at {storage_url}: {e}\n"
-            "Run: docker-compose -f docker-compose.integration.yml up -d"
+            "Run: docker-compose -f docker-compose.test.yml --profile guardian up -d"
         )
 
     # Check Guardian Service
@@ -65,7 +65,7 @@ def check_services_health(integration_config):
     except (requests.exceptions.RequestException, AssertionError) as e:
         pytest.skip(
             f"Guardian Service not available at {guardian_url}: {e}\n"
-            "Run: ./run-integration-tests.sh"
+            "Run: ./scripts/run-integration-tests.sh"
         )
 
 
