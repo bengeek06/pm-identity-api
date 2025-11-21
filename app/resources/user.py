@@ -90,7 +90,7 @@ def _parse_request_data(is_multipart, context="POST"):
     return json_data
 
 
-def _handle_avatar_upload(user, company_id):
+def _handle_avatar_upload(user):
     """Handle avatar upload if present in request."""
     if "avatar" not in request.files:
         return
@@ -103,7 +103,6 @@ def _handle_avatar_upload(user, company_id):
 
         upload_result = upload_avatar_via_proxy(
             user_id=str(user.id),
-            company_id=company_id,
             file_data=file_data,
             content_type=content_type,
             filename=filename,
@@ -124,20 +123,17 @@ def _handle_avatar_upload(user, company_id):
         # Don't fail user creation, just log the error
 
 
-def _create_user_storage(user_id, company_id):
+def _create_user_storage(user_id):
     """Create user directory structure in Storage Service."""
     try:
-        create_user_directories(
-            user_id=str(user_id),
-            company_id=company_id,
-        )
+        create_user_directories(user_id=str(user_id))
         logger.info(f"User directories created for {user_id}")
     except StorageServiceError as e:
         logger.warning(f"Failed to create user directories: {e}")
         # Don't fail user creation if directory creation fails
 
 
-def _handle_avatar_upload_for_update(user, company_id):
+def _handle_avatar_upload_for_update(user):
     """Handle avatar upload for PUT/PATCH operations."""
     if "avatar" not in request.files:
         return None
@@ -151,7 +147,6 @@ def _handle_avatar_upload_for_update(user, company_id):
 
         upload_result = upload_avatar_via_proxy(
             user_id=str(user.id),
-            company_id=company_id,
             file_data=file_data,
             content_type=content_type,
             filename=filename,
@@ -228,7 +223,7 @@ def _parse_patch_request_data():
     return json_data
 
 
-def _process_avatar_upload_for_patch(user, company_id):
+def _process_avatar_upload_for_patch(user):
     """
     Handle avatar upload for PATCH operation.
 
@@ -239,7 +234,7 @@ def _process_avatar_upload_for_patch(user, company_id):
         ValidationError: If upload fails.
     """
     try:
-        return _handle_avatar_upload_for_update(user, company_id)
+        return _handle_avatar_upload_for_update(user)
     except AvatarValidationError as e:
         raise ValidationError({"avatar": [str(e)]}) from e
     except StorageServiceError as exc:
@@ -339,10 +334,10 @@ class UserListResource(Resource):
             db.session.commit()
 
             # Create user directory structure in Storage Service
-            _create_user_storage(user.id, g.company_id)
+            _create_user_storage(user.id)
 
             # Handle avatar upload if present
-            _handle_avatar_upload(user, g.company_id)
+            _handle_avatar_upload(user)
 
             return user_schema.dump(user), 201
         except ValidationError as e:
@@ -433,9 +428,6 @@ class UserResource(Resource):
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
 
-        # Get company_id from JWT for avatar operations
-        company_id = g.company_id
-
         user_schema = UserSchema(session=db.session, context={"user": user})
 
         if "password" in json_data:
@@ -448,9 +440,7 @@ class UserResource(Resource):
             # Handle avatar upload if present
             uploaded_file_id = None
             try:
-                uploaded_file_id = _handle_avatar_upload_for_update(
-                    user, company_id
-                )
+                uploaded_file_id = _handle_avatar_upload_for_update(user)
             except AvatarValidationError as e:
                 return {"message": str(e)}, 400
             except StorageServiceError:
@@ -505,9 +495,6 @@ class UserResource(Resource):
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
 
-        # Get company_id from JWT for avatar operations
-        company_id = g.company_id
-
         user_schema = UserSchema(
             session=db.session, partial=True, context={"user": user}
         )
@@ -520,9 +507,7 @@ class UserResource(Resource):
 
         try:
             # Handle avatar upload if present
-            uploaded_file_id = _process_avatar_upload_for_patch(
-                user, company_id
-            )
+            uploaded_file_id = _process_avatar_upload_for_patch(user)
 
             # Company_id modification is prevented by schema validation
             logger.debug(f"[PATCH] json_data before schema.load: {json_data}")
@@ -574,12 +559,8 @@ class UserResource(Resource):
             return {"message": "User not found"}, 404
 
         # Delete all user storage from Storage Service
-        company_id = g.company_id
         try:
-            delete_user_storage(
-                user_id=str(user.id),
-                company_id=company_id,
-            )
+            delete_user_storage(user_id=str(user.id))
             logger.info(f"User storage deleted for {user.id}")
         except (StorageServiceError, ValueError) as e:
             # Log but don't fail user deletion if storage deletion fails

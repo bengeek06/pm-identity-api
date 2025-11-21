@@ -134,11 +134,10 @@ def test_upload_avatar_when_storage_disabled_returns_mock(app):
 
     with app.app_context():
         user_id = str(uuid.uuid4())
-        company_id = str(uuid.uuid4())
         file_data = b"fake-image-data"
 
         result = upload_avatar_via_proxy(
-            user_id, company_id, file_data, "image/jpeg", "avatar.jpg"
+            user_id, file_data, "image/jpeg", "avatar.jpg"
         )
 
         assert "file_id" in result
@@ -153,13 +152,10 @@ def test_upload_avatar_with_invalid_file_raises_validation_error(app):
 
     with app.app_context():
         user_id = str(uuid.uuid4())
-        company_id = str(uuid.uuid4())
 
         # Empty file should fail validation
         with pytest.raises(AvatarValidationError, match="empty"):
-            upload_avatar_via_proxy(
-                user_id, company_id, b"", "image/jpeg", "avatar.jpg"
-            )
+            upload_avatar_via_proxy(user_id, b"", "image/jpeg", "avatar.jpg")
 
 
 @mock.patch("app.storage_helper.requests.post")
@@ -179,11 +175,10 @@ def test_upload_avatar_with_valid_file_succeeds(mock_post, app):
 
     with app.app_context():
         user_id = str(uuid.uuid4())
-        company_id = str(uuid.uuid4())
         file_data = b"fake-image-data" * 100
 
         result = upload_avatar_via_proxy(
-            user_id, company_id, file_data, "image/jpeg", "avatar.jpg"
+            user_id, file_data, "image/jpeg", "avatar.jpg"
         )
 
         assert result["file_id"] == "test-file-id-123"
@@ -193,8 +188,8 @@ def test_upload_avatar_with_valid_file_succeeds(mock_post, app):
         mock_post.assert_called_once()
         call_args = mock_post.call_args
         assert call_args[0][0] == "http://storage:5001/upload/proxy"
-        assert call_args[1]["headers"]["X-User-ID"] == user_id
-        assert call_args[1]["headers"]["X-Company-ID"] == company_id
+        # JWT authentication via cookies, no headers needed
+        assert "cookies" in call_args[1]
 
 
 @mock.patch("app.storage_helper.requests.post")
@@ -212,12 +207,11 @@ def test_upload_avatar_handles_storage_service_error(mock_post, app):
 
     with app.app_context():
         user_id = str(uuid.uuid4())
-        company_id = str(uuid.uuid4())
         file_data = b"fake-image-data" * 100
 
-        with pytest.raises(Exception, match="Storage error"):
+        with pytest.raises(StorageServiceError):
             upload_avatar_via_proxy(
-                user_id, company_id, file_data, "image/jpeg", "avatar.jpg"
+                user_id, file_data, "image/jpeg", "avatar.jpg"
             )
 
 
@@ -235,14 +229,13 @@ def test_upload_avatar_handles_missing_file_id(mock_post, app):
 
     with app.app_context():
         user_id = str(uuid.uuid4())
-        company_id = str(uuid.uuid4())
         file_data = b"fake-image-data" * 100
 
         with pytest.raises(
             StorageServiceError, match="did not return file_id"
         ):
             upload_avatar_via_proxy(
-                user_id, company_id, file_data, "image/jpeg", "avatar.jpg"
+                user_id, file_data, "image/jpeg", "avatar.jpg"
             )
 
 
@@ -267,20 +260,18 @@ def test_upload_logo_with_valid_file_succeeds(mock_post, app):
 
     with app.app_context():
         company_id = str(uuid.uuid4())
-        user_id = str(uuid.uuid4())
         file_data = b"fake-logo-data" * 100
 
         result = upload_logo_via_proxy(
-            company_id, user_id, file_data, "image/png", "logo.png"
+            company_id, file_data, "image/png", "logo.png"
         )
 
         assert result["file_id"] == "logo-file-id-456"
         assert "object_key" in result
 
-        # Verify correct headers
+        # Verify JWT authentication via cookies
         call_args = mock_post.call_args
-        assert call_args[1]["headers"]["X-Company-ID"] == company_id
-        assert call_args[1]["headers"]["X-User-ID"] == user_id
+        assert "cookies" in call_args[1]
 
 
 # ============================================================================
@@ -294,7 +285,7 @@ def test_delete_avatar_when_storage_disabled_succeeds(app):
 
     with app.app_context():
         # Should not raise exception
-        delete_avatar("user-id", "company-id", "file-id")
+        delete_avatar("user-id", "file-id")
 
 
 @mock.patch("app.storage_helper.requests.delete")
@@ -309,18 +300,18 @@ def test_delete_avatar_succeeds(mock_delete, app):
 
     with app.app_context():
         user_id = str(uuid.uuid4())
-        company_id = str(uuid.uuid4())
         file_id = "file-to-delete"
 
         # Should not raise exception
-        delete_avatar(user_id, company_id, file_id)
+        delete_avatar(user_id, file_id)
 
         # Verify DELETE called
         mock_delete.assert_called_once()
         call_args = mock_delete.call_args
         assert call_args[0][0] == "http://storage:5001/delete"
         assert call_args[1]["json"]["file_id"] == file_id
-        assert call_args[1]["headers"]["X-User-ID"] == user_id
+        # JWT authentication via cookies
+        assert "cookies" in call_args[1]
 
 
 @mock.patch("app.storage_helper.requests.delete")
@@ -335,7 +326,7 @@ def test_delete_avatar_handles_not_found(mock_delete, app):
 
     with app.app_context():
         # Should NOT raise exception for 404 (already deleted)
-        delete_avatar("user-id", "company-id", "missing-file")
+        delete_avatar("user-id", "missing-file")
 
         # Verify it was called
         mock_delete.assert_called_once()
@@ -358,10 +349,9 @@ def test_delete_logo_succeeds(mock_delete, app):
 
     with app.app_context():
         company_id = str(uuid.uuid4())
-        user_id = str(uuid.uuid4())
 
         # Should not raise exception
-        delete_logo(company_id, user_id, "logo-file-id")
+        delete_logo(company_id, "logo-file-id")
 
         # Verify DELETE called
         mock_delete.assert_called_once()

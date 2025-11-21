@@ -41,7 +41,9 @@ class ConfigResource(Resource):
             HTTP status code 200.
         """
         jwt_secret_is_set = os.getenv("JWT_SECRET") is not None
-        internal_auth_token_is_set = os.getenv("INTERNAL_AUTH_TOKEN") is not None
+        internal_auth_token_is_set = (
+            os.getenv("INTERNAL_AUTH_TOKEN") is not None
+        )
 
         config = {
             "FLASK_ENV": os.getenv("FLASK_ENV"),

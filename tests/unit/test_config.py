@@ -55,4 +55,3 @@ def test_config_endpoit(client):
     assert "INTERNAL_AUTH_TOKEN_SET" in data
     assert isinstance(data["JWT_SECRET_SET"], bool)
     assert isinstance(data["INTERNAL_AUTH_TOKEN_SET"], bool)
-

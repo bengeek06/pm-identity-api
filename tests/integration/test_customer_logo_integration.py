@@ -64,7 +64,9 @@ def test_customer_logo_upload_to_real_storage(
     assert data["has_logo"] is True
 
     # Verify file exists by downloading via Identity Service
-    download_response = integration_client.get(f"/customers/{customer.id}/logo")
+    download_response = integration_client.get(
+        f"/customers/{customer.id}/logo"
+    )
     assert (
         download_response.status_code == 200
     ), f"File not found in Storage: {download_response.status_code}"
@@ -111,7 +113,9 @@ def test_customer_logo_download_from_real_storage(
     assert upload_response.status_code == 201
 
     # Download
-    download_response = integration_client.get(f"/customers/{customer.id}/logo")
+    download_response = integration_client.get(
+        f"/customers/{customer.id}/logo"
+    )
     assert download_response.status_code == 200
     assert download_response.content_type.startswith("image/")
     assert (
@@ -159,11 +163,15 @@ def test_customer_logo_delete_from_real_storage(
     assert upload_response.status_code == 201
 
     # Delete
-    delete_response = integration_client.delete(f"/customers/{customer.id}/logo")
+    delete_response = integration_client.delete(
+        f"/customers/{customer.id}/logo"
+    )
     assert delete_response.status_code == 204
 
     # Verify file is gone by checking download returns 404
-    download_response = integration_client.get(f"/customers/{customer.id}/logo")
+    download_response = integration_client.get(
+        f"/customers/{customer.id}/logo"
+    )
     assert download_response.status_code == 404, "Logo should be deleted"
 
     # Verify has_logo is False
@@ -231,7 +239,9 @@ def test_customer_logo_replace_in_real_storage(
     ), "Storage Service should version the same file"
 
     # Verify file exists by downloading latest version via Identity Service
-    download_response = integration_client.get(f"/customers/{customer.id}/logo")
+    download_response = integration_client.get(
+        f"/customers/{customer.id}/logo"
+    )
     assert download_response.status_code == 200
     assert download_response.content_type.startswith("image/")
 
@@ -331,7 +341,9 @@ def test_customer_logo_persistence_across_updates(
     assert customer_data["logo_file_id"] == file_id
 
     # Verify download still works
-    download_response = integration_client.get(f"/customers/{customer.id}/logo")
+    download_response = integration_client.get(
+        f"/customers/{customer.id}/logo"
+    )
     assert download_response.status_code == 200
     assert download_response.data == logo_data
 
@@ -374,7 +386,9 @@ def test_customer_logo_access_control(
     assert response.status_code == 201
 
     # Verify download works for same company
-    download_response = integration_client.get(f"/customers/{customer_a.id}/logo")
+    download_response = integration_client.get(
+        f"/customers/{customer_a.id}/logo"
+    )
     assert download_response.status_code == 200
 
     # Cleanup

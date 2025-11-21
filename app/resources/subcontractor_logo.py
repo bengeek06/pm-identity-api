@@ -89,10 +89,9 @@ class SubcontractorLogoResource(Resource):
             upload_result = upload_subcontractor_logo_via_proxy(
                 subcontractor_id=subcontractor_id,
                 company_id=subcontractor.company_id,
-                user_id=g.user_id,
                 file_data=file_data,
                 content_type=content_type,
-                filename=f"logo_{filename}",
+                filename=filename,
             )
 
             # Update subcontractor with logo file_id
@@ -248,10 +247,7 @@ class SubcontractorLogoResource(Resource):
         if subcontractor.logo_file_id:
             try:
                 delete_subcontractor_logo(
-                    subcontractor_id,
-                    subcontractor.company_id,
-                    g.user_id,
-                    subcontractor.logo_file_id,
+                    subcontractor_id, subcontractor.logo_file_id
                 )
             except Exception as e:  # pylint: disable=broad-except
                 # Catch all exceptions to ensure database cleanup happens

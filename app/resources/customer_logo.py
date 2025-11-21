@@ -89,10 +89,9 @@ class CustomerLogoResource(Resource):
             upload_result = upload_customer_logo_via_proxy(
                 customer_id=customer_id,
                 company_id=customer.company_id,
-                user_id=g.user_id,
                 file_data=file_data,
                 content_type=content_type,
-                filename=f"logo_{filename}",
+                filename=filename,
             )
 
             # Update customer with logo file_id
@@ -246,12 +245,7 @@ class CustomerLogoResource(Resource):
         # Delete from Storage Service (if file_id is available)
         if customer.logo_file_id:
             try:
-                delete_customer_logo(
-                    customer_id,
-                    customer.company_id,
-                    g.user_id,
-                    customer.logo_file_id,
-                )
+                delete_customer_logo(customer_id, customer.logo_file_id)
             except Exception as e:  # pylint: disable=broad-except
                 # Catch all exceptions to ensure database cleanup happens
                 logger.warning(f"Failed to delete logo from storage: {e}")

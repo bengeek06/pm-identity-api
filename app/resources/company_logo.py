@@ -86,7 +86,6 @@ class CompanyLogoResource(Resource):
             # Upload to Storage Service
             upload_result = upload_logo_via_proxy(
                 company_id=company_id,
-                user_id=g.user_id,  # User ID for auth
                 file_data=file_data,
                 content_type=content_type,
                 filename=f"logo_{filename}",
@@ -245,11 +244,8 @@ class CompanyLogoResource(Resource):
 
         # Delete from Storage Service (if file_id is available)
         if company.logo_file_id:
-            # Get user_id from JWT for auth
-            jwt_user_id = g.user_id
-
             try:
-                delete_logo(company_id, jwt_user_id, company.logo_file_id)
+                delete_logo(company_id, company.logo_file_id)
             except Exception as e:  # pylint: disable=broad-except
                 # Catch all exceptions to ensure database cleanup happens
                 logger.warning(f"Failed to delete logo from storage: {e}")

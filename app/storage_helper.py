@@ -15,8 +15,33 @@ Provides avatar upload/delete functionality for the Identity Service.
 """
 
 import requests
+from flask import request
 
 from app.logger import logger
+
+
+def _get_jwt_token() -> str | None:
+    """
+    Extract JWT token from request cookies.
+
+    Returns:
+        str | None: JWT token or None if not found
+    """
+    try:
+        return request.cookies.get("access_token")
+    except RuntimeError:
+        # Not in request context (e.g., unit tests)
+        return None
+
+
+def _prepare_auth_cookies() -> dict:
+    """
+    Prépare le cookie access_token pour le Storage Service.
+    """
+    jwt_token = _get_jwt_token()
+    if jwt_token:
+        return {"access_token": jwt_token}
+    return {}
 
 
 def is_storage_service_enabled() -> bool:
@@ -89,7 +114,6 @@ def validate_avatar(
 
 def _prepare_avatar_upload_request(
     user_id: str,
-    company_id: str,
     file_data: bytes,
     content_type: str,
     filename: str,
@@ -103,10 +127,7 @@ def _prepare_avatar_upload_request(
     logical_path = f"avatars/{user_id}.{extension}"
     logger.debug(f"Logical path for avatar: {logical_path}")
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-    }
+    headers = {}
 
     files = {
         "file": (filename, file_data, content_type),
@@ -123,7 +144,6 @@ def _prepare_avatar_upload_request(
 
 def _prepare_logo_upload_request(
     company_id: str,
-    user_id: str,
     file_data: bytes,
     content_type: str,
     filename: str,
@@ -137,10 +157,7 @@ def _prepare_logo_upload_request(
     logical_path = f"logos/{company_id}.{extension}"
     logger.debug(f"Logical path for logo: {logical_path}")
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-    }
+    headers = {}
 
     files = {
         "file": (filename, file_data, content_type),
@@ -158,7 +175,6 @@ def _prepare_logo_upload_request(
 def _prepare_customer_logo_upload_request(
     customer_id: str,
     company_id: str,
-    user_id: str,
     file_data: bytes,
     content_type: str,
     filename: str,
@@ -168,10 +184,7 @@ def _prepare_customer_logo_upload_request(
     logical_path = f"customers/{customer_id}/logo.{extension}"
     logger.debug(f"Logical path for customer logo: {logical_path}")
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-    }
+    headers = {}
 
     files = {
         "file": (filename, file_data, content_type),
@@ -189,7 +202,6 @@ def _prepare_customer_logo_upload_request(
 def _prepare_subcontractor_logo_upload_request(
     subcontractor_id: str,
     company_id: str,
-    user_id: str,
     file_data: bytes,
     content_type: str,
     filename: str,
@@ -199,10 +211,7 @@ def _prepare_subcontractor_logo_upload_request(
     logical_path = f"subcontractors/{subcontractor_id}/logo.{extension}"
     logger.debug(f"Logical path for subcontractor logo: {logical_path}")
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-    }
+    headers = {}
 
     files = {
         "file": (filename, file_data, content_type),
@@ -233,7 +242,6 @@ def _extract_object_key_from_response(result):
 
 def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
     user_id: str,
-    company_id: str,
     file_data: bytes,
     content_type: str,
     filename: str,
@@ -245,7 +253,6 @@ def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
 
     Args:
         user_id: UUID of the user
-        company_id: UUID of the company
         file_data: Binary file data
         content_type: MIME type (e.g., "image/jpeg")
         filename: Original filename
@@ -276,8 +283,9 @@ def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
 
     # Prepare request components
     headers, files, data = _prepare_avatar_upload_request(
-        user_id, company_id, file_data, content_type, filename
+        user_id, file_data, content_type, filename
     )
+    cookies = _prepare_auth_cookies()
 
     from flask import current_app  # pylint: disable=import-outside-toplevel
 
@@ -295,6 +303,7 @@ def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
             files=files,
             data=data,
             headers=headers,
+            cookies=cookies,
             timeout=timeout,
         )
 
@@ -307,7 +316,12 @@ def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
             logger.error(
                 f"Failed to upload avatar: {response.status_code} {response.text}"
             )
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except Exception as err:
+                raise StorageServiceError(
+                    f"Storage Service error: {err}"
+                ) from err
 
         result = response.json()
         logger.debug(f"Storage Service response: {result}")
@@ -349,7 +363,6 @@ def upload_avatar_via_proxy(  # pylint: disable=too-many-locals
 
 def upload_logo_via_proxy(  # pylint: disable=too-many-locals
     company_id: str,
-    user_id: str,
     file_data: bytes,
     content_type: str,
     filename: str,
@@ -359,7 +372,6 @@ def upload_logo_via_proxy(  # pylint: disable=too-many-locals
 
     Args:
         company_id: UUID of the company
-        user_id: UUID of the user (for auth)
         file_data: Binary file data
         content_type: MIME type (e.g., "image/jpeg")
         filename: Original filename
@@ -390,8 +402,9 @@ def upload_logo_via_proxy(  # pylint: disable=too-many-locals
 
     # Prepare request components
     headers, files, data = _prepare_logo_upload_request(
-        company_id, user_id, file_data, content_type, filename
+        company_id, file_data, content_type, filename
     )
+    cookies = _prepare_auth_cookies()
 
     from flask import current_app  # pylint: disable=import-outside-toplevel
 
@@ -409,6 +422,7 @@ def upload_logo_via_proxy(  # pylint: disable=too-many-locals
             files=files,
             data=data,
             headers=headers,
+            cookies=cookies,
             timeout=timeout,
         )
 
@@ -464,7 +478,6 @@ def upload_logo_via_proxy(  # pylint: disable=too-many-locals
 def upload_customer_logo_via_proxy(  # pylint: disable=too-many-locals
     customer_id: str,
     company_id: str,
-    user_id: str,
     file_data: bytes,
     content_type: str,
     filename: str,
@@ -475,7 +488,6 @@ def upload_customer_logo_via_proxy(  # pylint: disable=too-many-locals
     Args:
         customer_id: UUID of the customer
         company_id: UUID of the company
-        user_id: UUID of the user (for auth)
         file_data: Binary file data
         content_type: MIME type (e.g., "image/jpeg")
         filename: Original filename
@@ -503,8 +515,9 @@ def upload_customer_logo_via_proxy(  # pylint: disable=too-many-locals
     validate_avatar(file_data, content_type)
 
     headers, files, data = _prepare_customer_logo_upload_request(
-        customer_id, company_id, user_id, file_data, content_type, filename
+        customer_id, company_id, file_data, content_type, filename
     )
+    cookies = _prepare_auth_cookies()
 
     from flask import current_app  # pylint: disable=import-outside-toplevel
 
@@ -522,6 +535,7 @@ def upload_customer_logo_via_proxy(  # pylint: disable=too-many-locals
             files=files,
             data=data,
             headers=headers,
+            cookies=cookies,
             timeout=timeout,
         )
 
@@ -574,7 +588,6 @@ def upload_customer_logo_via_proxy(  # pylint: disable=too-many-locals
 def upload_subcontractor_logo_via_proxy(  # pylint: disable=too-many-locals
     subcontractor_id: str,
     company_id: str,
-    user_id: str,
     file_data: bytes,
     content_type: str,
     filename: str,
@@ -585,7 +598,6 @@ def upload_subcontractor_logo_via_proxy(  # pylint: disable=too-many-locals
     Args:
         subcontractor_id: UUID of the subcontractor
         company_id: UUID of the company
-        user_id: UUID of the user (for auth)
         file_data: Binary file data
         content_type: MIME type (e.g., "image/jpeg")
         filename: Original filename
@@ -613,13 +625,16 @@ def upload_subcontractor_logo_via_proxy(  # pylint: disable=too-many-locals
     validate_avatar(file_data, content_type)
 
     headers, files, data = _prepare_subcontractor_logo_upload_request(
-        subcontractor_id, company_id, user_id, file_data, content_type, filename
+        subcontractor_id, company_id, file_data, content_type, filename
     )
+    cookies = _prepare_auth_cookies()
 
     from flask import current_app  # pylint: disable=import-outside-toplevel
 
     url = f"{current_app.config['STORAGE_SERVICE_URL']}/upload/proxy"
-    logger.debug(f"Uploading logo for subcontractor {subcontractor_id} to {url}")
+    logger.debug(
+        f"Uploading logo for subcontractor {subcontractor_id} to {url}"
+    )
 
     try:
         logger.info(
@@ -632,6 +647,7 @@ def upload_subcontractor_logo_via_proxy(  # pylint: disable=too-many-locals
             files=files,
             data=data,
             headers=headers,
+            cookies=cookies,
             timeout=timeout,
         )
 
@@ -660,7 +676,9 @@ def upload_subcontractor_logo_via_proxy(  # pylint: disable=too-many-locals
 
         object_key = _extract_object_key_from_response(result)
 
-        logger.info(f"Subcontractor logo uploaded successfully: file_id={file_id}")
+        logger.info(
+            f"Subcontractor logo uploaded successfully: file_id={file_id}"
+        )
         logger.debug(f"object_key: {object_key}")
         return {"file_id": file_id, "object_key": object_key}
 
@@ -681,13 +699,12 @@ def upload_subcontractor_logo_via_proxy(  # pylint: disable=too-many-locals
         raise StorageServiceError(f"Storage Service error: {error_msg}") from e
 
 
-def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
+def delete_avatar(user_id: str, file_id: str) -> None:
     """
     Delete a user's avatar from the Storage Service.
 
     Args:
-        user_id (str): The user's ID
-        company_id (str): The user's company ID
+        user_id (str): The user's ID (for logging only)
         file_id (str): The file ID of the avatar to delete (from file_id field)
 
     Note:
@@ -708,11 +725,9 @@ def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
 
     url = f"{current_app.config['STORAGE_SERVICE_URL']}/delete"
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-        "Content-Type": "application/json",
-    }
+    headers = {}
+    headers["Content-Type"] = "application/json"
+    cookies = _prepare_auth_cookies()
 
     # The Storage Service DELETE endpoint expects file_id
     payload = {
@@ -725,7 +740,11 @@ def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
 
         timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
         response = requests.delete(
-            url, json=payload, headers=headers, timeout=timeout
+            url,
+            json=payload,
+            headers=headers,
+            cookies=cookies,
+            timeout=timeout,
         )
 
         # Accept both 200 and 404 (already deleted)
@@ -750,13 +769,12 @@ def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
         logger.warning("Avatar deletion failed, but continuing")
 
 
-def delete_logo(company_id: str, user_id: str, file_id: str) -> None:
+def delete_logo(company_id: str, file_id: str) -> None:
     """
     Delete a company's logo from the Storage Service.
 
     Args:
-        company_id (str): The company's ID
-        user_id (str): The user's ID (for auth)
+        company_id (str): The company's ID (for logging only)
         file_id (str): The file ID of the logo to delete (from file_id field)
 
     Note:
@@ -777,11 +795,9 @@ def delete_logo(company_id: str, user_id: str, file_id: str) -> None:
 
     url = f"{current_app.config['STORAGE_SERVICE_URL']}/delete"
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-        "Content-Type": "application/json",
-    }
+    headers = {}
+    headers["Content-Type"] = "application/json"
+    cookies = _prepare_auth_cookies()
 
     # The Storage Service DELETE endpoint expects file_id
     payload = {
@@ -794,7 +810,11 @@ def delete_logo(company_id: str, user_id: str, file_id: str) -> None:
 
         timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
         response = requests.delete(
-            url, json=payload, headers=headers, timeout=timeout
+            url,
+            json=payload,
+            headers=headers,
+            cookies=cookies,
+            timeout=timeout,
         )
 
         # Accept both 200 and 404 (already deleted)
@@ -819,16 +839,12 @@ def delete_logo(company_id: str, user_id: str, file_id: str) -> None:
         logger.warning("Logo deletion failed, but continuing")
 
 
-def delete_customer_logo(
-    customer_id: str, company_id: str, user_id: str, file_id: str
-) -> None:
+def delete_customer_logo(customer_id: str, file_id: str) -> None:
     """
     Delete a customer's logo from the Storage Service.
 
     Args:
-        customer_id (str): The customer's ID
-        company_id (str): The company's ID
-        user_id (str): The user's ID (for auth)
+        customer_id (str): The customer's ID (for logging only)
         file_id (str): The file ID of the logo to delete
 
     Note:
@@ -849,11 +865,9 @@ def delete_customer_logo(
 
     url = f"{current_app.config['STORAGE_SERVICE_URL']}/delete"
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-        "Content-Type": "application/json",
-    }
+    headers = {}
+    headers["Content-Type"] = "application/json"
+    cookies = _prepare_auth_cookies()
 
     payload = {
         "file_id": file_id,
@@ -865,7 +879,11 @@ def delete_customer_logo(
 
         timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
         response = requests.delete(
-            url, json=payload, headers=headers, timeout=timeout
+            url,
+            json=payload,
+            headers=headers,
+            cookies=cookies,
+            timeout=timeout,
         )
 
         if response.status_code in (200, 204, 404):
@@ -888,16 +906,12 @@ def delete_customer_logo(
         logger.warning("Customer logo deletion failed, but continuing")
 
 
-def delete_subcontractor_logo(
-    subcontractor_id: str, company_id: str, user_id: str, file_id: str
-) -> None:
+def delete_subcontractor_logo(subcontractor_id: str, file_id: str) -> None:
     """
     Delete a subcontractor's logo from the Storage Service.
 
     Args:
-        subcontractor_id (str): The subcontractor's ID
-        company_id (str): The company's ID
-        user_id (str): The user's ID (for auth)
+        subcontractor_id (str): The subcontractor's ID (for logging only)
         file_id (str): The file ID of the logo to delete
 
     Note:
@@ -906,7 +920,8 @@ def delete_subcontractor_logo(
     """
     if not is_storage_service_enabled():
         logger.info(
-            f"Storage Service disabled - skipping logo deletion for subcontractor {subcontractor_id}"
+            f"Storage Service disabled - skipping logo deletion for "
+            f"subcontractor {subcontractor_id}"
         )
         return
 
@@ -918,11 +933,9 @@ def delete_subcontractor_logo(
 
     url = f"{current_app.config['STORAGE_SERVICE_URL']}/delete"
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-        "Content-Type": "application/json",
-    }
+    headers = {}
+    headers["Content-Type"] = "application/json"
+    cookies = _prepare_auth_cookies()
 
     payload = {
         "file_id": file_id,
@@ -934,7 +947,11 @@ def delete_subcontractor_logo(
 
         timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
         response = requests.delete(
-            url, json=payload, headers=headers, timeout=timeout
+            url,
+            json=payload,
+            headers=headers,
+            cookies=cookies,
+            timeout=timeout,
         )
 
         if response.status_code in (200, 204, 404):
@@ -957,7 +974,7 @@ def delete_subcontractor_logo(
         logger.warning("Subcontractor logo deletion failed, but continuing")
 
 
-def create_user_directories(user_id: str, company_id: str) -> None:
+def create_user_directories(user_id: str) -> None:
     """
     Create the user directory structure in the Storage Service.
 
@@ -967,7 +984,6 @@ def create_user_directories(user_id: str, company_id: str) -> None:
 
     Args:
         user_id: UUID of the user
-        company_id: UUID of the company
 
     Raises:
         StorageServiceError: If directory creation fails
@@ -982,10 +998,8 @@ def create_user_directories(user_id: str, company_id: str) -> None:
 
     url = f"{current_app.config['STORAGE_SERVICE_URL']}/upload/proxy"
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-    }
+    headers = {}
+    cookies = _prepare_auth_cookies()
 
     # Create .keep file content (empty marker file)
     keep_content = b""
@@ -1017,6 +1031,7 @@ def create_user_directories(user_id: str, company_id: str) -> None:
                 files=files,
                 data=data,
                 headers=headers,
+                cookies=cookies,
                 timeout=timeout,
             )
 
@@ -1080,7 +1095,7 @@ def _delete_file_from_storage(
         logger.warning(f"Error deleting file {file_id}: {file_error}")
 
 
-def delete_user_storage(user_id: str, company_id: str) -> None:
+def delete_user_storage(user_id: str) -> None:
     """
     Delete all user storage (entire user directory and contents).
 
@@ -1088,7 +1103,6 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
 
     Args:
         user_id: UUID of the user
-        company_id: UUID of the company
 
     Note:
         Failures are logged but don't raise exceptions to avoid blocking user deletion.
@@ -1107,10 +1121,8 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
     # First, try to list all files for this user
     list_url = f"{current_app.config['STORAGE_SERVICE_URL']}/list"
 
-    headers = {
-        "X-User-ID": user_id,
-        "X-Company-ID": company_id,
-    }
+    headers = {}
+    cookies = _prepare_auth_cookies()
 
     params = {
         "bucket": "users",
@@ -1123,7 +1135,11 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
 
         timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
         response = requests.get(
-            list_url, params=params, headers=headers, timeout=timeout
+            list_url,
+            params=params,
+            headers=headers,
+            cookies=cookies,
+            timeout=timeout,
         )
 
         if response.status_code == 404:
