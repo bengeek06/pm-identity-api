@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """Utility functions for the Identity Service API."""
 
 import os
@@ -7,7 +15,7 @@ from functools import wraps
 
 import jwt
 import requests
-from flask import g, request
+from flask import current_app, g, request
 
 from app.logger import logger
 
@@ -231,15 +239,13 @@ def check_access(user_id, resource_name, operation):
     Returns:
         tuple: (access_granted (bool), reason (str), status (int or str))
     """
-    from flask import current_app  # pylint: disable=import-outside-toplevel
-
     logger.debug(
         f"Checking access for user_id: {user_id}, "
         f"resource_name: {resource_name}, operation: {operation}"
     )
 
     # Check if Guardian Service is enabled
-    use_guardian = current_app.config.get("USE_GUARDIAN_SERVICE", True)
+    use_guardian = current_app.config.get("USE_GUARDIAN_SERVICE")
 
     if not use_guardian:
         logger.warning(

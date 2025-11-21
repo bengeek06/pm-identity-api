@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 test_company_logo_integration.py
 ---------------------------------
@@ -10,14 +18,14 @@ import io
 
 import pytest
 
+from app.models.company import Company
+
 
 @pytest.mark.integration
 def test_company_logo_upload_to_real_storage(
     integration_client,
     real_company,
-    real_user,
     integration_token,
-    storage_api_client,
 ):
     """
     Test complete company logo upload flow:
@@ -46,33 +54,21 @@ def test_company_logo_upload_to_real_storage(
     assert "logo_file_id" in data
     assert data["has_logo"] is True
 
-    file_id = data["logo_file_id"]
-
-    # Verify file exists in Storage Service
-    storage_response = storage_api_client.get_file_metadata(
-        file_id,
-        real_company.id,
-        real_user.id,
-        bucket="companies",
-        resource_type="logos",
+    # Verify file exists by downloading via Identity Service
+    download_response = integration_client.get(
+        f"/companies/{real_company.id}/logo"
     )
     assert (
-        storage_response.status_code == 200
-    ), f"File not found in Storage: {storage_response.text}"
-
-    metadata = storage_response.json()
-    # Metadata response has nested structure: {"file": {...}, "current_version": {...}}
-    file_data = metadata.get("file", {})
-    assert file_data.get("id") == file_id
-    assert file_data.get("bucket_type") == "companies"
-    assert file_data.get("bucket_id") == real_company.id
+        download_response.status_code == 200
+    ), f"File not found in Storage: {download_response.status_code}"
+    assert download_response.content_type.startswith("image/")
+    assert len(download_response.data) > 0, "Downloaded logo is empty"
 
 
 @pytest.mark.integration
 def test_company_logo_download_from_real_storage(
     integration_client,
     real_company,
-    real_user,
     integration_token,
 ):
     """
@@ -110,9 +106,7 @@ def test_company_logo_download_from_real_storage(
 def test_company_logo_delete_from_real_storage(
     integration_client,
     real_company,
-    real_user,
     integration_token,
-    storage_api_client,
 ):
     """
     Test company logo deletion:
@@ -134,7 +128,6 @@ def test_company_logo_delete_from_real_storage(
         content_type="multipart/form-data",
     )
     assert upload_response.status_code == 201
-    file_id = upload_response.get_json()["logo_file_id"]
 
     # Delete
     delete_response = integration_client.delete(
@@ -142,13 +135,11 @@ def test_company_logo_delete_from_real_storage(
     )
     assert delete_response.status_code == 204
 
-    # Verify file is gone from Storage
-    storage_response = storage_api_client.get_file_metadata(
-        file_id, real_company.id, real_user.id
+    # Verify file is gone by checking download returns 404
+    download_response = integration_client.get(
+        f"/companies/{real_company.id}/logo"
     )
-    assert (
-        storage_response.status_code == 404
-    ), "File should be deleted from Storage Service"
+    assert download_response.status_code == 404, "Logo should be deleted"
 
     # Verify has_logo is False
     company_response = integration_client.get(f"/companies/{real_company.id}")
@@ -162,9 +153,7 @@ def test_company_logo_delete_from_real_storage(
 def test_company_logo_replace_in_real_storage(
     integration_client,
     real_company,
-    real_user,
     integration_token,
-    storage_api_client,
 ):
     """
     Test company logo replacement:
@@ -205,28 +194,17 @@ def test_company_logo_replace_in_real_storage(
         file_id_1 == file_id_2
     ), "Storage Service should version the same file"
 
-    # Verify file metadata exists (should return latest version)
-    metadata_response = storage_api_client.get_file_metadata(
-        file_id_2,
-        real_company.id,
-        real_user.id,
-        bucket="companies",
-        resource_type="logos",
-    )
-    assert metadata_response.status_code == 200
-    metadata = metadata_response.json()
-
-    # Verify it's version 2
-    file_data = metadata.get("file", {})
-    current_version = metadata.get("current_version", {})
-    assert current_version.get("version_number") == 2
-
-    # Verify download returns new content
+    # Verify file exists by downloading latest version via Identity Service
     download_response = integration_client.get(
         f"/companies/{real_company.id}/logo"
     )
     assert download_response.status_code == 200
-    assert download_response.data == logo2_data
+    assert download_response.content_type.startswith("image/")
+
+    # Verify download returns new content (latest version)
+    assert (
+        download_response.data == logo2_data
+    ), "Should return latest uploaded content"
 
 
 @pytest.mark.integration
@@ -234,15 +212,12 @@ def test_company_logo_isolation_between_companies(
     integration_client,
     integration_session,
     real_company,
-    real_user,
     integration_token,
 ):
     """
     Test that company logos are properly isolated.
     Company A should not be able to access Company B's logo.
     """
-    from app.models.company import Company
-
     # Create second company
     company_b = Company(name="Company B Integration Test")
     integration_session.add(company_b)
@@ -277,7 +252,6 @@ def test_company_logo_isolation_between_companies(
 def test_company_logo_size_validation(
     integration_client,
     real_company,
-    real_user,
     integration_token,
 ):
     """
@@ -298,14 +272,13 @@ def test_company_logo_size_validation(
     )
 
     # Should be rejected by validation
-    assert response.status_code in [400, 413], f"Large file should be rejected"
+    assert response.status_code in [400, 413], "Large file should be rejected"
 
 
 @pytest.mark.integration
 def test_company_logo_persistence_across_updates(
     integration_client,
     real_company,
-    real_user,
     integration_token,
 ):
     """

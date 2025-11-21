@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 module: app.resources.user_policies
 
@@ -8,12 +16,16 @@ It provides endpoints for retrieving all policies assigned to a user
 through their role assignments.
 """
 
-import requests
-from flask import current_app, g, request
+from flask import current_app
 from flask_restful import Resource
 
 from app.logger import logger
-from app.models.user import User
+from app.resources.guardian_helpers import (
+    fetch_policies_for_roles,
+    fetch_user_roles,
+    get_guardian_headers,
+    validate_user_access,
+)
 from app.utils import check_access_required, require_jwt_auth
 
 
@@ -31,9 +43,7 @@ class UserPoliciesResource(Resource):
 
     @require_jwt_auth()
     @check_access_required("read")
-    def get(
-        self, user_id
-    ):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+    def get(self, user_id):
         """
         Retrieve all policies associated with a user's roles.
 
@@ -51,147 +61,30 @@ class UserPoliciesResource(Resource):
         """
         logger.info("Fetching policies for user ID %s", user_id)
 
-        jwt_data = getattr(g, "jwt_data", {})
-        requesting_user_id = jwt_data.get("user_id")
-        company_id = jwt_data.get("company_id")
-
-        if not requesting_user_id:
-            logger.error("user_id missing in JWT")
-            return {"message": "user_id missing in JWT"}, 400
-
-        # Verify that the requested user exists and belongs to the same company
-        target_user = User.get_by_id(user_id)
-        if not target_user:
-            logger.error("User %s not found", user_id)
-            return {"message": "User not found"}, 404
-
-        if target_user.company_id != company_id:
-            logger.warning(
-                "User %s attempted to access policies for user %s from different company",
-                requesting_user_id,
-                user_id,
-            )
-            return {"message": "Access denied"}, 403
+        # Validate user access
+        error, status = validate_user_access(user_id)
+        if error:
+            return error, status
 
         # If Guardian Service is disabled, return empty policies
-        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+        if not current_app.config.get("USE_GUARDIAN_SERVICE"):
             logger.debug(
                 "Guardian Service is disabled - returning empty policies list"
             )
             return {"policies": []}, 200
 
         guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
-        # Get JWT token from cookies to forward to Guardian service
-        jwt_token = request.cookies.get("access_token")
-        headers = {}
-        if jwt_token:
-            headers["Cookie"] = f"access_token={jwt_token}"
+        headers = get_guardian_headers()
 
         # Step 1: Fetch all roles for the user
-        try:
-            roles_response = requests.get(
-                f"{guardian_url}/user-roles",
-                params={"user_id": user_id},
-                headers=headers,
-                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
-            )
-        except requests.exceptions.RequestException as e:
-            logger.error(
-                "Error contacting Guardian service for roles: %s", str(e)
-            )
-            return {"message": "Error fetching user roles"}, 500
+        user_roles, error = fetch_user_roles(user_id, guardian_url, headers)
+        if error:
+            return error
 
-        if roles_response.status_code != 200:
-            logger.error(
-                "Error fetching roles from Guardian: %s", roles_response.text
-            )
-            return {"message": "Error fetching user roles"}, 500
-
-        roles_data = roles_response.json()
-        logger.debug("Guardian roles response data: %s", roles_data)
-
-        # Handle both response formats for roles
-        if isinstance(roles_data, list):
-            user_roles = roles_data
-        elif isinstance(roles_data, dict) and "roles" in roles_data:
-            user_roles = roles_data.get("roles", [])
-        else:
-            logger.warning(
-                "Unexpected roles response format from Guardian: %s",
-                roles_data,
-            )
-            user_roles = []
-
-        # Step 2: Fetch policies for each role
-        all_policies = []
-        seen_policy_ids = set()
-
-        for user_role in user_roles:
-            role_id = user_role.get("role_id")
-            if not role_id:
-                logger.warning("user_role missing role_id: %s", user_role)
-                continue
-
-            try:
-                policies_response = requests.get(
-                    f"{guardian_url}/roles/{role_id}/policies",
-                    headers=headers,
-                    timeout=current_app.config.get(
-                        "GUARDIAN_SERVICE_TIMEOUT", 5
-                    ),
-                )
-            except requests.exceptions.RequestException as e:
-                logger.error(
-                    "Error contacting Guardian service for policies of role %s: %s",
-                    role_id,
-                    str(e),
-                )
-                # Continue with other roles instead of failing completely
-                continue
-
-            if policies_response.status_code == 404:
-                logger.warning(
-                    "Role %s not found in Guardian, skipping", role_id
-                )
-                continue
-
-            if policies_response.status_code != 200:
-                logger.error(
-                    "Error fetching policies for role %s from Guardian: %s",
-                    role_id,
-                    policies_response.text,
-                )
-                # Continue with other roles
-                continue
-
-            policies_data = policies_response.json()
-            logger.debug(
-                "Guardian policies response for role %s: %s",
-                role_id,
-                policies_data,
-            )
-
-            # Handle response format (expecting a list of policies)
-            if isinstance(policies_data, list):
-                policies = policies_data
-            elif (
-                isinstance(policies_data, dict) and "policies" in policies_data
-            ):
-                policies = policies_data.get("policies", [])
-            else:
-                logger.warning(
-                    "Unexpected policies response format for role %s: %s",
-                    role_id,
-                    policies_data,
-                )
-                policies = []
-
-            # Deduplicate policies by ID
-            for policy in policies:
-                policy_id = policy.get("id")
-                if policy_id and policy_id not in seen_policy_ids:
-                    seen_policy_ids.add(policy_id)
-                    all_policies.append(policy)
+        # Step 2: Fetch policies for each role and deduplicate
+        _, all_policies = fetch_policies_for_roles(
+            user_roles, guardian_url, headers
+        )
 
         logger.info(
             "Successfully fetched %d unique policies for user %s",

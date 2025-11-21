@@ -35,6 +35,16 @@ jobs:
         pylint --rcfile .pylintrc app/
     - name: Test with pytest
       run: |
-        echo "DATABASE_URL=sqlite:///:memory:" > .env.test
-        echo "JWT_SECRET=test-jwt-secret-key" >> .env.test
-        FLASK_ENV=testing pytest -m "not integration"
+        cat > .env.test << EOF
+        FLASK_ENV=testing
+        LOG_LEVEL=DEBUG
+        DATABASE_URL=sqlite:///:memory:
+        INTERNAL_AUTH_TOKEN=testing-internal-secret
+        JWT_SECRET=test-jwt-secret-key
+        GUARDIAN_SERVICE_TIMEOUT=5
+        STORAGE_REQUEST_TIMEOUT=30
+        MAX_AVATAR_SIZE_MB=5
+        USE_STORAGE_SERVICE=false
+        USE_GUARDIAN_SERVICE=false
+        EOF
+        pytest tests/unit

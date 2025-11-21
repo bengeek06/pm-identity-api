@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 module: app.resources.user_avatar
 
@@ -55,8 +63,7 @@ class UserAvatarResource(Resource):
             return {"message": "User not found"}, 404
 
         # Verify user_id matches JWT or user has permission
-        jwt_data = getattr(g, "jwt_data", {})
-        jwt_user_id = jwt_data.get("user_id")
+        jwt_user_id = g.user_id
 
         # Users can only upload their own avatar (unless admin - future enhancement)
         if jwt_user_id != user_id:
@@ -79,7 +86,7 @@ class UserAvatarResource(Resource):
             return {"message": "Storage Service disabled"}, 503
 
         avatar_file = request.files["avatar"]
-        company_id = jwt_data.get("company_id")
+        company_id = g.company_id
 
         try:
             file_data = avatar_file.read()
@@ -240,8 +247,7 @@ class UserAvatarResource(Resource):
             return {"message": "User not found"}, 404
 
         # Verify user_id matches JWT or user has permission
-        jwt_data = getattr(g, "jwt_data", {})
-        jwt_user_id = jwt_data.get("user_id")
+        jwt_user_id = g.user_id
 
         # Users can only delete their own avatar (unless admin - future enhancement)
         if jwt_user_id != user_id:
@@ -264,7 +270,7 @@ class UserAvatarResource(Resource):
             return {"message": "Avatar reference removed"}, 204
 
         # Delete from Storage Service (if file_id is available)
-        company_id = jwt_data.get("company_id")
+        company_id = g.company_id
         if user.avatar_file_id:
             try:
                 delete_avatar(user_id, company_id, user.avatar_file_id)

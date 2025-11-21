@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 app/__init__.py
 ---------------
@@ -65,7 +73,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Unauthorized access attempt detected.",
-            error=error,
+            str(error),
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -89,7 +97,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Forbidden access attempt detected.",
-            error=error,
+            str(error),
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -113,7 +121,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Resource not found.",
-            error=error,
+            str(error),
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -137,7 +145,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Bad request received.",
-            error=error,
+            str(error),
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -161,7 +169,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Unsupported media type.",
-            error=error,
+            str(error),
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -218,23 +226,8 @@ def create_app(config_class):
     """
 
     app = Flask(__name__)
+
     app.config.from_object(config_class)
-
-    # Validate configuration
-    # If config_class is a string, import it to get the actual class
-    if isinstance(config_class, str):
-        module_name, class_name = config_class.rsplit(".", 1)
-        module = __import__(module_name, fromlist=[class_name])
-        actual_config_class = getattr(module, class_name)
-    else:
-        actual_config_class = config_class
-
-    # Validate configuration if validate_config method exists
-    if hasattr(actual_config_class, "validate_config"):
-        actual_config_class.validate_config()
-    else:
-        # Fallback to validate_storage_config only
-        actual_config_class.validate_storage_config()
 
     env = os.getenv("FLASK_ENV", "development")
     logger.info("Creating app in environment.", environment=env)

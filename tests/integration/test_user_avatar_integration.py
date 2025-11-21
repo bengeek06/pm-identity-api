@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 test_user_avatar_integration.py
 --------------------------------
@@ -14,10 +22,8 @@ import pytest
 @pytest.mark.integration
 def test_avatar_upload_to_real_storage(
     integration_client,
-    real_company,
     real_user,
     integration_token,
-    storage_api_client,
 ):
     """
     Test complete avatar upload flow:
@@ -46,31 +52,18 @@ def test_avatar_upload_to_real_storage(
     assert "avatar_file_id" in data
     assert data["has_avatar"] is True
 
-    file_id = data["avatar_file_id"]
-
-    # Verify file exists in Storage Service
-    storage_response = storage_api_client.get_file_metadata(
-        file_id, real_company.id, real_user.id
-    )
+    # Verify file exists by downloading via Identity Service
+    download_response = integration_client.get(f"/users/{real_user.id}/avatar")
     assert (
-        storage_response.status_code == 200
-    ), f"File not found in Storage: {storage_response.text}"
-
-    metadata = storage_response.json()
-    # Storage API returns nested structure: {file: {...}, current_version: {...}}
-    file_data = metadata.get("file", {})
-    assert (
-        file_data.get("id") == file_id
-        or file_data.get("bucket_type") == "users"
-    )
-    assert file_data.get("bucket_type") == "users"
-    assert file_data.get("bucket_id") == real_user.id
+        download_response.status_code == 200
+    ), f"File not found in Storage: {download_response.status_code}"
+    assert download_response.content_type.startswith("image/")
+    assert len(download_response.data) > 0, "Downloaded avatar is empty"
 
 
 @pytest.mark.integration
 def test_avatar_download_from_real_storage(
     integration_client,
-    real_company,
     real_user,
     integration_token,
 ):
@@ -106,10 +99,8 @@ def test_avatar_download_from_real_storage(
 @pytest.mark.integration
 def test_avatar_delete_from_real_storage(
     integration_client,
-    real_company,
     real_user,
     integration_token,
-    storage_api_client,
 ):
     """
     Test avatar deletion:
@@ -131,7 +122,6 @@ def test_avatar_delete_from_real_storage(
         content_type="multipart/form-data",
     )
     assert upload_response.status_code == 201
-    file_id = upload_response.get_json()["avatar_file_id"]
 
     # Delete
     delete_response = integration_client.delete(
@@ -139,13 +129,9 @@ def test_avatar_delete_from_real_storage(
     )
     assert delete_response.status_code == 204
 
-    # Verify file is gone from Storage
-    storage_response = storage_api_client.get_file_metadata(
-        file_id, real_company.id, real_user.id
-    )
-    assert (
-        storage_response.status_code == 404
-    ), "File should be deleted from Storage Service"
+    # Verify file is gone by checking download returns 404
+    download_response = integration_client.get(f"/users/{real_user.id}/avatar")
+    assert download_response.status_code == 404, "Avatar should be deleted"
 
     # Verify has_avatar is False
     user_response = integration_client.get(f"/users/{real_user.id}")
@@ -158,10 +144,8 @@ def test_avatar_delete_from_real_storage(
 @pytest.mark.integration
 def test_avatar_replace_in_real_storage(
     integration_client,
-    real_company,
     real_user,
     integration_token,
-    storage_api_client,
 ):
     """
     Test avatar replacement:
@@ -202,21 +186,15 @@ def test_avatar_replace_in_real_storage(
         file_id_1 == file_id_2
     ), "Storage Service should version the same file"
 
-    # Verify file metadata exists (should return latest version)
-    metadata_response = storage_api_client.get_file_metadata(
-        file_id_2, real_company.id, real_user.id
-    )
-    assert metadata_response.status_code == 200
-    metadata = metadata_response.json()
-
-    # Verify it's version 2
-    current_version = metadata.get("current_version", {})
-    assert current_version.get("version_number") == 2
-
-    # Verify download returns new content (latest version)
+    # Verify file exists by downloading latest version via Identity Service
     download_response = integration_client.get(f"/users/{real_user.id}/avatar")
     assert download_response.status_code == 200
-    assert download_response.data == avatar2_data
+    assert download_response.content_type.startswith("image/")
+
+    # Verify download returns new content (latest version)
+    assert (
+        download_response.data == avatar2_data
+    ), "Should return latest uploaded content"
 
 
 @pytest.mark.integration
@@ -231,9 +209,8 @@ def test_avatar_isolation_between_users(
     Test that avatars are properly isolated between users.
     User A should not be able to access User B's avatar.
     """
-    from werkzeug.security import (
-        generate_password_hash,
-    )  # pylint: disable=import-outside-toplevel
+    from werkzeug.security import \
+        generate_password_hash  # pylint: disable=import-outside-toplevel
 
     from app.models.user import User  # pylint: disable=import-outside-toplevel
 

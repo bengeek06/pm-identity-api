@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 logger.py
 ---------
@@ -42,10 +50,10 @@ handler.setFormatter(
 )
 
 # Set log level from LOG_LEVEL env var, default to INFO
-log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-if log_level not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
-    log_level = "INFO"
-logging.basicConfig(level=getattr(logging, log_level), handlers=[handler])
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+if LOG_LEVEL not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+    LOG_LEVEL = "INFO"
+logging.basicConfig(level=getattr(logging, LOG_LEVEL), handlers=[handler])
 
 # Choose renderer based on environment
 if env in ("development", "testing"):
