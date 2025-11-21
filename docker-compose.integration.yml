@@ -64,8 +64,9 @@ services:
     environment:
       FLASK_ENV: development
       LOG_LEVEL: DEBUG
-      # Use in-memory DB for clean state on each test run
-      DATABASE_URL: "sqlite:///:memory:"
+      # Use temp file DB - persists across Flask reloader restarts
+      # Cleaned by run-integration-tests.sh before each run
+      DATABASE_URL: "sqlite:////tmp/guardian_test.db"
       JWT_SECRET: integration-test-secret-key
       # Docker-specific flags
       IN_DOCKER_CONTAINER: "1"

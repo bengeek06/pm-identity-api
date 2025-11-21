@@ -79,6 +79,14 @@ if docker compose -f "$COMPOSE_FILE" --profile guardian ps | grep -q "Up"; then
     docker compose -f "$COMPOSE_FILE" --profile guardian down -v
 fi
 
+# Clean Guardian test database for fresh start
+if [ "$WITH_GUARDIAN" = true ]; then
+    if [ -f "/tmp/guardian_test.db" ]; then
+        echo "🗑️  Removing old Guardian test database..."
+        rm -f /tmp/guardian_test.db
+    fi
+fi
+
 # Start services (build + up)
 echo "🚀 Starting integration services (MinIO + Storage + Guardian)..."
 if [ "$WITH_GUARDIAN" = true ]; then
