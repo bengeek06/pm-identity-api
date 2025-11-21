@@ -4,8 +4,6 @@ Test to verify handling of different Guardian service response formats.
 
 from unittest import mock
 
-import pytest
-
 from tests.unit.conftest import create_jwt_token, get_init_db_payload
 
 

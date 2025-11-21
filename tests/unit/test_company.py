@@ -82,7 +82,7 @@ def test_get_companies_multiple(client, session):
     data = response.get_json()
     assert isinstance(data, list)
     assert len(data) == 3
-    
+
     names = [c["name"] for c in data]
     assert "Company A" in names
     assert "Company B" in names
@@ -222,7 +222,10 @@ def test_post_sqlalchemy_error(client, monkeypatch):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
 
     # Mock the validation to bypass uniqueness check
-    monkeypatch.setattr("app.schemas.company_schema.CompanySchema.validate_name", lambda self, value, **kwargs: None)
+    monkeypatch.setattr(
+        "app.schemas.company_schema.CompanySchema.validate_name",
+        lambda self, value, **kwargs: None,
+    )
     monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
 
     company_id = str(uuid.uuid4())
@@ -433,7 +436,10 @@ def test_put_company_sqlalchemy_error(client, session, monkeypatch):
         raise SQLAlchemyError("Mocked SQLAlchemyError")
 
     # Mock the validation to bypass uniqueness check
-    monkeypatch.setattr("app.schemas.company_schema.CompanySchema.validate_name", lambda self, value, **kwargs: None)
+    monkeypatch.setattr(
+        "app.schemas.company_schema.CompanySchema.validate_name",
+        lambda self, value, **kwargs: None,
+    )
     monkeypatch.setattr("app.models.db.session.commit", raise_sqlalchemy_error)
 
     payload = {"name": "NewName"}

@@ -14,10 +14,8 @@ import pytest
 @pytest.mark.integration
 def test_avatar_upload_to_real_storage(
     integration_client,
-    real_company,
     real_user,
     integration_token,
-    storage_api_client,
 ):
     """
     Test complete avatar upload flow:
@@ -46,8 +44,6 @@ def test_avatar_upload_to_real_storage(
     assert "avatar_file_id" in data
     assert data["has_avatar"] is True
 
-    file_id = data["avatar_file_id"]
-
     # Verify file exists by downloading via Identity Service
     download_response = integration_client.get(f"/users/{real_user.id}/avatar")
     assert (
@@ -60,7 +56,6 @@ def test_avatar_upload_to_real_storage(
 @pytest.mark.integration
 def test_avatar_download_from_real_storage(
     integration_client,
-    real_company,
     real_user,
     integration_token,
 ):
@@ -96,10 +91,8 @@ def test_avatar_download_from_real_storage(
 @pytest.mark.integration
 def test_avatar_delete_from_real_storage(
     integration_client,
-    real_company,
     real_user,
     integration_token,
-    storage_api_client,
 ):
     """
     Test avatar deletion:
@@ -121,7 +114,6 @@ def test_avatar_delete_from_real_storage(
         content_type="multipart/form-data",
     )
     assert upload_response.status_code == 201
-    file_id = upload_response.get_json()["avatar_file_id"]
 
     # Delete
     delete_response = integration_client.delete(
@@ -144,10 +136,8 @@ def test_avatar_delete_from_real_storage(
 @pytest.mark.integration
 def test_avatar_replace_in_real_storage(
     integration_client,
-    real_company,
     real_user,
     integration_token,
-    storage_api_client,
 ):
     """
     Test avatar replacement:
@@ -194,7 +184,9 @@ def test_avatar_replace_in_real_storage(
     assert download_response.content_type.startswith("image/")
 
     # Verify download returns new content (latest version)
-    assert download_response.data == avatar2_data, "Should return latest uploaded content"
+    assert (
+        download_response.data == avatar2_data
+    ), "Should return latest uploaded content"
 
 
 @pytest.mark.integration

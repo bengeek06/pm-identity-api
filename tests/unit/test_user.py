@@ -9,12 +9,11 @@ import uuid
 from unittest import mock
 
 import jwt
-import pytest
-import requests
 from werkzeug.security import generate_password_hash
 
 from app.models.user import User
 from tests.unit.conftest import create_jwt_token, get_init_db_payload
+
 
 ##################################################
 # Test cases for GET /users
@@ -43,6 +42,7 @@ def test_get_users_empty(client, session):
     data = response.get_json()
     assert isinstance(data, list)
     assert len(data) == 0
+
 
 def test_get_users_single(client, session):
     """
@@ -73,6 +73,7 @@ def test_get_users_single(client, session):
     assert data[0]["last_name"] == "Smith"
     assert data[0]["company_id"] == company_id
     assert "id" in data[0]
+
 
 def test_get_users_multiple(client, session):
     """
@@ -110,9 +111,11 @@ def test_get_users_multiple(client, session):
     assert "Bob" in first_names
     assert "Carol" in first_names
 
+
 ##################################################
 # Test cases for POST /users
 ##################################################
+
 
 def test_post_user_success(client):
     """
@@ -142,6 +145,7 @@ def test_post_user_success(client):
     assert data["company_id"] == str(company_id)
     assert "id" in data
 
+
 def test_post_user_missing_required_fields(client):
     """
     Test POST /users with missing required fields.
@@ -169,6 +173,7 @@ def test_post_user_missing_required_fields(client):
         or "last_name" in str(data).lower()
         or "company_id" in str(data).lower()
     )
+
 
 def test_post_user_duplicate_email(client, session):
     """
@@ -203,6 +208,7 @@ def test_post_user_duplicate_email(client, session):
     data = response.get_json()
     assert "email" in str(data).lower()
 
+
 def test_post_user_invalid_email(client):
     """
     Test POST /users with invalid email format.
@@ -227,9 +233,11 @@ def test_post_user_invalid_email(client):
     data = response.get_json()
     assert "email" in str(data).lower()
 
+
 ##################################################
 # Test cases for GET /users/<id>
 ##################################################
+
 
 def test_get_user_by_id_success(client, session):
     """
@@ -263,6 +271,7 @@ def test_get_user_by_id_success(client, session):
     assert data["last_name"] == "User"
     assert data["company_id"] == company_id
 
+
 def test_get_user_by_id_not_found(client):
     """
     Test GET /users/<id> for a non-existent user.
@@ -286,9 +295,11 @@ def test_get_user_by_id_not_found(client):
         or "message" in data
     )
 
+
 ##################################################
 # Test cases for PUT /users/<id>
 ##################################################
+
 
 def test_put_user_success(client, session):
     """
@@ -328,6 +339,7 @@ def test_put_user_success(client, session):
     assert data["last_name"] == "User"
     assert data["company_id"] == str(company_id)
 
+
 def test_put_user_not_found(client):
     """
     Test PUT /users/<id> for a non-existent user.
@@ -356,6 +368,7 @@ def test_put_user_not_found(client):
         or "error" in data
         or "message" in data
     )
+
 
 def test_put_user_missing_required_fields(client, session):
     """
@@ -393,9 +406,11 @@ def test_put_user_missing_required_fields(client, session):
         or "company_id" in str(data).lower()
     )
 
+
 ##################################################
 # Test cases for PATCH /users/<id>
 ##################################################
+
 
 def test_patch_user_success(client, session):
     """
@@ -428,6 +443,7 @@ def test_patch_user_success(client, session):
     assert data["last_name"] == "UserUpdated"
     assert data["email"] == "patchme@example.com"
 
+
 def test_patch_user_not_found(client):
     """
     Test PATCH /users/<id> for a non-existent user.
@@ -451,6 +467,7 @@ def test_patch_user_not_found(client):
         or "error" in data
         or "message" in data
     )
+
 
 def test_patch_user_invalid_email(client, session):
     """
@@ -480,9 +497,11 @@ def test_patch_user_invalid_email(client, session):
     data = response.get_json()
     assert "email" in str(data).lower()
 
+
 ##################################################
 # Test cases for DELETE /users/<id>
 ##################################################
+
 
 def test_delete_user_success(client, session):
     """
@@ -514,6 +533,7 @@ def test_delete_user_success(client, session):
     get_response = client.get(f"/users/{user.id}")
     assert get_response.status_code == 404
 
+
 def test_delete_user_not_found(client):
     """
     Test DELETE /users/<id> for a non-existent user.
@@ -537,9 +557,11 @@ def test_delete_user_not_found(client):
         or "message" in data
     )
 
+
 ##################################################
 # Test cases for GET /position/<string:position_id>/users
 ##################################################
+
 
 def test_get_users_by_position(client, session):
     """
@@ -598,6 +620,7 @@ def test_get_users_by_position(client, session):
     assert len(data2) == 1
     assert data2[0]["email"] == "pos2@example.com"
 
+
 def test_get_users_by_position_not_found(client):
     """
     Test GET /positions/<position_id>/users for a position with no users.
@@ -618,9 +641,11 @@ def test_get_users_by_position_not_found(client):
     assert isinstance(data, list)
     assert len(data) == 0
 
+
 ##################################################
 # Test cases for POST /verify_password
 ##################################################
+
 
 def test_verify_password_success(client, session):
     """
@@ -654,6 +679,7 @@ def test_verify_password_success(client, session):
     assert user.last_login_at is not None
     assert data["last_login_at"] is not None
 
+
 def test_verify_password_wrong_password(client, session):
     """
     Test POST /verify_password with wrong password.
@@ -675,6 +701,7 @@ def test_verify_password_wrong_password(client, session):
     data = response.get_json()
     assert "invalid" in str(data).lower()
 
+
 def test_verify_password_user_not_found(client):
     """
     Test POST /verify_password with non-existent user.
@@ -684,6 +711,7 @@ def test_verify_password_user_not_found(client):
     assert response.status_code == 403
     data = response.get_json()
     assert "invalid" in str(data).lower()
+
 
 def test_verify_password_missing_password(client, session):
     """
@@ -706,9 +734,11 @@ def test_verify_password_missing_password(client, session):
     data = response.get_json()
     assert "required" in str(data).lower()
 
+
 ##################################################
 # Test cases for GET /users/<user_id>/roles
 ##################################################
+
 
 def test_get_user_roles_missing_jwt(client):
     """
@@ -719,6 +749,7 @@ def test_get_user_roles_missing_jwt(client):
     assert response.status_code == 401
     data = response.get_json()
     assert "jwt" in str(data).lower() or "token" in str(data).lower()
+
 
 def test_get_user_roles_missing_user_id_in_jwt(client):
     """
@@ -738,6 +769,7 @@ def test_get_user_roles_missing_user_id_in_jwt(client):
     assert response.status_code == 401
     data = response.get_json()
     assert "missing user_id" in str(data).lower()
+
 
 def test_get_user_roles_empty_roles(client):
     """
@@ -768,6 +800,7 @@ def test_get_user_roles_empty_roles(client):
             assert "roles" in data
             assert data["roles"] == []
 
+
 def test_get_user_roles_guardian_response_missing_roles_key(client):
     """
     Test GET /users/<user_id>/roles when Guardian response doesn't contain 'roles' key.
@@ -797,6 +830,7 @@ def test_get_user_roles_guardian_response_missing_roles_key(client):
             assert "roles" in data
             assert data["roles"] == []  # Should default to empty list
 
+
 def test_get_user_roles_user_not_found(client):
     """
     Test GET /users/<user_id>/roles when the requested user doesn't exist.
@@ -817,6 +851,7 @@ def test_get_user_roles_user_not_found(client):
     assert response.status_code == 404
     data = response.get_json()
     assert "user not found" in str(data).lower()
+
 
 def test_get_user_roles_different_company_access_denied(client, session):
     """
@@ -850,6 +885,7 @@ def test_get_user_roles_different_company_access_denied(client, session):
     data = response.get_json()
     assert "access denied" in str(data).lower()
 
+
 def test_post_user_role_missing_jwt(client):
     """
     Test POST /users/<user_id>/roles without JWT authentication.
@@ -860,6 +896,7 @@ def test_post_user_role_missing_jwt(client):
     assert response.status_code == 401
     data = response.get_json()
     assert "jwt" in str(data).lower() or "token" in str(data).lower()
+
 
 def test_post_user_role_missing_user_id_in_jwt(client):
     """
@@ -880,6 +917,7 @@ def test_post_user_role_missing_user_id_in_jwt(client):
     assert response.status_code == 401
     data = response.get_json()
     assert "missing user_id" in str(data).lower()
+
 
 def test_post_user_role_user_not_found(client):
     """
@@ -902,6 +940,7 @@ def test_post_user_role_user_not_found(client):
     assert response.status_code == 404
     data = response.get_json()
     assert "user not found" in str(data).lower()
+
 
 def test_post_user_role_different_company_access_denied(client, session):
     """
@@ -936,6 +975,7 @@ def test_post_user_role_different_company_access_denied(client, session):
     data = response.get_json()
     assert "access denied" in str(data).lower()
 
+
 def test_post_user_role_missing_json_data(client):
     """
     Test POST /users/<user_id>/roles without JSON payload.
@@ -954,6 +994,7 @@ def test_post_user_role_missing_json_data(client):
     assert response.status_code == 400
     data = response.get_json()
     assert "json data required" in str(data).lower()
+
 
 def test_post_user_role_missing_role_field(client):
     """
@@ -974,6 +1015,7 @@ def test_post_user_role_missing_role_field(client):
     assert response.status_code == 400
     data = response.get_json()
     assert "role id field is required" in str(data).lower()
+
 
 def test_post_user_role_invalid_role_format(client):
     """
@@ -1010,6 +1052,7 @@ def test_post_user_role_invalid_role_format(client):
     data = response.get_json()
     assert "role id must be a non-empty string" in str(data).lower()
 
+
 def test_get_user_role_missing_jwt(client):
     """
     Test GET /users/<user_id>/roles/<user_role_id> without JWT authentication.
@@ -1021,6 +1064,7 @@ def test_get_user_role_missing_jwt(client):
     assert response.status_code == 401
     data = response.get_json()
     assert "jwt token" in str(data).lower()
+
 
 def test_get_user_role_user_not_found(client):
     """
@@ -1050,6 +1094,7 @@ def test_get_user_role_user_not_found(client):
         or "access denied" in str(data).lower()
     )
 
+
 def test_delete_user_role_missing_jwt(client):
     """
     Test DELETE /users/<user_id>/roles/<user_role_id> without JWT authentication.
@@ -1061,6 +1106,7 @@ def test_delete_user_role_missing_jwt(client):
     assert response.status_code == 401
     data = response.get_json()
     assert "jwt token" in str(data).lower()
+
 
 def test_delete_user_role_user_not_found(client):
     """
@@ -1089,6 +1135,7 @@ def test_delete_user_role_user_not_found(client):
         "not found" in str(data).lower()
         or "access denied" in str(data).lower()
     )
+
 
 def test_get_user_policies_no_roles(client):
     """
@@ -1121,6 +1168,7 @@ def test_get_user_policies_no_roles(client):
             assert "policies" in data
             assert data["policies"] == []
 
+
 def test_get_user_policies_missing_jwt(client):
     """
     Test GET /users/<user_id>/policies without JWT authentication.
@@ -1128,6 +1176,7 @@ def test_get_user_policies_missing_jwt(client):
     fake_user_id = str(uuid.uuid4())
     response = client.get(f"/users/{fake_user_id}/policies")
     assert response.status_code == 401
+
 
 def test_get_user_policies_user_not_found(client):
     """
@@ -1143,6 +1192,7 @@ def test_get_user_policies_user_not_found(client):
     assert response.status_code == 404
     data = response.get_json()
     assert "not found" in str(data).lower()
+
 
 def test_get_user_policies_different_company_denied(client, session):
     """
@@ -1176,6 +1226,7 @@ def test_get_user_policies_different_company_denied(client, session):
     assert response.status_code == 403
     data = response.get_json()
     assert "denied" in str(data).lower()
+
 
 def test_get_user_policies_role_not_found_in_guardian(client):
     """
@@ -1221,9 +1272,11 @@ def test_get_user_policies_role_not_found_in_guardian(client):
             assert "policies" in data
             assert data["policies"] == []
 
+
 ##################################################
 # User Permissions Tests
 ##################################################
+
 
 def test_get_user_permissions_no_roles(client):
     """
@@ -1256,6 +1309,7 @@ def test_get_user_permissions_no_roles(client):
             assert "permissions" in data
             assert data["permissions"] == []
 
+
 def test_get_user_permissions_missing_jwt(client):
     """
     Test GET /users/<user_id>/permissions without JWT authentication.
@@ -1263,6 +1317,7 @@ def test_get_user_permissions_missing_jwt(client):
     fake_user_id = str(uuid.uuid4())
     response = client.get(f"/users/{fake_user_id}/permissions")
     assert response.status_code == 401
+
 
 def test_get_user_permissions_user_not_found(client):
     """
@@ -1278,6 +1333,7 @@ def test_get_user_permissions_user_not_found(client):
     assert response.status_code == 404
     data = response.get_json()
     assert "not found" in str(data).lower()
+
 
 def test_get_user_permissions_different_company_denied(client, session):
     """
@@ -1311,6 +1367,7 @@ def test_get_user_permissions_different_company_denied(client, session):
     assert response.status_code == 403
     data = response.get_json()
     assert "denied" in str(data).lower()
+
 
 def test_get_user_permissions_policy_not_found_in_guardian(client):
     """

@@ -68,7 +68,7 @@ def test_post_company_logo_no_file(client, session):
     assert "No logo file provided" in data["message"]
 
 
-def test_post_company_logo_company_not_found(client, session):
+def test_post_company_logo_company_not_found(client):
     """
     Test POST /companies/{id}/logo for non-existent company.
     Should return 404 Not Found.
@@ -213,7 +213,7 @@ def test_delete_company_logo_no_logo(client, session):
     assert "has no logo to delete" in data["message"]
 
 
-def test_delete_company_logo_company_not_found(client, session):
+def test_delete_company_logo_company_not_found(client):
     """
     Test DELETE /companies/{id}/logo for non-existent company.
     Should return 404.

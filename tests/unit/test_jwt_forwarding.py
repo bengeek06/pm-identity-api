@@ -105,13 +105,15 @@ def test_post_role_jwt_cookie_forwarding(client, app):
         "status": 200,
     }
 
-    def post_side_effect(url, **kwargs):
+    def post_side_effect(url, **_kwargs):
         """Return different responses based on URL."""
         if "check-access" in url:
             return mock_check_access
         return mock_response
 
-    with mock.patch("requests.post", side_effect=post_side_effect) as mock_post:
+    with mock.patch(
+        "requests.post", side_effect=post_side_effect
+    ) as mock_post:
         payload = {"role_id": mock_role_id}
         response = client.post(f"/users/{user_id}/roles", json=payload)
 
@@ -120,7 +122,8 @@ def test_post_role_jwt_cookie_forwarding(client, app):
 
         # Find the call to user-roles endpoint (not check-access)
         user_roles_calls = [
-            call for call in mock_post.call_args_list
+            call
+            for call in mock_post.call_args_list
             if "user-roles" in call[0][0]
         ]
         assert len(user_roles_calls) == 1
@@ -128,8 +131,13 @@ def test_post_role_jwt_cookie_forwarding(client, app):
         # Verify that the JWT cookie was forwarded to Guardian
         call_args = user_roles_calls[0]
         assert call_args[0][0] == "http://guardian:8000/user-roles"
-        assert call_args[1]["json"] == {"user_id": user_id, "role_id": mock_role_id}
-        assert call_args[1]["headers"] == {"Cookie": f"access_token={jwt_token}"}
+        assert call_args[1]["json"] == {
+            "user_id": user_id,
+            "role_id": mock_role_id,
+        }
+        assert call_args[1]["headers"] == {
+            "Cookie": f"access_token={jwt_token}"
+        }
         assert call_args[1]["timeout"] == 5
 
         # Extract the Cookie header that was sent to Guardian
@@ -198,7 +206,9 @@ def test_individual_role_jwt_forwarding(client, app):
                 headers={"Cookie": f"access_token={jwt_token}"},
                 timeout=5,
             )
-            print("✅ JWT forwarded in individual role GET")    # Test DELETE individual role
+            print(
+                "✅ JWT forwarded in individual role GET"
+            )  # Test DELETE individual role
     mock_delete_response = mock.Mock()
     mock_delete_response.status_code = 204
 

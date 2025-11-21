@@ -4,7 +4,6 @@ Tests for utility functions in app.utils module.
 
 from unittest import mock
 
-import pytest
 import requests
 
 from app.utils import check_access

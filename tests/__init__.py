@@ -7,6 +7,7 @@ Ce fichier est exécuté en premier par pytest.
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Définir FLASK_ENV avant de charger le .env

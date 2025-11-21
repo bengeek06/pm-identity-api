@@ -45,7 +45,12 @@ def test_guardian_direct_list_format(client, app):
         roles_list  # Liste directe comme Guardian renvoie
     )
 
-    with mock.patch("requests.get", side_effect=lambda url, **kwargs: mock_get_roles if "user-roles" in url else mock.Mock()):
+    with mock.patch(
+        "requests.get",
+        side_effect=lambda url, **kwargs: (
+            mock_get_roles if "user-roles" in url else mock.Mock()
+        ),
+    ):
         with mock.patch("requests.post", return_value=mock_check_access):
             response = client.get(f"/users/{user_id}/roles")
 

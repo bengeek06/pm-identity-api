@@ -6,12 +6,10 @@ All interactions go through Storage Service API, never directly to MinIO.
 """
 
 import os
-import uuid
-import jwt
 
+import jwt
 import pytest
 import requests
-from werkzeug.security import generate_password_hash
 
 from app import create_app
 from app.models import db
@@ -124,7 +122,7 @@ def integration_client(integration_app):
 
 
 @pytest.fixture(scope="session")
-def integration_session(integration_app):
+def integration_session():
     """
     Database session for integration tests.
     Session-scoped - yields the session for the entire test session.
@@ -149,22 +147,24 @@ def integration_identity_init(integration_client):
                 "email": "admin@integration-test.com",
                 "password": "integration-password",
                 "first_name": "Admin",
-                "last_name": "User"
-            }
-        }
+                "last_name": "User",
+            },
+        },
     )
-    
-    assert response.status_code == 201, f"Identity init failed: {response.get_json()}"
+
+    assert (
+        response.status_code == 201
+    ), f"Identity init failed: {response.get_json()}"
     data = response.get_json()
-    
+
     company_id = data["company"]["id"]
     user_id = data["user"]["id"]
-    
+
     return {
         "company_id": company_id,
         "user_id": user_id,
         "company": data["company"],
-        "user": data["user"]
+        "user": data["user"],
     }
 
 
@@ -174,53 +174,55 @@ def guardian_init(integration_identity_init):
     Initialize Guardian Service via /init-db endpoint.
     Uses company_id and user_id from Identity initialization.
     Session-scoped to run once for all tests.
-    
+
     Returns the role name (companyadmin) created by Guardian.
     """
     guardian_url = "http://localhost:5002"
-    
+
     company_id = integration_identity_init["company_id"]
     user_id = integration_identity_init["user_id"]
-    
-    print(f"✓ Initializing Guardian - company_id={company_id}, user_id={user_id}")
-    
+
+    print(
+        f"✓ Initializing Guardian - company_id={company_id}, user_id={user_id}"
+    )
+
     # Call Guardian /init-db to create policies, roles, and assign role to user
     try:
         response = requests.post(
             f"{guardian_url}/init-db",
-            json={
-                "company": {"id": company_id},
-                "user": {"id": user_id}
-            },
-            timeout=10
+            json={"company": {"id": company_id}, "user": {"id": user_id}},
+            timeout=10,
         )
-        
+
         # Accept both 201 (created) and 403 (already initialized)
         if response.status_code == 201:
             print("✓ Guardian initialized successfully")
         elif response.status_code == 403:
             print("✓ Guardian already initialized")
         else:
-            print(f"❌ Guardian init failed: {response.status_code} - {response.text}")
+            print(
+                f"❌ Guardian init failed: {response.status_code} - {response.text}"
+            )
             response.raise_for_status()
-        
+
         return "companyadmin"
-        
+
     except requests.exceptions.RequestException as e:
         pytest.skip(f"Guardian Service not available: {e}")
+        return None
 
 
 @pytest.fixture
-def integration_token(integration_identity_init, guardian_init):
+def integration_token(integration_identity_init, guardian_init):  # pylint: disable=unused-argument
     """
     Generate JWT token for integration tests.
     Uses the company_id and user_id from Identity initialization.
-    
+
     Depends on guardian_init to ensure Guardian is initialized before tests run.
     """
     company_id = integration_identity_init["company_id"]
     user_id = integration_identity_init["user_id"]
-    
+
     return create_jwt_token(company_id, user_id)
 
 
@@ -243,11 +245,11 @@ def storage_api_client(integration_config):
             """Set JWT cookie for authentication."""
             token = create_jwt_token(company_id, user_id)
             # Storage Service uses 'access_token' cookie for JWT
-            self.session.cookies.set('access_token', token, domain='localhost')
+            self.session.cookies.set("access_token", token, domain="localhost")
 
         def get_file_metadata(
             self,
-            file_id,
+            _file_id,
             company_id,
             user_id,
             bucket="users",
@@ -274,7 +276,7 @@ def storage_api_client(integration_config):
             """
             # Set JWT cookie for authentication
             self._set_jwt_cookie(company_id, user_id)
-            
+
             # For avatars: bucket="users", id=user_id
             # For logos: bucket="companies", id=company_id
             bucket_id = company_id if bucket == "companies" else user_id
@@ -286,8 +288,8 @@ def storage_api_client(integration_config):
             response = self.session.get(
                 f"{self.base_url}/metadata",
                 params={
-                    "bucket": bucket,              # "users" or "companies"
-                    "id": bucket_id,               # user_id or company_id
+                    "bucket": bucket,  # "users" or "companies"
+                    "id": bucket_id,  # user_id or company_id
                     "logical_path": logical_path,
                     "include_versions": False,
                 },
@@ -298,12 +300,12 @@ def storage_api_client(integration_config):
         def delete_file(self, file_id, company_id, user_id):
             """
             Delete file via Storage Service /delete endpoint.
-            
+
             Uses JWT cookie authentication instead of headers.
             """
             # Set JWT cookie for authentication
             self._set_jwt_cookie(company_id, user_id)
-            
+
             response = self.session.delete(
                 f"{self.base_url}/delete",
                 json={"file_id": file_id, "physical": True},
@@ -313,8 +315,9 @@ def storage_api_client(integration_config):
 
     return StorageAPIClient(
         integration_config["STORAGE_SERVICE_URL"],
-        integration_config["JWT_SECRET"]
+        integration_config["JWT_SECRET"],
     )
+
 
 def create_jwt_token(company_id, user_id):
     """Helper function to create a JWT token for testing."""
@@ -327,33 +330,32 @@ def create_jwt_token(company_id, user_id):
 # Backward compatibility aliases for existing tests
 # ============================================================================
 
+
 @pytest.fixture
 def real_company(integration_identity_init, integration_app):
     """
     Backward compatibility alias for tests expecting real_company.
     Returns a Company object with data from Identity /init-db.
     """
-    from app.models.company import Company
-    
     with integration_app.app_context():
         company_data = integration_identity_init["company"]
         # Return a Company object that looks like it came from the DB
-        company = Company(
-            id=company_data["id"],
-            name=company_data["name"]
-        )
+        company = Company(id=company_data["id"], name=company_data["name"])
         return company
 
 
 @pytest.fixture
-def real_user(integration_identity_init, integration_app, guardian_init, integration_token):
+def real_user(
+    integration_identity_init,
+    integration_app,
+    guardian_init,  # pylint: disable=unused-argument
+    integration_token,  # pylint: disable=unused-argument
+):
     """
     Backward compatibility alias for tests expecting real_user.
     Returns a User object with data from Identity /init-db.
     Guardian role is already assigned via guardian_init.
     """
-    from app.models.user import User
-    
     with integration_app.app_context():
         user_data = integration_identity_init["user"]
         # Return a User object that looks like it came from the DB
@@ -362,6 +364,6 @@ def real_user(integration_identity_init, integration_app, guardian_init, integra
             email=user_data["email"],
             first_name=user_data.get("first_name"),
             last_name=user_data.get("last_name"),
-            company_id=integration_identity_init["company_id"]
+            company_id=integration_identity_init["company_id"],
         )
         return user

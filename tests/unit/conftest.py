@@ -10,6 +10,12 @@ import pytest
 
 from app import create_app
 from app.models import db
+from app.models.company import Company
+from app.models.customer import Customer
+from app.models.organization_unit import OrganizationUnit
+from app.models.position import Position
+from app.models.subcontractor import Subcontractor
+from app.models.user import User
 
 
 @pytest.fixture(scope="session")
@@ -39,19 +45,11 @@ def clean_db(app):
         "USE_GUARDIAN_SERVICE": app.config.get("USE_GUARDIAN_SERVICE"),
         "USE_STORAGE_SERVICE": app.config.get("USE_STORAGE_SERVICE"),
     }
-    
+
     yield
-    
+
     # Après chaque test, on nettoie toutes les tables dans le bon ordre
     with app.app_context():
-        # Import des modèles
-        from app.models.user import User
-        from app.models.position import Position
-        from app.models.organization_unit import OrganizationUnit
-        from app.models.customer import Customer
-        from app.models.subcontractor import Subcontractor
-        from app.models.company import Company
-        
         # Supprime dans l'ordre : d'abord les entités qui dépendent d'autres
         try:
             db.session.query(User).delete()
@@ -69,7 +67,7 @@ def clean_db(app):
                 db.session.execute(table.delete())
             db.session.execute(db.text("PRAGMA foreign_keys = ON"))
             db.session.commit()
-    
+
     # Restaure la configuration originale
     app.config.update(original_config)
 
