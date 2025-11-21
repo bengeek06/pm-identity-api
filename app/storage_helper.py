@@ -155,6 +155,68 @@ def _prepare_logo_upload_request(
     return headers, files, data
 
 
+def _prepare_customer_logo_upload_request(
+    customer_id: str,
+    company_id: str,
+    user_id: str,
+    file_data: bytes,
+    content_type: str,
+    filename: str,
+):
+    """Prepare upload request data for customer logo."""
+    extension = "png"
+    logical_path = f"customers/{customer_id}/logo.{extension}"
+    logger.debug(f"Logical path for customer logo: {logical_path}")
+
+    headers = {
+        "X-User-ID": user_id,
+        "X-Company-ID": company_id,
+    }
+
+    files = {
+        "file": (filename, file_data, content_type),
+    }
+
+    data = {
+        "bucket_type": "companies",
+        "bucket_id": company_id,
+        "logical_path": logical_path,
+    }
+
+    return headers, files, data
+
+
+def _prepare_subcontractor_logo_upload_request(
+    subcontractor_id: str,
+    company_id: str,
+    user_id: str,
+    file_data: bytes,
+    content_type: str,
+    filename: str,
+):
+    """Prepare upload request data for subcontractor logo."""
+    extension = "png"
+    logical_path = f"subcontractors/{subcontractor_id}/logo.{extension}"
+    logger.debug(f"Logical path for subcontractor logo: {logical_path}")
+
+    headers = {
+        "X-User-ID": user_id,
+        "X-Company-ID": company_id,
+    }
+
+    files = {
+        "file": (filename, file_data, content_type),
+    }
+
+    data = {
+        "bucket_type": "companies",
+        "bucket_id": company_id,
+        "logical_path": logical_path,
+    }
+
+    return headers, files, data
+
+
 def _extract_object_key_from_response(result):
     """Extract object_key from Storage Service response."""
     object_key = result.get("object_key")
@@ -399,6 +461,226 @@ def upload_logo_via_proxy(  # pylint: disable=too-many-locals
         raise StorageServiceError(f"Storage Service error: {error_msg}") from e
 
 
+def upload_customer_logo_via_proxy(  # pylint: disable=too-many-locals
+    customer_id: str,
+    company_id: str,
+    user_id: str,
+    file_data: bytes,
+    content_type: str,
+    filename: str,
+) -> dict:
+    """
+    Upload a customer logo via the Storage Service proxy endpoint.
+
+    Args:
+        customer_id: UUID of the customer
+        company_id: UUID of the company
+        user_id: UUID of the user (for auth)
+        file_data: Binary file data
+        content_type: MIME type (e.g., "image/jpeg")
+        filename: Original filename
+
+    Returns:
+        dict: {
+            'file_id': 'uuid-from-storage',
+            'object_key': 'companies/.../customers/...'
+        }
+        If Storage Service is disabled, returns mock data.
+
+    Raises:
+        AvatarValidationError: If validation fails
+        StorageServiceError: If upload fails
+    """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping logo upload for customer {customer_id}"
+        )
+        return {
+            "file_id": f"mock-file-id-{customer_id}",
+            "object_key": "mock-object-key",
+        }
+
+    validate_avatar(file_data, content_type)
+
+    headers, files, data = _prepare_customer_logo_upload_request(
+        customer_id, company_id, user_id, file_data, content_type, filename
+    )
+
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    url = f"{current_app.config['STORAGE_SERVICE_URL']}/upload/proxy"
+    logger.debug(f"Uploading logo for customer {customer_id} to {url}")
+
+    try:
+        logger.info(
+            f"Uploading logo for customer {customer_id}: {len(file_data)} bytes"
+        )
+
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
+        response = requests.post(
+            url,
+            files=files,
+            data=data,
+            headers=headers,
+            timeout=timeout,
+        )
+
+        logger.debug(
+            f"Storage Service response status: {response.status_code}"
+        )
+
+        if response.status_code not in (200, 201):
+            logger.error(
+                f"Failed to upload customer logo: {response.status_code} {response.text}"
+            )
+            response.raise_for_status()
+
+        result = response.json()
+        logger.debug(f"Storage Service response: {result}")
+
+        file_id = result.get("file_id")
+        if not file_id and "data" in result:
+            file_id = result["data"].get("file_id")
+
+        if not file_id:
+            logger.error(
+                f"Storage Service did not return file_id. Response: {result}"
+            )
+            raise StorageServiceError("Storage Service did not return file_id")
+
+        object_key = _extract_object_key_from_response(result)
+
+        logger.info(f"Customer logo uploaded successfully: file_id={file_id}")
+        logger.debug(f"object_key: {object_key}")
+        return {"file_id": file_id, "object_key": object_key}
+
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout calling Storage Service at {url}")
+        raise StorageServiceError("Storage Service timeout") from None
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error calling Storage Service: {e}")
+        if hasattr(e, "response") and e.response is not None:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("message", str(e))
+            except ValueError:
+                error_msg = str(e)
+        else:
+            error_msg = str(e)
+        raise StorageServiceError(f"Storage Service error: {error_msg}") from e
+
+
+def upload_subcontractor_logo_via_proxy(  # pylint: disable=too-many-locals
+    subcontractor_id: str,
+    company_id: str,
+    user_id: str,
+    file_data: bytes,
+    content_type: str,
+    filename: str,
+) -> dict:
+    """
+    Upload a subcontractor logo via the Storage Service proxy endpoint.
+
+    Args:
+        subcontractor_id: UUID of the subcontractor
+        company_id: UUID of the company
+        user_id: UUID of the user (for auth)
+        file_data: Binary file data
+        content_type: MIME type (e.g., "image/jpeg")
+        filename: Original filename
+
+    Returns:
+        dict: {
+            'file_id': 'uuid-from-storage',
+            'object_key': 'companies/.../subcontractors/...'
+        }
+        If Storage Service is disabled, returns mock data.
+
+    Raises:
+        AvatarValidationError: If validation fails
+        StorageServiceError: If upload fails
+    """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping logo upload for subcontractor {subcontractor_id}"
+        )
+        return {
+            "file_id": f"mock-file-id-{subcontractor_id}",
+            "object_key": "mock-object-key",
+        }
+
+    validate_avatar(file_data, content_type)
+
+    headers, files, data = _prepare_subcontractor_logo_upload_request(
+        subcontractor_id, company_id, user_id, file_data, content_type, filename
+    )
+
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    url = f"{current_app.config['STORAGE_SERVICE_URL']}/upload/proxy"
+    logger.debug(f"Uploading logo for subcontractor {subcontractor_id} to {url}")
+
+    try:
+        logger.info(
+            f"Uploading logo for subcontractor {subcontractor_id}: {len(file_data)} bytes"
+        )
+
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
+        response = requests.post(
+            url,
+            files=files,
+            data=data,
+            headers=headers,
+            timeout=timeout,
+        )
+
+        logger.debug(
+            f"Storage Service response status: {response.status_code}"
+        )
+
+        if response.status_code not in (200, 201):
+            logger.error(
+                f"Failed to upload subcontractor logo: {response.status_code} {response.text}"
+            )
+            response.raise_for_status()
+
+        result = response.json()
+        logger.debug(f"Storage Service response: {result}")
+
+        file_id = result.get("file_id")
+        if not file_id and "data" in result:
+            file_id = result["data"].get("file_id")
+
+        if not file_id:
+            logger.error(
+                f"Storage Service did not return file_id. Response: {result}"
+            )
+            raise StorageServiceError("Storage Service did not return file_id")
+
+        object_key = _extract_object_key_from_response(result)
+
+        logger.info(f"Subcontractor logo uploaded successfully: file_id={file_id}")
+        logger.debug(f"object_key: {object_key}")
+        return {"file_id": file_id, "object_key": object_key}
+
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout calling Storage Service at {url}")
+        raise StorageServiceError("Storage Service timeout") from None
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error calling Storage Service: {e}")
+        if hasattr(e, "response") and e.response is not None:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("message", str(e))
+            except ValueError:
+                error_msg = str(e)
+        else:
+            error_msg = str(e)
+        raise StorageServiceError(f"Storage Service error: {error_msg}") from e
+
+
 def delete_avatar(user_id: str, company_id: str, file_id: str) -> None:
     """
     Delete a user's avatar from the Storage Service.
@@ -535,6 +817,144 @@ def delete_logo(company_id: str, user_id: str, file_id: str) -> None:
         logger.error(f"Error deleting logo: {e}")
         # Don't raise - deletion is not critical
         logger.warning("Logo deletion failed, but continuing")
+
+
+def delete_customer_logo(
+    customer_id: str, company_id: str, user_id: str, file_id: str
+) -> None:
+    """
+    Delete a customer's logo from the Storage Service.
+
+    Args:
+        customer_id (str): The customer's ID
+        company_id (str): The company's ID
+        user_id (str): The user's ID (for auth)
+        file_id (str): The file ID of the logo to delete
+
+    Note:
+        This function does not raise exceptions if deletion fails,
+        as deletion is not critical to the update operation.
+    """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping logo deletion for customer {customer_id}"
+        )
+        return
+
+    if not file_id:
+        logger.warning("No file_id provided for deletion")
+        return
+
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    url = f"{current_app.config['STORAGE_SERVICE_URL']}/delete"
+
+    headers = {
+        "X-User-ID": user_id,
+        "X-Company-ID": company_id,
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "file_id": file_id,
+        "physical": True,
+    }
+
+    try:
+        logger.info(f"Deleting customer logo with file_id: {file_id}")
+
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
+        response = requests.delete(
+            url, json=payload, headers=headers, timeout=timeout
+        )
+
+        if response.status_code in (200, 204, 404):
+            logger.info(
+                f"Customer logo deleted successfully: file_id={file_id}"
+            )
+            return
+
+        logger.error(
+            f"Failed to delete customer logo: {response.status_code} - {response.text}"
+        )
+        response.raise_for_status()
+
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout calling Storage Service at {url}")
+        logger.warning("Customer logo deletion failed, but continuing")
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error deleting customer logo: {e}")
+        logger.warning("Customer logo deletion failed, but continuing")
+
+
+def delete_subcontractor_logo(
+    subcontractor_id: str, company_id: str, user_id: str, file_id: str
+) -> None:
+    """
+    Delete a subcontractor's logo from the Storage Service.
+
+    Args:
+        subcontractor_id (str): The subcontractor's ID
+        company_id (str): The company's ID
+        user_id (str): The user's ID (for auth)
+        file_id (str): The file ID of the logo to delete
+
+    Note:
+        This function does not raise exceptions if deletion fails,
+        as deletion is not critical to the update operation.
+    """
+    if not is_storage_service_enabled():
+        logger.info(
+            f"Storage Service disabled - skipping logo deletion for subcontractor {subcontractor_id}"
+        )
+        return
+
+    if not file_id:
+        logger.warning("No file_id provided for deletion")
+        return
+
+    from flask import current_app  # pylint: disable=import-outside-toplevel
+
+    url = f"{current_app.config['STORAGE_SERVICE_URL']}/delete"
+
+    headers = {
+        "X-User-ID": user_id,
+        "X-Company-ID": company_id,
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "file_id": file_id,
+        "physical": True,
+    }
+
+    try:
+        logger.info(f"Deleting subcontractor logo with file_id: {file_id}")
+
+        timeout = current_app.config.get("STORAGE_REQUEST_TIMEOUT", 30)
+        response = requests.delete(
+            url, json=payload, headers=headers, timeout=timeout
+        )
+
+        if response.status_code in (200, 204, 404):
+            logger.info(
+                f"Subcontractor logo deleted successfully: file_id={file_id}"
+            )
+            return
+
+        logger.error(
+            f"Failed to delete subcontractor logo: {response.status_code} - {response.text}"
+        )
+        response.raise_for_status()
+
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout calling Storage Service at {url}")
+        logger.warning("Subcontractor logo deletion failed, but continuing")
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error deleting subcontractor logo: {e}")
+        logger.warning("Subcontractor logo deletion failed, but continuing")
 
 
 def create_user_directories(user_id: str, company_id: str) -> None:

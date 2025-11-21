@@ -57,7 +57,14 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         model = Customer
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at", "company_id")
+        dump_only = (
+            "id",
+            "created_at",
+            "updated_at",
+            "company_id",
+            "logo_file_id",
+            "has_logo",
+        )
         unknown = RAISE
 
     name = fields.String(

@@ -61,6 +61,8 @@ class Subcontractor(db.Model):
     phone_number = db.Column(db.String(50), nullable=True)
     email = db.Column(db.String(100), nullable=True)
     address = db.Column(db.String(200), nullable=True)
+    logo_file_id = db.Column(db.String(36), nullable=True)
+    has_logo = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
@@ -157,3 +159,18 @@ class Subcontractor(db.Model):
                 "Error retrieving subcontractor by name %s: %s", name, e
             )
             return None
+
+    def set_logo(self, file_id: str) -> None:
+        """
+        Set subcontractor logo file_id and flag.
+
+        Args:
+            file_id (str): Storage Service file_id for the logo.
+        """
+        self.logo_file_id = file_id
+        self.has_logo = True
+
+    def remove_logo(self) -> None:
+        """Clear subcontractor logo reference and flag."""
+        self.logo_file_id = None
+        self.has_logo = False
