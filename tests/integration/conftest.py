@@ -221,7 +221,9 @@ def guardian_init(integration_identity_init):
 
 
 @pytest.fixture
-def integration_token(integration_identity_init, guardian_init):  # pylint: disable=unused-argument
+def integration_token(
+    integration_identity_init, guardian_init
+):  # pylint: disable=unused-argument
     """
     Generate JWT token for integration tests.
     Uses the company_id and user_id from Identity initialization.

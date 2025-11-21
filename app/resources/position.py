@@ -226,7 +226,10 @@ class PositionResource(Resource):
             return position_schema.dump(position), 200
         except ValidationError as err:
             logger.error(LOG_VALIDATION_ERROR, err.messages)
-            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
+            return {
+                "message": MSG_VALIDATION_ERROR,
+                "errors": err.messages,
+            }, 400
         except IntegrityError as e:
             db.session.rollback()
             logger.error(LOG_INTEGRITY_ERROR, str(e))
@@ -269,7 +272,10 @@ class PositionResource(Resource):
             return position_schema.dump(position), 200
         except ValidationError as err:
             logger.error(LOG_VALIDATION_ERROR, err.messages)
-            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
+            return {
+                "message": MSG_VALIDATION_ERROR,
+                "errors": err.messages,
+            }, 400
         except IntegrityError as e:
             db.session.rollback()
             logger.error(LOG_INTEGRITY_ERROR, str(e))

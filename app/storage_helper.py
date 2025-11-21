@@ -624,6 +624,42 @@ def create_user_directories(user_id: str, company_id: str) -> None:
             ) from e
 
 
+def _delete_file_from_storage(
+    file_id: str, delete_url: str, headers: dict, timeout: int
+) -> None:
+    """
+    Delete a single file from storage service.
+
+    Args:
+        file_id: ID of the file to delete
+        delete_url: Storage service delete endpoint URL
+        headers: Request headers with user/company IDs
+        timeout: Request timeout in seconds
+    """
+    try:
+        delete_payload = {
+            "file_id": file_id,
+            "physical": True,  # Permanent deletion
+        }
+
+        del_response = requests.delete(
+            delete_url,
+            json=delete_payload,
+            headers=headers,
+            timeout=timeout,
+        )
+
+        if del_response.status_code in (200, 204, 404):
+            logger.debug(f"Deleted file {file_id}")
+        else:
+            logger.warning(
+                f"Failed to delete file {file_id}: {del_response.status_code}"
+            )
+
+    except (requests.exceptions.RequestException, ValueError) as file_error:
+        logger.warning(f"Error deleting file {file_id}: {file_error}")
+
+
 def delete_user_storage(user_id: str, company_id: str) -> None:
     """
     Delete all user storage (entire user directory and contents).
@@ -685,35 +721,10 @@ def delete_user_storage(user_id: str, company_id: str) -> None:
 
         for file_meta in files:
             file_id = file_meta.get("file_id")
-            if not file_id:
-                continue
-
-            try:
-                delete_payload = {
-                    "file_id": file_id,
-                    "physical": True,  # Permanent deletion
-                }
-
-                del_response = requests.delete(
-                    delete_url,
-                    json=delete_payload,
-                    headers=headers,
-                    timeout=timeout,
+            if file_id:
+                _delete_file_from_storage(
+                    file_id, delete_url, headers, timeout
                 )
-
-                if del_response.status_code in (200, 204, 404):
-                    logger.debug(f"Deleted file {file_id}")
-                else:
-                    logger.warning(
-                        f"Failed to delete file {file_id}: {del_response.status_code}"
-                    )
-
-            except (
-                requests.exceptions.RequestException,
-                ValueError,
-            ) as file_error:
-                logger.warning(f"Error deleting file {file_id}: {file_error}")
-                # Continue with next file
 
         logger.info(f"Finished deleting storage for user {user_id}")
 

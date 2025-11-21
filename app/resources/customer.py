@@ -26,11 +26,9 @@ from app.constants import (
     LOG_DATABASE_ERROR,
     LOG_INTEGRITY_ERROR,
     LOG_VALIDATION_ERROR,
-    MSG_CUSTOMER_DELETED,
     MSG_CUSTOMER_NOT_FOUND,
     MSG_DATABASE_ERROR_OCCURRED,
     MSG_INTEGRITY_ERROR_DUPLICATE,
-    MSG_VALIDATION_ERROR,
 )
 from app.logger import logger
 from app.models import db

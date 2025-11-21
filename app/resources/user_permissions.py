@@ -100,10 +100,7 @@ class UserPermissionsResource(Resource):
             # Deduplicate permissions by ID
             for permission in permissions:
                 permission_id = permission.get("id")
-                if (
-                    permission_id
-                    and permission_id not in seen_permission_ids
-                ):
+                if permission_id and permission_id not in seen_permission_ids:
                     seen_permission_ids.add(permission_id)
                     all_permissions.append(permission)
 

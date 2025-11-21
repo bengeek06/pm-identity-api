@@ -26,7 +26,6 @@ from app.constants import (
     LOG_DATABASE_ERROR,
     LOG_INTEGRITY_ERROR,
     LOG_VALIDATION_ERROR,
-    MSG_COMPANY_DELETED,
     MSG_COMPANY_NOT_FOUND,
     MSG_DATABASE_ERROR,
     MSG_INTEGRITY_ERROR,
@@ -97,7 +96,10 @@ class CompanyListResource(Resource):
             return company_schema.dump(new_company), 201
         except ValidationError as err:
             logger.error(LOG_VALIDATION_ERROR, err.messages)
-            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
+            return {
+                "message": MSG_VALIDATION_ERROR,
+                "errors": err.messages,
+            }, 400
         except IntegrityError as e:
             db.session.rollback()
             logger.error(LOG_INTEGRITY_ERROR, str(e))
@@ -184,7 +186,10 @@ class CompanyResource(Resource):
             return company_schema.dump(company), 200
         except ValidationError as err:
             logger.error(LOG_VALIDATION_ERROR, err.messages)
-            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
+            return {
+                "message": MSG_VALIDATION_ERROR,
+                "errors": err.messages,
+            }, 400
         except IntegrityError as e:
             db.session.rollback()
             logger.error(LOG_INTEGRITY_ERROR, str(e))
@@ -229,7 +234,10 @@ class CompanyResource(Resource):
             return company_schema.dump(company), 200
         except ValidationError as err:
             logger.error(LOG_VALIDATION_ERROR, err.messages)
-            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
+            return {
+                "message": MSG_VALIDATION_ERROR,
+                "errors": err.messages,
+            }, 400
         except IntegrityError as e:
             db.session.rollback()
             logger.error(LOG_INTEGRITY_ERROR, str(e))
