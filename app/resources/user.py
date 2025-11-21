@@ -22,6 +22,9 @@ from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import generate_password_hash
 
+from app.constants import (LOG_DATABASE_ERROR, LOG_INTEGRITY_ERROR,
+                          LOG_VALIDATION_ERROR, MSG_DATABASE_ERROR,
+                          MSG_INTEGRITY_ERROR, MSG_VALIDATION_ERROR)
 from app.logger import logger
 from app.models import db
 from app.models.company import Company
@@ -335,16 +338,16 @@ class UserListResource(Resource):
 
             return user_schema.dump(user), 201
         except ValidationError as e:
-            logger.error(f"Validation error: {e.messages}")
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error(f"Integrity error: {str(e.orig)}")
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
 
 class UserResource(Resource):
@@ -529,16 +532,16 @@ class UserResource(Resource):
             db.session.commit()
             return user_schema.dump(updated_user), 200
         except ValidationError as e:
-            logger.error(f"Validation error: {e.messages}")
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error(f"Integrity error: {str(e.orig)}")
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
     @check_access_required("delete")
@@ -580,5 +583,5 @@ class UserResource(Resource):
             return {"message": "User deleted successfully"}, 204
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500

@@ -19,20 +19,15 @@ from app.constants import (
     LOG_DATABASE_ERROR,
     LOG_INTEGRITY_ERROR,
     LOG_VALIDATION_ERROR,
-    MSG_DATABASE_ERROR,
-    MSG_INTEGRITY_ERROR,
-    MSG_ORG_UNIT_DELETED,
+    MSG_DATABASE_ERROR_OCCURRED,
+    MSG_INTEGRITY_ERROR_DUPLICATE,
     MSG_ORG_UNIT_NOT_FOUND,
-    MSG_VALIDATION_ERROR,
 )
 from app.logger import logger
 from app.models import db
 from app.models.organization_unit import OrganizationUnit
 from app.schemas.organization_unit_schema import OrganizationUnitSchema
 from app.utils import check_access_required, require_jwt_auth
-
-# Error message constants
-ERROR_INTEGRITY_DUPLICATE = "Integrity error, possibly duplicate entry."
 
 
 class OrganizationUnitListResource(Resource):
@@ -97,14 +92,12 @@ class OrganizationUnitListResource(Resource):
             return {"error": str(err)}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error(
-                "Integrity error, possibly duplicate entry: %s", str(err)
-            )
-            return {"error": ERROR_INTEGRITY_DUPLICATE}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(err))
+            return {"error": MSG_INTEGRITY_ERROR_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error(LOG_DATABASE_ERROR, str(err))
-            return {"error": "Database error occurred."}, 500
+            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
 
 class OrganizationUnitResource(Resource):
@@ -193,14 +186,12 @@ class OrganizationUnitResource(Resource):
             return {"error": str(err)}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error(
-                "Integrity error, possibly duplicate entry: %s", str(err)
-            )
-            return {"error": ERROR_INTEGRITY_DUPLICATE}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(err))
+            return {"error": MSG_INTEGRITY_ERROR_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error(LOG_DATABASE_ERROR, str(err))
-            return {"error": "Database error occurred."}, 500
+            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
     @check_access_required("update")
@@ -246,14 +237,12 @@ class OrganizationUnitResource(Resource):
             return {"error": str(err)}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error(
-                "Integrity error, possibly duplicate entry: %s", str(err)
-            )
-            return {"error": ERROR_INTEGRITY_DUPLICATE}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(err))
+            return {"error": MSG_INTEGRITY_ERROR_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
             logger.error(LOG_DATABASE_ERROR, str(err))
-            return {"error": "Database error occurred."}, 500
+            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
     @check_access_required("delete")
@@ -311,7 +300,7 @@ class OrganizationUnitResource(Resource):
             logger.error(
                 "Database error while deleting organization unit: %s", str(err)
             )
-            return {"error": "Database error occurred."}, 500
+            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
 
 class OrganizationUnitChildrenResource(Resource):
