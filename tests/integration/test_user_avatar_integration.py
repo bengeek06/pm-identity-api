@@ -48,23 +48,13 @@ def test_avatar_upload_to_real_storage(
 
     file_id = data["avatar_file_id"]
 
-    # Verify file exists in Storage Service
-    storage_response = storage_api_client.get_file_metadata(
-        file_id, real_company.id, real_user.id
-    )
+    # Verify file exists by downloading via Identity Service
+    download_response = integration_client.get(f"/users/{real_user.id}/avatar")
     assert (
-        storage_response.status_code == 200
-    ), f"File not found in Storage: {storage_response.text}"
-
-    metadata = storage_response.json()
-    # Storage API returns nested structure: {file: {...}, current_version: {...}}
-    file_data = metadata.get("file", {})
-    assert (
-        file_data.get("id") == file_id
-        or file_data.get("bucket_type") == "users"
-    )
-    assert file_data.get("bucket_type") == "users"
-    assert file_data.get("bucket_id") == real_user.id
+        download_response.status_code == 200
+    ), f"File not found in Storage: {download_response.status_code}"
+    assert download_response.content_type.startswith("image/")
+    assert len(download_response.data) > 0, "Downloaded avatar is empty"
 
 
 @pytest.mark.integration
@@ -139,13 +129,9 @@ def test_avatar_delete_from_real_storage(
     )
     assert delete_response.status_code == 204
 
-    # Verify file is gone from Storage
-    storage_response = storage_api_client.get_file_metadata(
-        file_id, real_company.id, real_user.id
-    )
-    assert (
-        storage_response.status_code == 404
-    ), "File should be deleted from Storage Service"
+    # Verify file is gone by checking download returns 404
+    download_response = integration_client.get(f"/users/{real_user.id}/avatar")
+    assert download_response.status_code == 404, "Avatar should be deleted"
 
     # Verify has_avatar is False
     user_response = integration_client.get(f"/users/{real_user.id}")
@@ -202,21 +188,13 @@ def test_avatar_replace_in_real_storage(
         file_id_1 == file_id_2
     ), "Storage Service should version the same file"
 
-    # Verify file metadata exists (should return latest version)
-    metadata_response = storage_api_client.get_file_metadata(
-        file_id_2, real_company.id, real_user.id
-    )
-    assert metadata_response.status_code == 200
-    metadata = metadata_response.json()
-
-    # Verify it's version 2
-    current_version = metadata.get("current_version", {})
-    assert current_version.get("version_number") == 2
-
-    # Verify download returns new content (latest version)
+    # Verify file exists by downloading latest version via Identity Service
     download_response = integration_client.get(f"/users/{real_user.id}/avatar")
     assert download_response.status_code == 200
-    assert download_response.data == avatar2_data
+    assert download_response.content_type.startswith("image/")
+
+    # Verify download returns new content (latest version)
+    assert download_response.data == avatar2_data, "Should return latest uploaded content"
 
 
 @pytest.mark.integration

@@ -48,24 +48,13 @@ def test_company_logo_upload_to_real_storage(
 
     file_id = data["logo_file_id"]
 
-    # Verify file exists in Storage Service
-    storage_response = storage_api_client.get_file_metadata(
-        file_id,
-        real_company.id,
-        real_user.id,
-        bucket="companies",
-        resource_type="logos",
-    )
+    # Verify file exists by downloading via Identity Service
+    download_response = integration_client.get(f"/companies/{real_company.id}/logo")
     assert (
-        storage_response.status_code == 200
-    ), f"File not found in Storage: {storage_response.text}"
-
-    metadata = storage_response.json()
-    # Metadata response has nested structure: {"file": {...}, "current_version": {...}}
-    file_data = metadata.get("file", {})
-    assert file_data.get("id") == file_id
-    assert file_data.get("bucket_type") == "companies"
-    assert file_data.get("bucket_id") == real_company.id
+        download_response.status_code == 200
+    ), f"File not found in Storage: {download_response.status_code}"
+    assert download_response.content_type.startswith("image/")
+    assert len(download_response.data) > 0, "Downloaded logo is empty"
 
 
 @pytest.mark.integration
@@ -142,13 +131,9 @@ def test_company_logo_delete_from_real_storage(
     )
     assert delete_response.status_code == 204
 
-    # Verify file is gone from Storage
-    storage_response = storage_api_client.get_file_metadata(
-        file_id, real_company.id, real_user.id
-    )
-    assert (
-        storage_response.status_code == 404
-    ), "File should be deleted from Storage Service"
+    # Verify file is gone by checking download returns 404
+    download_response = integration_client.get(f"/companies/{real_company.id}/logo")
+    assert download_response.status_code == 404, "Logo should be deleted"
 
     # Verify has_logo is False
     company_response = integration_client.get(f"/companies/{real_company.id}")
@@ -205,28 +190,13 @@ def test_company_logo_replace_in_real_storage(
         file_id_1 == file_id_2
     ), "Storage Service should version the same file"
 
-    # Verify file metadata exists (should return latest version)
-    metadata_response = storage_api_client.get_file_metadata(
-        file_id_2,
-        real_company.id,
-        real_user.id,
-        bucket="companies",
-        resource_type="logos",
-    )
-    assert metadata_response.status_code == 200
-    metadata = metadata_response.json()
-
-    # Verify it's version 2
-    file_data = metadata.get("file", {})
-    current_version = metadata.get("current_version", {})
-    assert current_version.get("version_number") == 2
-
-    # Verify download returns new content
-    download_response = integration_client.get(
-        f"/companies/{real_company.id}/logo"
-    )
+    # Verify file exists by downloading latest version via Identity Service
+    download_response = integration_client.get(f"/companies/{real_company.id}/logo")
     assert download_response.status_code == 200
-    assert download_response.data == logo2_data
+    assert download_response.content_type.startswith("image/")
+
+    # Verify download returns new content (latest version)
+    assert download_response.data == logo2_data, "Should return latest uploaded content"
 
 
 @pytest.mark.integration

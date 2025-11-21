@@ -18,7 +18,10 @@ services:
       - integration-network
 
   storage-service:
-    image: ghcr.io/bengeek06/storage-api-waterfall:latest
+    # Always build from local repository
+    build:
+      context: ../storage_service
+      dockerfile: Dockerfile
     container_name: identity-integration-storage
     ports:
       - "5001:5000"
@@ -49,6 +52,35 @@ services:
       retries: 10
     networks:
       - integration-network
+
+  guardian-service:
+    # Guardian Service - Authorization and access control
+    build:
+      context: ${GUARDIAN_SERVICE_PATH:-../guardian_service}
+      dockerfile: Dockerfile
+    container_name: identity-integration-guardian
+    ports:
+      - "5002:5000"
+    environment:
+      FLASK_ENV: development
+      LOG_LEVEL: DEBUG
+      # Use in-memory DB for clean state on each test run
+      DATABASE_URL: "sqlite:///:memory:"
+      JWT_SECRET: integration-test-secret-key
+      # Docker-specific flags
+      IN_DOCKER_CONTAINER: "1"
+      WAIT_FOR_DB: "false"
+      RUN_MIGRATIONS: "true"
+      APP_MODE: "development"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health').read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - integration-network
+    profiles:
+      - guardian  # Only start when --profile guardian is specified
 
 networks:
   integration-network:

@@ -2,6 +2,53 @@
 
 Tests d'intégration pour Identity Service avec Storage Service et MinIO réels.
 
+## Quick Start
+
+```bash
+# Default: remote images, no Guardian
+./run-integration-tests.sh
+
+# With Guardian service
+./run-integration-tests.sh --with-guardian
+
+# Build from local repositories (for testing service changes)
+./run-integration-tests.sh --build-local
+
+# All options combined
+./run-integration-tests.sh --build-local --with-guardian
+```
+
+## Image Strategy: Remote vs Local Build
+
+### Problem
+- Remote images (`ghcr.io/...`) are only built from `main` branch
+- When testing branches, remote images may be outdated
+
+### Solutions
+
+**1. Remote Images (Default)**
+```bash
+./run-integration-tests.sh
+```
+✅ Fast, no setup needed  
+⚠️ Only tests against `main` branch of Storage/Guardian
+
+**2. Local Build**
+```bash
+./run-integration-tests.sh --build-local
+```
+✅ Tests your current branches  
+⚠️ Requires repos in `../storage_service`, `../guardian_service`
+
+**3. Mixed (via `.env.integration`)**
+```bash
+# Build Storage locally, use remote Guardian
+STORAGE_IMAGE=""
+GUARDIAN_IMAGE=ghcr.io/bengeek06/guardian-api-waterfall:latest
+```
+
+See `.env.integration` for configuration options.
+
 ## Architecture
 
 ```
