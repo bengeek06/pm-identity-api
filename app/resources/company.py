@@ -14,6 +14,16 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from app.constants import (
+    LOG_DATABASE_ERROR,
+    LOG_INTEGRITY_ERROR,
+    LOG_VALIDATION_ERROR,
+    MSG_COMPANY_DELETED,
+    MSG_COMPANY_NOT_FOUND,
+    MSG_DATABASE_ERROR,
+    MSG_INTEGRITY_ERROR,
+    MSG_VALIDATION_ERROR,
+)
 from app.logger import logger
 from app.models import db
 from app.models.company import Company
@@ -50,8 +60,8 @@ class CompanyListResource(Resource):
             company_schema = CompanySchema(session=db.session, many=True)
             return company_schema.dump(companies), 200
         except SQLAlchemyError as e:
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
     @check_access_required("create")
@@ -78,16 +88,16 @@ class CompanyListResource(Resource):
             db.session.commit()
             return company_schema.dump(new_company), 201
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
 
 class CompanyResource(Resource):
@@ -154,7 +164,7 @@ class CompanyResource(Resource):
         company = Company.get_by_id(company_id)
         if not company:
             logger.warning("Company with ID %s not found", company_id)
-            return {"message": "Company not found"}, 404
+            return {"message": MSG_COMPANY_NOT_FOUND}, 404
 
         company_schema = CompanySchema(
             context={"company": company}, session=db.session
@@ -165,16 +175,16 @@ class CompanyResource(Resource):
             db.session.commit()
             return company_schema.dump(company), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
     @check_access_required("update")
@@ -199,7 +209,7 @@ class CompanyResource(Resource):
         company = Company.get_by_id(company_id)
         if not company:
             logger.warning("Company with ID %s not found", company_id)
-            return {"message": "Company not found"}, 404
+            return {"message": MSG_COMPANY_NOT_FOUND}, 404
 
         company_schema = CompanySchema(
             context={"company": company}, session=db.session, partial=True
@@ -210,16 +220,16 @@ class CompanyResource(Resource):
             db.session.commit()
             return company_schema.dump(company), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
     @check_access_required("delete")
@@ -239,7 +249,7 @@ class CompanyResource(Resource):
         company = Company.get_by_id(company_id)
         if not company:
             logger.warning("Company with ID %s not found", company_id)
-            return {"message": "Company not found"}, 404
+            return {"message": MSG_COMPANY_NOT_FOUND}, 404
 
         try:
             db.session.delete(company)
@@ -247,9 +257,9 @@ class CompanyResource(Resource):
             return {}, 204
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500

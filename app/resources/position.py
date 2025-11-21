@@ -15,6 +15,16 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from app.constants import (
+    LOG_DATABASE_ERROR,
+    LOG_INTEGRITY_ERROR,
+    LOG_VALIDATION_ERROR,
+    MSG_DATABASE_ERROR,
+    MSG_INTEGRITY_ERROR,
+    MSG_POSITION_DELETED,
+    MSG_POSITION_NOT_FOUND,
+    MSG_VALIDATION_ERROR,
+)
 from app.logger import logger
 from app.models import db
 from app.models.organization_unit import OrganizationUnit
@@ -123,16 +133,16 @@ class PositionListResource(Resource):
             db.session.commit()
             return position_schema.dump(position), 201
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
 
 class PositionResource(Resource):
@@ -171,7 +181,7 @@ class PositionResource(Resource):
         position = Position.get_by_id(position_id)
         if not position:
             logger.warning("Position with ID %s not found", position_id)
-            return {"message": "Position not found"}, 404
+            return {"message": MSG_POSITION_NOT_FOUND}, 404
 
         schema = PositionSchema(session=db.session)
         return schema.dump(position), 200
@@ -202,22 +212,22 @@ class PositionResource(Resource):
             position = Position.get_by_id(position_id)
             if not position:
                 logger.warning("Position with ID %s not found", position_id)
-                return {"message": "Position not found"}, 404
+                return {"message": MSG_POSITION_NOT_FOUND}, 404
 
             position = position_schema.load(json_data, instance=position)
             db.session.commit()
             return position_schema.dump(position), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
     @check_access_required("update")
@@ -245,22 +255,22 @@ class PositionResource(Resource):
             position = Position.get_by_id(position_id)
             if not position:
                 logger.warning("Position with ID %s not found", position_id)
-                return {"message": "Position not found"}, 404
+                return {"message": MSG_POSITION_NOT_FOUND}, 404
 
             position = position_schema.load(json_data, instance=position)
             db.session.commit()
             return position_schema.dump(position), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": err.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
     @check_access_required("delete")
@@ -278,7 +288,7 @@ class PositionResource(Resource):
         position = Position.get_by_id(position_id)
         if not position:
             logger.warning("Position with ID %s not found", position_id)
-            return {"message": "Position not found"}, 404
+            return {"message": MSG_POSITION_NOT_FOUND}, 404
 
         try:
             db.session.delete(position)
@@ -286,8 +296,8 @@ class PositionResource(Resource):
             return {"message": "Position deleted"}, 204
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
 
 class OrganizationUnitPositionsResource(Resource):
@@ -359,13 +369,13 @@ class OrganizationUnitPositionsResource(Resource):
             db.session.commit()
             return position_schema.dump(position), 201
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500

@@ -14,6 +14,16 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from app.constants import (
+    LOG_DATABASE_ERROR,
+    LOG_INTEGRITY_ERROR,
+    LOG_VALIDATION_ERROR,
+    MSG_CUSTOMER_DELETED,
+    MSG_CUSTOMER_NOT_FOUND,
+    MSG_DATABASE_ERROR_OCCURRED,
+    MSG_INTEGRITY_ERROR_DUPLICATE,
+    MSG_VALIDATION_ERROR,
+)
 from app.logger import logger
 from app.models import db
 from app.models.customer import Customer
@@ -77,16 +87,16 @@ class CustomerListResource(Resource):
             db.session.commit()
             return customer_schema.dump(new_customer), 201
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
             return {"error": err.messages}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(err))
-            return {"error": "Integrity error, possibly duplicate entry."}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(err))
+            return {"error": MSG_INTEGRITY_ERROR_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error("Database error: %s", str(err))
-            return {"error": "Database error occurred."}, 500
+            logger.error(LOG_DATABASE_ERROR, str(err))
+            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
 
 class CustomerResource(Resource):
@@ -125,7 +135,7 @@ class CustomerResource(Resource):
         customer = Customer.get_by_id(customer_id)
         if not customer:
             logger.warning("Customer with ID %s not found", customer_id)
-            return {"message": "Customer not found"}, 404
+            return {"message": MSG_CUSTOMER_NOT_FOUND}, 404
 
         customer_schema = CustomerSchema(session=db.session)
         return customer_schema.dump(customer), 200
@@ -154,7 +164,7 @@ class CustomerResource(Resource):
             customer = Customer.get_by_id(customer_id)
             if not customer:
                 logger.warning("Customer with ID %s not found", customer_id)
-                return {"error": "Customer not found"}, 404
+                return {"error": MSG_CUSTOMER_NOT_FOUND}, 404
 
             updated_customer = customer_schema.load(
                 json_data, instance=customer
@@ -162,16 +172,16 @@ class CustomerResource(Resource):
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
             return {"error": err.messages}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(err))
-            return {"error": "Integrity error, possibly duplicate entry."}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(err))
+            return {"error": MSG_INTEGRITY_ERROR_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error("Database error: %s", str(err))
-            return {"error": "Database error occurred."}, 500
+            logger.error(LOG_DATABASE_ERROR, str(err))
+            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
     @check_access_required("update")
@@ -197,7 +207,7 @@ class CustomerResource(Resource):
             customer = Customer.get_by_id(customer_id)
             if not customer:
                 logger.warning("Customer with ID %s not found", customer_id)
-                return {"error": "Customer not found"}, 404
+                return {"error": MSG_CUSTOMER_NOT_FOUND}, 404
 
             updated_customer = customer_schema.load(
                 json_data, instance=customer, partial=True
@@ -205,16 +215,16 @@ class CustomerResource(Resource):
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
             return {"error": err.messages}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(err))
-            return {"error": "Integrity error, possibly duplicate entry."}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(err))
+            return {"error": MSG_INTEGRITY_ERROR_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error("Database error: %s", str(err))
-            return {"error": "Database error occurred."}, 500
+            logger.error(LOG_DATABASE_ERROR, str(err))
+            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
     @check_access_required("delete")
@@ -234,7 +244,7 @@ class CustomerResource(Resource):
         customer = Customer.get_by_id(customer_id)
         if not customer:
             logger.warning("Customer with ID %s not found", customer_id)
-            return {"error": "Customer not found"}, 404
+            return {"error": MSG_CUSTOMER_NOT_FOUND}, 404
 
         try:
             db.session.delete(customer)
@@ -242,12 +252,12 @@ class CustomerResource(Resource):
             return "", 204
         except IntegrityError as err:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(err))
+            logger.error(LOG_INTEGRITY_ERROR, str(err))
             return (
                 {"error": "Integrity error, possibly due to FK constraints."},
                 400,
             )
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error("Database error: %s", str(err))
-            return {"error": "Database error occurred."}, 500
+            logger.error(LOG_DATABASE_ERROR, str(err))
+            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500

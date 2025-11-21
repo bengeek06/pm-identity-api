@@ -15,6 +15,16 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from app.constants import (
+    LOG_DATABASE_ERROR,
+    LOG_INTEGRITY_ERROR,
+    LOG_VALIDATION_ERROR,
+    MSG_DATABASE_ERROR,
+    MSG_INTEGRITY_ERROR,
+    MSG_ORG_UNIT_DELETED,
+    MSG_ORG_UNIT_NOT_FOUND,
+    MSG_VALIDATION_ERROR,
+)
 from app.logger import logger
 from app.models import db
 from app.models.organization_unit import OrganizationUnit
@@ -83,7 +93,7 @@ class OrganizationUnitListResource(Resource):
             db.session.commit()
             return org_unit_schema.dump(new_org_unit), 201
         except ValidationError as err:
-            logger.error("Validation error: %s", str(err))
+            logger.error(LOG_VALIDATION_ERROR, str(err))
             return {"error": str(err)}, 400
         except IntegrityError as err:
             db.session.rollback()
@@ -93,7 +103,7 @@ class OrganizationUnitListResource(Resource):
             return {"error": ERROR_INTEGRITY_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error("Database error: %s", str(err))
+            logger.error(LOG_DATABASE_ERROR, str(err))
             return {"error": "Database error occurred."}, 500
 
 
@@ -135,7 +145,7 @@ class OrganizationUnitResource(Resource):
         org_unit = OrganizationUnit.get_by_id(unit_id)
         if not org_unit:
             logger.warning("Organization unit with ID %s not found", unit_id)
-            return {"error": "Organization unit not found"}, 404
+            return {"error": MSG_ORG_UNIT_NOT_FOUND}, 404
 
         org_unit_schema = OrganizationUnitSchema(session=db.session)
         return org_unit_schema.dump(org_unit), 200
@@ -169,7 +179,7 @@ class OrganizationUnitResource(Resource):
                 logger.warning(
                     "Organization unit with ID %s not found", unit_id
                 )
-                return {"error": "Organization unit not found"}, 404
+                return {"error": MSG_ORG_UNIT_NOT_FOUND}, 404
 
             updated_org_unit = org_unit_schema.load(
                 json_data, instance=org_unit
@@ -179,7 +189,7 @@ class OrganizationUnitResource(Resource):
             db.session.commit()
             return org_unit_schema.dump(updated_org_unit), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", str(err))
+            logger.error(LOG_VALIDATION_ERROR, str(err))
             return {"error": str(err)}, 400
         except IntegrityError as err:
             db.session.rollback()
@@ -189,7 +199,7 @@ class OrganizationUnitResource(Resource):
             return {"error": ERROR_INTEGRITY_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error("Database error: %s", str(err))
+            logger.error(LOG_DATABASE_ERROR, str(err))
             return {"error": "Database error occurred."}, 500
 
     @require_jwt_auth()
@@ -222,7 +232,7 @@ class OrganizationUnitResource(Resource):
                 logger.warning(
                     "Organization unit with ID %s not found", unit_id
                 )
-                return {"error": "Organization unit not found"}, 404
+                return {"error": MSG_ORG_UNIT_NOT_FOUND}, 404
 
             # Passe le contexte pour la validation de parent_id
             updated_org_unit = org_unit_schema.load(
@@ -232,7 +242,7 @@ class OrganizationUnitResource(Resource):
             db.session.commit()
             return org_unit_schema.dump(updated_org_unit), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", str(err))
+            logger.error(LOG_VALIDATION_ERROR, str(err))
             return {"error": str(err)}, 400
         except IntegrityError as err:
             db.session.rollback()
@@ -242,7 +252,7 @@ class OrganizationUnitResource(Resource):
             return {"error": ERROR_INTEGRITY_DUPLICATE}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error("Database error: %s", str(err))
+            logger.error(LOG_DATABASE_ERROR, str(err))
             return {"error": "Database error occurred."}, 500
 
     @require_jwt_auth()
@@ -266,7 +276,7 @@ class OrganizationUnitResource(Resource):
         org_unit = OrganizationUnit.get_by_id(unit_id)
         if not org_unit:
             logger.warning("Organization unit with ID %s not found", unit_id)
-            return {"error": "Organization unit not found"}, 404
+            return {"error": MSG_ORG_UNIT_NOT_FOUND}, 404
 
         try:
             # Suppression récursive des enfants

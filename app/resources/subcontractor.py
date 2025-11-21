@@ -14,6 +14,16 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from app.constants import (
+    LOG_DATABASE_ERROR,
+    LOG_INTEGRITY_ERROR,
+    LOG_VALIDATION_ERROR,
+    MSG_DATABASE_ERROR,
+    MSG_INTEGRITY_ERROR,
+    MSG_SUBCONTRACTOR_DELETED,
+    MSG_SUBCONTRACTOR_NOT_FOUND,
+    MSG_VALIDATION_ERROR,
+)
 from app.logger import logger
 from app.models import db
 from app.models.subcontractor import Subcontractor
@@ -22,8 +32,6 @@ from app.utils import check_access_required, require_jwt_auth
 
 # Error message constants
 ERROR_SUBCONTRACTOR_NOT_FOUND = "Subcontractor with ID %s not found"
-MSG_SUBCONTRACTOR_NOT_FOUND = "Subcontractor not found"
-MSG_SUBCONTRACTOR_DELETED = "Subcontractor deleted successfully"
 
 
 class SubcontractorListResource(Resource):
@@ -84,16 +92,16 @@ class SubcontractorListResource(Resource):
             db.session.commit()
             return subcontractor_schema.dump(new_subcontractor), 201
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
 
 class SubcontractorResource(Resource):
@@ -173,16 +181,16 @@ class SubcontractorResource(Resource):
             db.session.commit()
             return subcontractor_schema.dump(updated_subcontractor), 200
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
     @check_access_required("update")
@@ -223,16 +231,16 @@ class SubcontractorResource(Resource):
             db.session.commit()
             return subcontractor_schema.dump(updated_subcontractor), 200
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
     @check_access_required("delete")
@@ -258,5 +266,5 @@ class SubcontractorResource(Resource):
             return {"message": MSG_SUBCONTRACTOR_DELETED}, 204
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
