@@ -7,7 +7,7 @@ from functools import wraps
 
 import jwt
 import requests
-from flask import g, request, current_app
+from flask import current_app, g, request
 
 from app.logger import logger
 

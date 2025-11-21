@@ -27,13 +27,9 @@ from app.models import db
 from app.models.company import Company
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
-from app.storage_helper import (
-    AvatarValidationError,
-    StorageServiceError,
-    create_user_directories,
-    delete_user_storage,
-    upload_avatar_via_proxy,
-)
+from app.storage_helper import (AvatarValidationError, StorageServiceError,
+                                create_user_directories, delete_user_storage,
+                                upload_avatar_via_proxy)
 from app.utils import check_access_required, require_jwt_auth
 
 # Content type constants

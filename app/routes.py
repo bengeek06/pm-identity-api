@@ -19,20 +19,13 @@ from app.resources.config import ConfigResource
 from app.resources.customer import CustomerListResource, CustomerResource
 from app.resources.health import HealthResource
 from app.resources.init_db import InitDBResource
-from app.resources.organization_unit import (
-    OrganizationUnitChildrenResource,
-    OrganizationUnitListResource,
-    OrganizationUnitResource,
-)
-from app.resources.position import (
-    OrganizationUnitPositionsResource,
-    PositionListResource,
-    PositionResource,
-)
-from app.resources.subcontractor import (
-    SubcontractorListResource,
-    SubcontractorResource,
-)
+from app.resources.organization_unit import (OrganizationUnitChildrenResource,
+                                             OrganizationUnitListResource,
+                                             OrganizationUnitResource)
+from app.resources.position import (OrganizationUnitPositionsResource,
+                                    PositionListResource, PositionResource)
+from app.resources.subcontractor import (SubcontractorListResource,
+                                         SubcontractorResource)
 from app.resources.user import UserListResource, UserResource
 from app.resources.user_auth import VerifyPasswordResource
 from app.resources.user_avatar import UserAvatarResource
