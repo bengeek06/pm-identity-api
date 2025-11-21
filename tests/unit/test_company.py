@@ -37,7 +37,13 @@ def test_get_companies_empty(client):
     response = client.get("/companies")
     assert response.status_code == 200
     assert response.is_json
-    assert response.get_json() == []
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
+    assert isinstance(data, list)
+    assert len(data) == 0
+    assert result["pagination"]["total"] == 0
 
 
 def test_get_companies_single(client, session):
@@ -58,9 +64,13 @@ def test_get_companies_single(client, session):
 
     response = client.get("/companies")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 1
+    assert result["pagination"]["total"] == 1
     assert data[0]["name"] == "Test Company"
     assert data[0]["description"] == "A test company"
     assert data[0]["city"] == "Paris"
@@ -87,9 +97,13 @@ def test_get_companies_multiple(client, session):
 
     response = client.get("/companies")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 3
+    assert result["pagination"]["total"] == 3
 
     names = [c["name"] for c in data]
     assert "Company A" in names

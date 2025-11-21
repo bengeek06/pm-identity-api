@@ -49,18 +49,80 @@ class CompanyListResource(Resource):
     @check_access_required("list")
     def get(self):
         """
-        Retrieve all companies.
+        Retrieve all companies with optional filtering, pagination, and sorting.
+
+        Query Parameters:
+            name (str, optional): Filter by exact company name match
+            search (str, optional): Search in name and description
+            page (int, optional): Page number (default: 1, min: 1)
+            limit (int, optional): Items per page (default: 50, max: 1000)
+            sort (str, optional): Field to sort by (created_at, updated_at, name)
+            order (str, optional): Sort order (asc, desc, default: asc)
 
         Returns:
-            tuple: A tuple containing a list of serialized companies and the
-                   HTTP status code 200.
+            tuple: Paginated response with data and metadata, HTTP 200
         """
         logger.info("Retrieving all companies")
 
         try:
-            companies = Company.get_all()
+            query = Company.query
+
+            # Apply name filter if provided
+            name = request.args.get("name")
+            if name:
+                query = query.filter_by(name=name)
+
+            # Apply search filter if provided (searches in name and description)
+            search = request.args.get("search")
+            if search:
+                search_pattern = f"%{search}%"
+                query = query.filter(
+                    db.or_(
+                        Company.name.ilike(search_pattern),
+                        Company.description.ilike(search_pattern),
+                    )
+                )
+
+            # Pagination parameters
+            page = request.args.get("page", 1, type=int)
+            limit = request.args.get("limit", 50, type=int)
+
+            # Validate and constrain pagination params
+            page = max(1, page)
+            limit = min(max(1, limit), 1000)
+
+            # Sorting parameters
+            sort_field = request.args.get("sort", "created_at")
+            sort_order = request.args.get("order", "asc")
+
+            # Validate sort field
+            allowed_sorts = ["created_at", "updated_at", "name"]
+            if sort_field not in allowed_sorts:
+                sort_field = "created_at"
+
+            # Apply sorting
+            if sort_order == "desc":
+                query = query.order_by(getattr(Company, sort_field).desc())
+            else:
+                query = query.order_by(getattr(Company, sort_field).asc())
+
+            # Execute pagination
+            paginated = query.paginate(
+                page=page, per_page=limit, error_out=False
+            )
+
             company_schema = CompanySchema(session=db.session, many=True)
-            return company_schema.dump(companies), 200
+            return {
+                "data": company_schema.dump(paginated.items),
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": paginated.total,
+                    "pages": paginated.pages,
+                    "has_next": paginated.has_next,
+                    "has_prev": paginated.has_prev,
+                },
+            }, 200
         except SQLAlchemyError as e:
             logger.error(LOG_DATABASE_ERROR, str(e))
             return {"message": MSG_DATABASE_ERROR}, 500

@@ -957,6 +957,33 @@ components:
           type: string
           description: Password to verify
 
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          description: Number of items per page
+          example: 50
+        total:
+          type: integer
+          description: Total number of items
+          example: 150
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 3
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_prev:
+          type: boolean
+          description: Whether there is a previous page
+          example: false
 
   responses:
     CustomerCreated:
@@ -967,13 +994,18 @@ components:
             $ref: '#/components/schemas/Customer'
 
     CustomerList:
-      description: List of customers
+      description: Paginated list of customers
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Customer'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     CustomerDetails:
       description: Customer details
@@ -1007,13 +1039,18 @@ components:
             $ref: '#/components/schemas/Position'
 
     PositionList:
-      description: List of positions
+      description: Paginated list of positions
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Position'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     PositionDetails:
       description: Position details
@@ -1047,13 +1084,18 @@ components:
             $ref: '#/components/schemas/OrganizationUnit'
 
     OrganizationUnitList:
-      description: List of organization units
+      description: Paginated list of organization units
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/OrganizationUnit'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationUnit'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     OrganizationUnitDetails:
       description: Organization unit details
@@ -1087,13 +1129,18 @@ components:
             $ref: '#/components/schemas/Company'
 
     CompanyList:
-      description: List of companies
+      description: Paginated list of companies
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Company'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Company'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     CompanyDetails:
       description: Company details
@@ -1181,13 +1228,18 @@ components:
             $ref: '#/components/schemas/Subcontractor'
 
     SubcontractorList:
-      description: List of subcontractors
+      description: Paginated list of subcontractors
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Subcontractor'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subcontractor'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     SubcontractorDetails:
       description: Subcontractor details
@@ -1222,13 +1274,18 @@ components:
             $ref: '#/components/schemas/User'
 
     UserList:
-      description: List of users
+      description: Paginated list of users
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/User'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     UserDetails:
       description: User details
@@ -1292,7 +1349,53 @@ paths:
     get:
       tags: [Customers Management]
       summary: List all customers
-      description: Returns the list of all customers
+      description: Returns the list of all customers with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact customer name match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in name, email, and contact_person (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, name]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
       responses:
         '200':
           $ref: '#/components/responses/CustomerList'
@@ -1544,7 +1647,53 @@ paths:
     get:
       tags: [Positions]
       summary: List all positions
-      description: Returns the list of all positions
+      description: Returns the list of all positions with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: title
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact position title match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in title and description (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, title]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
       responses:
         '200':
           $ref: '#/components/responses/PositionList'
@@ -1734,7 +1883,53 @@ paths:
     get:
       tags: [Organizations]
       summary: List all organization units
-      description: Returns the list of all organization units
+      description: Returns the list of all organization units with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact organization unit name match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in name and description (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, name, level]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
       responses:
         '200':
           $ref: '#/components/responses/OrganizationUnitList'
@@ -1894,7 +2089,53 @@ paths:
     get:
       tags: [Companies]
       summary: List all companies
-      description: Returns the list of all companies
+      description: Returns the list of all companies with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact company name match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in name and description (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, name]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
       responses:
         '200':
           $ref: '#/components/responses/CompanyList'
@@ -2236,7 +2477,54 @@ paths:
     get:
       tags: [Users]
       summary: List all users
-      description: Returns the list of all users for the authenticated company
+      description: Returns the list of all users for the authenticated company with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+            format: email
+          description: Filter by exact email match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in email, first_name, and last_name (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, email]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
       responses:
         '200':
           $ref: '#/components/responses/UserList'
@@ -2615,7 +2903,53 @@ paths:
     get:
       tags: [Subcontractors Management]
       summary: List all subcontractors
-      description: Returns the list of all subcontractors
+      description: Returns the list of all subcontractors with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact subcontractor name match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in name, email, and contact_person (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, name]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
       responses:
         '200':
           $ref: '#/components/responses/SubcontractorList'

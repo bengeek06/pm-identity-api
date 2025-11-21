@@ -31,9 +31,13 @@ def test_get_subcontractors_empty(client):
 
     response = client.get("/subcontractors")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 0
+    assert result["pagination"]["total"] == 0
 
 
 def test_get_subcontractors_single(client, session):
@@ -50,9 +54,13 @@ def test_get_subcontractors_single(client, session):
     session.commit()
     response = client.get("/subcontractors")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 1
+    assert result["pagination"]["total"] == 1
     assert data[0]["name"] == "SubA"
     assert "id" in data[0]
 
@@ -72,7 +80,11 @@ def test_get_subcontractors_multiple(client, session):
     session.commit()
     response = client.get("/subcontractors")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
+    assert isinstance(data, list)
     names = [item["name"] for item in data]
     assert "SubA" in names
     assert "SubB" in names

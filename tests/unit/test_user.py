@@ -47,9 +47,13 @@ def test_get_users_empty(client, session):
 
     response = client.get("/users")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 0
+    assert result["pagination"]["total"] == 0
 
 
 def test_get_users_single(client, session):
@@ -73,9 +77,13 @@ def test_get_users_single(client, session):
 
     response = client.get("/users")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
     assert isinstance(data, list)
     assert len(data) == 1
+    assert result["pagination"]["total"] == 1
     assert data[0]["email"] == "test1@example.com"
     assert data[0]["first_name"] == "Alice"
     assert data[0]["last_name"] == "Smith"
@@ -111,13 +119,86 @@ def test_get_users_multiple(client, session):
 
     response = client.get("/users")
     assert response.status_code == 200
-    data = response.get_json()
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
+    assert result["pagination"]["total"] == 2
     emails = [item["email"] for item in data]
     assert "test2@example.com" in emails
     assert "test3@example.com" in emails
     first_names = [item["first_name"] for item in data]
     assert "Bob" in first_names
     assert "Carol" in first_names
+
+
+def test_get_users_filter_by_email(client, session):
+    """
+    Test GET /users?email=<value> filters by exact email match.
+    """
+    company_id = str(uuid.uuid4())
+    user1 = User(
+        email="alice@example.com",
+        hashed_password="hashedpw1",
+        first_name="Alice",
+        last_name="Smith",
+        company_id=company_id,
+    )
+    user2 = User(
+        email="bob@example.com",
+        hashed_password="hashedpw2",
+        first_name="Bob",
+        last_name="Jones",
+        company_id=company_id,
+    )
+    session.add_all([user1, user2])
+    session.commit()
+
+    jwt_token = create_jwt_token(company_id, str(user1.id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Test filtering by email
+    response = client.get("/users?email=alice@example.com")
+    assert response.status_code == 200
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert result["pagination"]["total"] == 1
+    assert data[0]["email"] == "alice@example.com"
+    assert data[0]["first_name"] == "Alice"
+
+
+def test_get_users_filter_no_match(client, session):
+    """
+    Test GET /users with filter returns empty list when no match.
+    """
+    company_id = str(uuid.uuid4())
+    user = User(
+        email="alice@example.com",
+        hashed_password="hashedpw1",
+        first_name="Alice",
+        last_name="Smith",
+        company_id=company_id,
+    )
+    session.add(user)
+    session.commit()
+
+    jwt_token = create_jwt_token(company_id, str(user.id))
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Test filtering with non-existent email
+    response = client.get("/users?email=nonexistent@example.com")
+    assert response.status_code == 200
+    result = response.get_json()
+    assert "data" in result
+    assert "pagination" in result
+    data = result["data"]
+    assert isinstance(data, list)
+    assert len(data) == 0
+    assert result["pagination"]["total"] == 0
 
 
 ##################################################
