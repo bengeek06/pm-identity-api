@@ -29,7 +29,7 @@ class CustomerSchema(SQLAlchemyAutoSchema):
     Marshmallow schema for the Customer model.
 
     This schema serializes and validates Customer objects, enforcing field
-    types, length constraints, and format (email, digits). It also ensures
+    types, length constraints, and format (email, phone). It also ensures
     proper deserialization and serialization for API input/output.
 
     Fields:
@@ -37,7 +37,8 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         company_id (str): Required. Must be a valid UUID (36 characters).
         email (str): Optional. Must be a valid email, max 100 characters.
         contact_person (str): Optional. Max 100 characters.
-        phone_number (str): Optional. Digits only, max 50 characters.
+        phone_number (str): Optional. International format allowed
+            (digits, +, spaces, (), -), max 50 characters.
         address (str): Optional. Max 255 characters.
     """
 
@@ -74,7 +75,8 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         validate=[
             validate.Length(max=50),
             validate.Regexp(
-                r"^\d*$", error="Phone number must contain only digits."
+                r"^[\d\s+()-]*$",
+                error="Phone number can only contain digits, spaces, +, (), and -",
             ),
         ],
     )
