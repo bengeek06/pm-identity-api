@@ -78,6 +78,7 @@ class PositionListResource(Resource):
 
         Query Parameters:
             title (str, optional): Filter by exact position title match
+            search (str, optional): Search in title and description
             page (int, optional): Page number (default: 1, min: 1)
             limit (int, optional): Items per page (default: 50, max: 1000)
             sort (str, optional): Field to sort by (created_at, updated_at, title)
@@ -93,6 +94,17 @@ class PositionListResource(Resource):
             title = request.args.get("title")
             if title:
                 query = query.filter_by(title=title)
+
+            # Apply search filter if provided (searches in title and description)
+            search = request.args.get("search")
+            if search:
+                search_pattern = f"%{search}%"
+                query = query.filter(
+                    db.or_(
+                        Position.title.ilike(search_pattern),
+                        Position.description.ilike(search_pattern),
+                    )
+                )
 
             # Pagination parameters
             page = request.args.get("page", 1, type=int)

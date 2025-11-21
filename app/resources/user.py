@@ -255,7 +255,7 @@ class UserListResource(Resource):
 
     @require_jwt_auth()
     @check_access_required("list")
-    def get(self):
+    def get(self):  # pylint: disable=too-many-locals
         """
         Get all users from the authenticated user's company.
 
@@ -263,6 +263,7 @@ class UserListResource(Resource):
 
         Query Parameters:
             email (str, optional): Filter by exact email match
+            search (str, optional): Search in email, first_name, last_name
             page (int, optional): Page number (default: 1, min: 1)
             limit (int, optional): Items per page (default: 50, max: 1000)
             sort (str, optional): Sort by (created_at, updated_at, email)
@@ -287,6 +288,18 @@ class UserListResource(Resource):
             email = request.args.get("email")
             if email:
                 query = query.filter_by(email=email)
+
+            # Apply search filter if provided (searches in email, first_name, last_name)
+            search = request.args.get("search")
+            if search:
+                search_pattern = f"%{search}%"
+                query = query.filter(
+                    db.or_(
+                        User.email.ilike(search_pattern),
+                        User.first_name.ilike(search_pattern),
+                        User.last_name.ilike(search_pattern),
+                    )
+                )
 
             # Pagination parameters
             page = request.args.get("page", 1, type=int)

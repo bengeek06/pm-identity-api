@@ -56,6 +56,7 @@ class SubcontractorListResource(Resource):
 
         Query Parameters:
             name (str, optional): Filter by exact subcontractor name match
+            search (str, optional): Search in name, email, contact_person
             page (int, optional): Page number (default: 1, min: 1)
             limit (int, optional): Items per page (default: 50, max: 1000)
             sort (str, optional): Field to sort by (created_at, updated_at, name)
@@ -71,6 +72,18 @@ class SubcontractorListResource(Resource):
             name = request.args.get("name")
             if name:
                 query = query.filter_by(name=name)
+
+            # Apply search filter if provided (searches in name, email, contact_person)
+            search = request.args.get("search")
+            if search:
+                search_pattern = f"%{search}%"
+                query = query.filter(
+                    db.or_(
+                        Subcontractor.name.ilike(search_pattern),
+                        Subcontractor.email.ilike(search_pattern),
+                        Subcontractor.contact_person.ilike(search_pattern),
+                    )
+                )
 
             # Pagination parameters
             page = request.args.get("page", 1, type=int)
