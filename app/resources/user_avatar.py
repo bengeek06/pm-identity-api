@@ -82,7 +82,6 @@ class UserAvatarResource(Resource):
             return {"message": "Storage Service disabled"}, 503
 
         avatar_file = request.files["avatar"]
-        company_id = g.company_id
 
         try:
             file_data = avatar_file.read()
@@ -92,7 +91,6 @@ class UserAvatarResource(Resource):
             # Upload to Storage Service
             upload_result = upload_avatar_via_proxy(
                 user_id=user_id,
-                company_id=company_id,
                 file_data=file_data,
                 content_type=content_type,
                 filename=filename,
@@ -266,10 +264,9 @@ class UserAvatarResource(Resource):
             return {"message": "Avatar reference removed"}, 204
 
         # Delete from Storage Service (if file_id is available)
-        company_id = g.company_id
         if user.avatar_file_id:
             try:
-                delete_avatar(user_id, company_id, user.avatar_file_id)
+                delete_avatar(user_id, user.avatar_file_id)
             except Exception as e:  # pylint: disable=broad-except
                 # Catch all exceptions to ensure database cleanup happens
                 logger.warning(f"Failed to delete avatar from storage: {e}")

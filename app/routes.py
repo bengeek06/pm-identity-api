@@ -25,6 +25,7 @@ from app.resources.company import CompanyListResource, CompanyResource
 from app.resources.company_logo import CompanyLogoResource
 from app.resources.config import ConfigResource
 from app.resources.customer import CustomerListResource, CustomerResource
+from app.resources.customer_logo import CustomerLogoResource
 from app.resources.health import HealthResource
 from app.resources.init_db import InitDBResource
 from app.resources.organization_unit import (OrganizationUnitChildrenResource,
@@ -34,6 +35,7 @@ from app.resources.position import (OrganizationUnitPositionsResource,
                                     PositionListResource, PositionResource)
 from app.resources.subcontractor import (SubcontractorListResource,
                                          SubcontractorResource)
+from app.resources.subcontractor_logo import SubcontractorLogoResource
 from app.resources.user import UserListResource, UserResource
 from app.resources.user_auth import VerifyPasswordResource
 from app.resources.user_avatar import UserAvatarResource
@@ -71,6 +73,9 @@ def register_routes(app):
 
     api.add_resource(CustomerListResource, "/customers")
     api.add_resource(CustomerResource, "/customers/<string:customer_id>")
+    api.add_resource(
+        CustomerLogoResource, "/customers/<string:customer_id>/logo"
+    )
 
     api.add_resource(OrganizationUnitListResource, "/organization_units")
     api.add_resource(
@@ -91,6 +96,10 @@ def register_routes(app):
     api.add_resource(SubcontractorListResource, "/subcontractors")
     api.add_resource(
         SubcontractorResource, "/subcontractors/<string:subcontractor_id>"
+    )
+    api.add_resource(
+        SubcontractorLogoResource,
+        "/subcontractors/<string:subcontractor_id>/logo",
     )
 
     api.add_resource(UserListResource, "/users")

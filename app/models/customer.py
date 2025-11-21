@@ -58,6 +58,8 @@ class Customer(db.Model):
     contact_person = db.Column(db.String(100), nullable=True)
     phone_number = db.Column(db.String(50), nullable=True)
     address = db.Column(db.String(255), nullable=True)
+    logo_file_id = db.Column(db.String(36), nullable=True)
+    has_logo = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
@@ -145,3 +147,18 @@ class Customer(db.Model):
         except SQLAlchemyError as e:
             logger.error(f"Error retrieving customer by name {name}: {e}")
             return None
+
+    def set_logo(self, file_id: str) -> None:
+        """
+        Set customer logo file_id and flag.
+
+        Args:
+            file_id (str): Storage Service file_id for the logo.
+        """
+        self.logo_file_id = file_id
+        self.has_logo = True
+
+    def remove_logo(self) -> None:
+        """Clear customer logo reference and flag."""
+        self.logo_file_id = None
+        self.has_logo = False

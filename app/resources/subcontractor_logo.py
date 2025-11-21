@@ -7,10 +7,10 @@
 # See LICENSE and LICENSE.md files in the root directory for full license text.
 # For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
-module: app.resources.company_logo
+module: app.resources.subcontractor_logo
 
-This module defines the Flask-RESTful resource for company logo management.
-It provides endpoints for uploading, retrieving, and deleting company logos.
+This module defines the Flask-RESTful resource for subcontractor logo management.
+It provides endpoints for uploading, retrieving, and deleting subcontractor logos.
 """
 
 import requests
@@ -19,52 +19,54 @@ from flask_restful import Resource
 
 from app.logger import logger
 from app.models import db
-from app.models.company import Company
+from app.models.subcontractor import Subcontractor
 from app.storage_helper import (AvatarValidationError, StorageServiceError,
-                                delete_logo, upload_logo_via_proxy)
+                                delete_subcontractor_logo,
+                                upload_subcontractor_logo_via_proxy)
 from app.utils import check_access_required, require_jwt_auth
 
 
-class CompanyLogoResource(Resource):
+class SubcontractorLogoResource(Resource):
     """
-    Resource for managing company logos (upload, retrieve, delete).
+    Resource for managing subcontractor logos (upload, retrieve, delete).
 
     Methods:
-        post(company_id): Upload a company logo
-        get(company_id): Retrieve company logo image
-        delete(company_id): Delete company logo
+        post(subcontractor_id): Upload a subcontractor logo
+        get(subcontractor_id): Retrieve subcontractor logo image
+        delete(subcontractor_id): Delete subcontractor logo
     """
 
     @require_jwt_auth()
     @check_access_required("update")
-    def post(self, company_id):
+    def post(self, subcontractor_id):
         """
-        Upload a company logo.
+        Upload a subcontractor logo.
 
         Expects multipart/form-data with 'logo' file.
 
         Args:
-            company_id (str): The ID of the company
+            subcontractor_id (str): The ID of the subcontractor
 
         Returns:
             tuple: Success message and HTTP status code 200/201
             tuple: Error message and HTTP status code on failure
         """
-        logger.info(f"Uploading logo for company {company_id}")
+        logger.info(f"Uploading logo for subcontractor {subcontractor_id}")
 
-        company = Company.get_by_id(company_id)
-        if not company:
-            logger.warning(f"Company {company_id} not found")
-            return {"message": "Company not found"}, 404
+        subcontractor = Subcontractor.get_by_id(subcontractor_id)
+        if not subcontractor:
+            logger.warning(f"Subcontractor {subcontractor_id} not found")
+            return {"message": "Subcontractor not found"}, 404
 
         # Verify company_id matches JWT
         jwt_company_id = g.company_id
-        if jwt_company_id != company_id:
+        if jwt_company_id != subcontractor.company_id:
             logger.warning(
-                f"Access denied: JWT company_id {jwt_company_id} != {company_id}"
+                f"Access denied: JWT company_id {jwt_company_id} "
+                f"!= subcontractor company_id {subcontractor.company_id}"
             )
             return {
-                "message": "Access denied: cannot manage other company's logo"
+                "message": "Access denied: cannot manage other company's subcontractor logo"
             }, 403
 
         # Get uploaded file
@@ -84,19 +86,21 @@ class CompanyLogoResource(Resource):
             filename = logo_file.filename or "logo.png"
 
             # Upload to Storage Service
-            upload_result = upload_logo_via_proxy(
-                company_id=company_id,
+            upload_result = upload_subcontractor_logo_via_proxy(
+                subcontractor_id=subcontractor_id,
+                company_id=subcontractor.company_id,
                 file_data=file_data,
                 content_type=content_type,
-                filename=f"logo_{filename}",
+                filename=filename,
             )
 
-            # Update company with logo file_id
-            company.set_logo(upload_result["file_id"])
+            # Update subcontractor with logo file_id
+            subcontractor.set_logo(upload_result["file_id"])
             db.session.commit()
 
             logger.info(
-                f"Logo uploaded for company {company_id}: file_id={upload_result['file_id']}"
+                f"Logo uploaded for subcontractor {subcontractor_id}: "
+                f"file_id={upload_result['file_id']}"
             )
 
             return {
@@ -115,25 +119,25 @@ class CompanyLogoResource(Resource):
 
     @require_jwt_auth()
     @check_access_required("read")
-    def get(self, company_id):
+    def get(self, subcontractor_id):
         """
-        Retrieve the logo image for a company.
+        Retrieve the logo image for a subcontractor.
 
         Args:
-            company_id (str): The ID of the company
+            subcontractor_id (str): The ID of the subcontractor
 
         Returns:
             Response: The logo image file stream
             tuple: Error message and HTTP status code on failure
         """
-        company = Company.get_by_id(company_id)
-        if not company:
-            logger.warning(f"Company {company_id} not found")
-            return {"message": "Company not found"}, 404
+        subcontractor = Subcontractor.get_by_id(subcontractor_id)
+        if not subcontractor:
+            logger.warning(f"Subcontractor {subcontractor_id} not found")
+            return {"message": "Subcontractor not found"}, 404
 
-        if not company.has_logo:
-            logger.debug(f"Company {company_id} has no logo")
-            return {"message": "Company has no logo"}, 404
+        if not subcontractor.has_logo:
+            logger.debug(f"Subcontractor {subcontractor_id} has no logo")
+            return {"message": "Subcontractor has no logo"}, 404
 
         # Check if USE_STORAGE_SERVICE is enabled
         if not current_app.config.get("USE_STORAGE_SERVICE", True):
@@ -141,11 +145,7 @@ class CompanyLogoResource(Resource):
             return {"message": "Storage Service disabled"}, 404
 
         # Use convention-based logical_path
-        # Logos sont toujours stockés comme logos/{company_id}.png
-        # L'extension .png est normalisée (voir storage_helper.py)
-        # Le vrai format (JPEG, PNG, WebP, etc.) est dans le Content-Type HTTP
-        # que le Storage Service retourne au download (le navigateur lit ça, pas l'extension)
-        logical_path = f"logos/{company_id}.png"
+        logical_path = f"subcontractors/{subcontractor_id}/logo.png"
 
         # Get Storage Service config
         storage_service_url = current_app.config["STORAGE_SERVICE_URL"]
@@ -154,7 +154,7 @@ class CompanyLogoResource(Resource):
         try:
             logger.debug(
                 f"Fetching logo from Storage Service: "
-                f"bucket_type=companies, bucket_id={company_id}, "
+                f"bucket_type=companies, bucket_id={subcontractor.company_id}, "
                 f"logical_path={logical_path}"
             )
 
@@ -162,12 +162,12 @@ class CompanyLogoResource(Resource):
                 f"{storage_service_url}/download/proxy",
                 params={
                     "bucket_type": "companies",
-                    "bucket_id": company_id,
+                    "bucket_id": subcontractor.company_id,
                     "logical_path": logical_path,
                 },
                 headers={
-                    "X-User-ID": company_id,
-                    "X-Company-ID": company_id,
+                    "X-User-ID": g.user_id,
+                    "X-Company-ID": subcontractor.company_id,
                 },
                 stream=True,
                 timeout=timeout,
@@ -181,7 +181,7 @@ class CompanyLogoResource(Resource):
                     "message": "Failed to retrieve logo"
                 }, response.status_code
 
-            logger.info(f"Serving logo for company {company_id}")
+            logger.info(f"Serving logo for subcontractor {subcontractor_id}")
             return Response(
                 response.iter_content(chunk_size=8192),
                 content_type=response.headers.get("Content-Type", "image/png"),
@@ -203,57 +203,60 @@ class CompanyLogoResource(Resource):
 
     @require_jwt_auth()
     @check_access_required("delete")
-    def delete(self, company_id):
+    def delete(self, subcontractor_id):
         """
-        Delete company logo.
+        Delete subcontractor logo.
 
         Args:
-            company_id (str): The ID of the company
+            subcontractor_id (str): The ID of the subcontractor
 
         Returns:
             tuple: Success message and HTTP status code 204
             tuple: Error message and HTTP status code on failure
         """
-        logger.info(f"Deleting logo for company {company_id}")
+        logger.info(f"Deleting logo for subcontractor {subcontractor_id}")
 
-        company = Company.get_by_id(company_id)
-        if not company:
-            logger.warning(f"Company {company_id} not found")
-            return {"message": "Company not found"}, 404
+        subcontractor = Subcontractor.get_by_id(subcontractor_id)
+        if not subcontractor:
+            logger.warning(f"Subcontractor {subcontractor_id} not found")
+            return {"message": "Subcontractor not found"}, 404
 
         # Verify company_id matches JWT
         jwt_company_id = g.company_id
-        if jwt_company_id != company_id:
+        if jwt_company_id != subcontractor.company_id:
             logger.warning(
-                f"Access denied: JWT company_id {jwt_company_id} != {company_id}"
+                f"Access denied: JWT company_id {jwt_company_id} "
+                f"!= subcontractor company_id {subcontractor.company_id}"
             )
             return {
-                "message": "Access denied: cannot delete other company's logo"
+                "message": "Access denied: cannot delete other company's subcontractor logo"
             }, 403
 
-        if not company.has_logo:
-            return {"message": "Company has no logo to delete"}, 404
+        if not subcontractor.has_logo:
+            return {"message": "Subcontractor has no logo to delete"}, 404
 
         # Check if USE_STORAGE_SERVICE is enabled
         if not current_app.config.get("USE_STORAGE_SERVICE", True):
             logger.warning("Storage Service is disabled")
             # Still clear the flag in database
-            company.remove_logo()
+            subcontractor.remove_logo()
             db.session.commit()
             return {"message": "Logo reference removed"}, 204
 
         # Delete from Storage Service (if file_id is available)
-        if company.logo_file_id:
+        if subcontractor.logo_file_id:
             try:
-                delete_logo(company_id, company.logo_file_id)
+                delete_subcontractor_logo(
+                    subcontractor_id, subcontractor.logo_file_id
+                )
             except Exception as e:  # pylint: disable=broad-except
                 # Catch all exceptions to ensure database cleanup happens
                 logger.warning(f"Failed to delete logo from storage: {e}")
                 # Continue anyway to clear database
 
         # Clear logo reference in database
-        company.remove_logo()
+        subcontractor.remove_logo()
         db.session.commit()
 
-        logger.info(f"Logo deleted for company {company_id}")
+        logger.info(f"Logo deleted for subcontractor {subcontractor_id}")
         return {"message": "Logo deleted successfully"}, 204

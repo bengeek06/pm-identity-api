@@ -596,9 +596,7 @@ def test_delete_avatar_success(mock_delete, client, app, session):
         assert response.status_code == 204
 
         # Verify delete was called
-        mock_delete.assert_called_once_with(
-            user_id, company_id, "test-file-id"
-        )
+        mock_delete.assert_called_once_with(user_id, "test-file-id")
 
         # Verify flag cleared in database
         user = User.get_by_id(user_id)
