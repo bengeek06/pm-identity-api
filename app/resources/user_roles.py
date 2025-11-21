@@ -15,6 +15,7 @@ from werkzeug.exceptions import BadRequest
 
 from app.logger import logger
 from app.models.user import User
+from app.resources.guardian_helpers import validate_user_access
 from app.utils import check_access_required, require_jwt_auth
 
 
@@ -134,27 +135,10 @@ class UserRolesListResource(Resource):
         """
         logger.info("Fetching roles for user ID %s", user_id)
 
-        jwt_data = getattr(g, "jwt_data", {})
-        requesting_user_id = jwt_data.get("user_id")
-        company_id = jwt_data.get("company_id")
-
-        if not requesting_user_id:
-            logger.error("user_id missing in JWT")
-            return {"message": "user_id missing in JWT"}, 400
-
-        # Verify that the requested user belongs to the same company
-        target_user = User.get_by_id(user_id)
-        if not target_user:
-            logger.warning("User with ID %s not found", user_id)
-            return {"message": "User not found"}, 404
-
-        if target_user.company_id != company_id:
-            logger.warning(
-                "User %s attempted to access roles for user %s from different company",
-                requesting_user_id,
-                user_id,
-            )
-            return {"message": "Access denied"}, 403
+        # Validate user access
+        error, status = validate_user_access(user_id)
+        if error:
+            return error, status
 
         # If Guardian Service is disabled, return empty roles
         if not current_app.config.get("USE_GUARDIAN_SERVICE"):
@@ -225,18 +209,10 @@ class UserRolesListResource(Resource):
         """
         logger.info("Adding role for user ID %s", user_id)
 
-        jwt_data = getattr(g, "jwt_data", {})
-        requesting_user_id = jwt_data.get("user_id")
-        company_id = jwt_data.get("company_id")
-
-        if not requesting_user_id:
-            logger.error("user_id missing in JWT")
-            return {"message": "user_id missing in JWT"}, 400
-
-        # Verify that the requested user belongs to the same company
-        _, error = self._validate_user_access(user_id, company_id)
+        # Validate user access
+        error, status = validate_user_access(user_id)
         if error:
-            return error
+            return error, status
 
         try:
             json_data = request.get_json(force=True)
@@ -305,8 +281,7 @@ class UserRolesResource(Resource):
         )
 
         # Get company_id from JWT data stored in g by the decorator
-        jwt_data = getattr(g, "jwt_data", {})
-        company_id = jwt_data.get("company_id")
+        company_id = g.company_id
 
         if not company_id:
             logger.error("company_id missing in JWT")
@@ -389,8 +364,7 @@ class UserRolesResource(Resource):
         )
 
         # Get company_id from JWT data stored in g by the decorator
-        jwt_data = getattr(g, "jwt_data", {})
-        company_id = jwt_data.get("company_id")
+        company_id = g.company_id
 
         if not company_id:
             logger.error("company_id missing in JWT")

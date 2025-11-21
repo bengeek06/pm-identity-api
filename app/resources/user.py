@@ -259,8 +259,7 @@ class UserListResource(Resource):
         logger.info("Fetching all users")
         try:
             # Get company_id from JWT data stored in g by the decorator
-            jwt_data = getattr(g, "jwt_data", {})
-            company_id = jwt_data.get("company_id")
+            company_id = g.company_id
 
             if not company_id:
                 logger.error("company_id missing in JWT")
@@ -424,8 +423,7 @@ class UserResource(Resource):
             return {"message": "User not found"}, 404
 
         # Get company_id from JWT for avatar operations
-        jwt_data = getattr(g, "jwt_data", {})
-        company_id = jwt_data.get("company_id")
+        company_id = g.company_id
 
         user_schema = UserSchema(session=db.session, context={"user": user})
 
@@ -497,8 +495,7 @@ class UserResource(Resource):
             return {"message": "User not found"}, 404
 
         # Get company_id from JWT for avatar operations
-        jwt_data = getattr(g, "jwt_data", {})
-        company_id = jwt_data.get("company_id")
+        company_id = g.company_id
 
         user_schema = UserSchema(
             session=db.session, partial=True, context={"user": user}
@@ -566,8 +563,7 @@ class UserResource(Resource):
             return {"message": "User not found"}, 404
 
         # Delete all user storage from Storage Service
-        jwt_data = getattr(g, "jwt_data", {})
-        company_id = jwt_data.get("company_id")
+        company_id = g.company_id
         try:
             delete_user_storage(
                 user_id=str(user.id),

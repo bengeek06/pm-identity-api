@@ -50,9 +50,7 @@ class CompanyLogoResource(Resource):
             return {"message": "Company not found"}, 404
 
         # Verify company_id matches JWT
-        jwt_data = getattr(g, "jwt_data", {})
-        jwt_company_id = jwt_data.get("company_id")
-        jwt_user_id = jwt_data.get("user_id")
+        jwt_company_id = g.company_id
         if jwt_company_id != company_id:
             logger.warning(
                 f"Access denied: JWT company_id {jwt_company_id} != {company_id}"
@@ -80,7 +78,7 @@ class CompanyLogoResource(Resource):
             # Upload to Storage Service
             upload_result = upload_logo_via_proxy(
                 company_id=company_id,
-                user_id=jwt_user_id,  # User ID for auth
+                user_id=g.user_id,  # User ID for auth
                 file_data=file_data,
                 content_type=content_type,
                 filename=f"logo_{filename}",
@@ -217,8 +215,7 @@ class CompanyLogoResource(Resource):
             return {"message": "Company not found"}, 404
 
         # Verify company_id matches JWT
-        jwt_data = getattr(g, "jwt_data", {})
-        jwt_company_id = jwt_data.get("company_id")
+        jwt_company_id = g.company_id
         if jwt_company_id != company_id:
             logger.warning(
                 f"Access denied: JWT company_id {jwt_company_id} != {company_id}"
@@ -241,8 +238,7 @@ class CompanyLogoResource(Resource):
         # Delete from Storage Service (if file_id is available)
         if company.logo_file_id:
             # Get user_id from JWT for auth
-            jwt_data = getattr(g, "jwt_data", {})
-            jwt_user_id = jwt_data.get("user_id")
+            jwt_user_id = g.user_id
 
             try:
                 delete_logo(company_id, jwt_user_id, company.logo_file_id)
