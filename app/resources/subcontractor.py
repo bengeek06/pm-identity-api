@@ -52,14 +52,24 @@ class SubcontractorListResource(Resource):
     @check_access_required("list")
     def get(self):
         """
-        Retrieve all subcontractors.
+        Retrieve all subcontractors with optional filtering.
+
+        Query Parameters:
+            name (str, optional): Filter by exact subcontractor name match
 
         Returns:
             tuple: A tuple containing a list of serialized subcontractors and
                    the HTTP status code 200.
         """
         try:
-            subcontractors = Subcontractor.query.all()
+            query = Subcontractor.query
+
+            # Apply name filter if provided
+            name = request.args.get("name")
+            if name:
+                query = query.filter_by(name=name)
+
+            subcontractors = query.all()
             schema = SubcontractorSchema(many=True)
             return schema.dump(subcontractors), 200
         except SQLAlchemyError as e:

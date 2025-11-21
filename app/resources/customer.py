@@ -49,7 +49,10 @@ class CustomerListResource(Resource):
     @check_access_required("list")
     def get(self):
         """
-        Retrieve all customers.
+        Retrieve all customers with optional filtering.
+
+        Query Parameters:
+            name (str, optional): Filter by exact customer name match
 
         Returns:
             tuple: A tuple containing a list of serialized customers and the
@@ -57,7 +60,14 @@ class CustomerListResource(Resource):
         """
         logger.info("Retrieving all customers")
 
-        customers = Customer.get_all()
+        query = Customer.query
+
+        # Apply name filter if provided
+        name = request.args.get("name")
+        if name:
+            query = query.filter_by(name=name)
+
+        customers = query.all()
         customer_schema = CustomerSchema(session=db.session, many=True)
         return customer_schema.dump(customers), 200
 

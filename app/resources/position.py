@@ -74,14 +74,24 @@ class PositionListResource(Resource):
     @check_access_required("list")
     def get(self):
         """
-        Retrieve all positions.
+        Retrieve all positions with optional filtering.
+
+        Query Parameters:
+            title (str, optional): Filter by exact position title match
 
         Returns:
             tuple: A tuple containing a list of serialized positions and the
                    HTTP status code 200.
         """
         try:
-            positions = Position.query.all()
+            query = Position.query
+
+            # Apply title filter if provided
+            title = request.args.get("title")
+            if title:
+                query = query.filter_by(title=title)
+
+            positions = query.all()
             schema = PositionSchema(many=True)
             return schema.dump(positions), 200
         except SQLAlchemyError as e:

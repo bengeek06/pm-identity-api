@@ -49,7 +49,10 @@ class CompanyListResource(Resource):
     @check_access_required("list")
     def get(self):
         """
-        Retrieve all companies.
+        Retrieve all companies with optional filtering.
+
+        Query Parameters:
+            name (str, optional): Filter by exact company name match
 
         Returns:
             tuple: A tuple containing a list of serialized companies and the
@@ -58,7 +61,14 @@ class CompanyListResource(Resource):
         logger.info("Retrieving all companies")
 
         try:
-            companies = Company.get_all()
+            query = Company.query
+
+            # Apply name filter if provided
+            name = request.args.get("name")
+            if name:
+                query = query.filter_by(name=name)
+
+            companies = query.all()
             company_schema = CompanySchema(session=db.session, many=True)
             return company_schema.dump(companies), 200
         except SQLAlchemyError as e:

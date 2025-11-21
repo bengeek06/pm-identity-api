@@ -97,6 +97,99 @@ def test_get_positions_multiple(client, session):
     assert unit2.id in ids
 
 
+def test_get_positions_filter_by_title(client, session):
+    """
+    Test GET /positions?title=<value> filters by exact title match.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    unit = OrganizationUnit(name="TestUnit", company_id=company_id)
+    session.add(unit)
+    session.commit()
+
+    # Create multiple positions with different titles
+    pos1 = Position(
+        title="Manager", company_id=company_id, organization_unit_id=unit.id
+    )
+    pos2 = Position(
+        title="Developer", company_id=company_id, organization_unit_id=unit.id
+    )
+    pos3 = Position(
+        title="Manager", company_id=company_id, organization_unit_id=unit.id
+    )
+    session.add_all([pos1, pos2, pos3])
+    session.commit()
+
+    # Test filtering by title
+    response = client.get("/positions?title=Manager")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    assert len(data) == 2
+    for item in data:
+        assert item["title"] == "Manager"
+
+
+def test_get_positions_filter_by_title_no_match(client, session):
+    """
+    Test GET /positions?title=<value> returns empty list when no match.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    unit = OrganizationUnit(name="TestUnit", company_id=company_id)
+    session.add(unit)
+    session.commit()
+
+    pos = Position(
+        title="Developer", company_id=company_id, organization_unit_id=unit.id
+    )
+    session.add(pos)
+    session.commit()
+
+    # Test filtering with non-existent title
+    response = client.get("/positions?title=NonExistent")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    assert len(data) == 0
+
+
+def test_get_positions_without_filter_returns_all(client, session):
+    """
+    Test GET /positions without filter returns all positions.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    unit = OrganizationUnit(name="TestUnit", company_id=company_id)
+    session.add(unit)
+    session.commit()
+
+    pos1 = Position(
+        title="Manager", company_id=company_id, organization_unit_id=unit.id
+    )
+    pos2 = Position(
+        title="Developer", company_id=company_id, organization_unit_id=unit.id
+    )
+    session.add_all([pos1, pos2])
+    session.commit()
+
+    # Test without filter
+    response = client.get("/positions")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    assert len(data) == 2
+
+
 ##################################################
 # Test cases for POST /positions
 ##################################################

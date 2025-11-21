@@ -50,7 +50,10 @@ class OrganizationUnitListResource(Resource):
     @check_access_required("list")
     def get(self):
         """
-        Retrieve all organization units.
+        Retrieve all organization units with optional filtering.
+
+        Query Parameters:
+            name (str, optional): Filter by exact organization unit name match
 
         Returns:
             tuple: A tuple containing a list of serialized organization units
@@ -58,7 +61,14 @@ class OrganizationUnitListResource(Resource):
         """
         logger.info("Retrieving all organization units")
 
-        org_units = OrganizationUnit.get_all()
+        query = OrganizationUnit.query
+
+        # Apply name filter if provided
+        name = request.args.get("name")
+        if name:
+            query = query.filter_by(name=name)
+
+        org_units = query.all()
         org_unit_schema = OrganizationUnitSchema(session=db.session, many=True)
         return org_unit_schema.dump(org_units), 200
 

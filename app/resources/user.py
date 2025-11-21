@@ -257,7 +257,10 @@ class UserListResource(Resource):
     @check_access_required("list")
     def get(self):
         """
-        Get all users from the authenticated user's company.
+        Get all users from the authenticated user's company with optional filtering.
+
+        Query Parameters:
+            email (str, optional): Filter by exact email match
 
         Returns:
             tuple: List of serialized users and HTTP status code 200.
@@ -272,7 +275,14 @@ class UserListResource(Resource):
                 return {"message": "company_id missing in JWT"}, 400
 
             # Filter users by company_id to only return users from the same company
-            users = User.query.filter_by(company_id=company_id).all()
+            query = User.query.filter_by(company_id=company_id)
+
+            # Apply email filter if provided
+            email = request.args.get("email")
+            if email:
+                query = query.filter_by(email=email)
+
+            users = query.all()
             schema = UserSchema(many=True)
             return schema.dump(users), 200
         except SQLAlchemyError as e:

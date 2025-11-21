@@ -1292,7 +1292,14 @@ paths:
     get:
       tags: [Customers Management]
       summary: List all customers
-      description: Returns the list of all customers
+      description: Returns the list of all customers with optional filtering
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact customer name match
       responses:
         '200':
           $ref: '#/components/responses/CustomerList'
@@ -1544,7 +1551,14 @@ paths:
     get:
       tags: [Positions]
       summary: List all positions
-      description: Returns the list of all positions
+      description: Returns the list of all positions with optional filtering
+      parameters:
+        - name: title
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact position title match
       responses:
         '200':
           $ref: '#/components/responses/PositionList'
@@ -1734,7 +1748,14 @@ paths:
     get:
       tags: [Organizations]
       summary: List all organization units
-      description: Returns the list of all organization units
+      description: Returns the list of all organization units with optional filtering
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact organization unit name match
       responses:
         '200':
           $ref: '#/components/responses/OrganizationUnitList'
@@ -1894,7 +1915,14 @@ paths:
     get:
       tags: [Companies]
       summary: List all companies
-      description: Returns the list of all companies
+      description: Returns the list of all companies with optional filtering
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact company name match
       responses:
         '200':
           $ref: '#/components/responses/CompanyList'
@@ -2236,7 +2264,15 @@ paths:
     get:
       tags: [Users]
       summary: List all users
-      description: Returns the list of all users for the authenticated company
+      description: Returns the list of all users for the authenticated company with optional filtering
+      parameters:
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+            format: email
+          description: Filter by exact email match
       responses:
         '200':
           $ref: '#/components/responses/UserList'
@@ -2615,7 +2651,14 @@ paths:
     get:
       tags: [Subcontractors Management]
       summary: List all subcontractors
-      description: Returns the list of all subcontractors
+      description: Returns the list of all subcontractors with optional filtering
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact subcontractor name match
       responses:
         '200':
           $ref: '#/components/responses/SubcontractorList'
