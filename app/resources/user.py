@@ -391,16 +391,12 @@ class UserListResource(Resource):
             # Assign company_id from JWT after load
             user.company_id = g.company_id
 
-            # Handle nullable company_id for superuser creation
-            if user.company_id:
-                company = Company.get_by_id(user.company_id)
-                if not company:
-                    logger.warning(
-                        "Company with ID %s not found", user.company_id
-                    )
-                    return {"message": "Company not found"}, 404
-                user.company = company
-            # If company_id is None, this is a superuser creation
+            company = Company.get_by_id(user.company_id)
+            if not company:
+                logger.warning("Company with ID %s not found", user.company_id)
+                return {"message": "Company not found"}, 404
+            user.company = company
+
             db.session.add(user)
             db.session.commit()
 
