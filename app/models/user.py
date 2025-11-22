@@ -84,6 +84,11 @@ class User(db.Model):
     position_id = db.Column(
         db.String(36), db.ForeignKey("position.id"), nullable=True
     )
+    # Password reset fields (Issue #12 Phase 1)
+    password_reset_required = db.Column(
+        db.Boolean, default=False, nullable=False
+    )
+    last_password_change = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
