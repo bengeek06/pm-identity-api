@@ -16,3 +16,7 @@ This instance is used throughout the application for ORM operations.
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+# Import models after db initialization to avoid circular imports
+# pylint: disable=wrong-import-position
+from app.models.password_reset_otp import PasswordResetOTP  # noqa: E402, F401

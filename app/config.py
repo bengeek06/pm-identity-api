@@ -139,6 +139,50 @@ class Config:
             os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5")
         )
 
+    # Flask-Mail configuration
+    use_email_env = os.environ.get("USE_EMAIL_SERVICE", "false")
+    USE_EMAIL_SERVICE = use_email_env.lower() in ("true", "yes", "1")
+
+    if USE_EMAIL_SERVICE:
+        MAIL_SERVER = os.environ.get("MAIL_SERVER")
+        MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
+        MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").lower() in (
+            "true",
+            "yes",
+            "1",
+        )
+        MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "false").lower() in (
+            "true",
+            "yes",
+            "1",
+        )
+        MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+        MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+        MAIL_DEFAULT_SENDER = os.environ.get(
+            "MAIL_DEFAULT_SENDER", MAIL_USERNAME
+        )
+        MAIL_MAX_EMAILS = int(os.environ.get("MAIL_MAX_EMAILS", "100"))
+
+        if not MAIL_SERVER:
+            raise ValueError(
+                "MAIL_SERVER environment variable is not set "
+                "while USE_EMAIL_SERVICE is enabled."
+            )
+
+    # Rate limiting configuration
+    RATELIMIT_STORAGE_URI = os.environ.get(
+        "RATELIMIT_STORAGE_URI", "memory://"
+    )
+    RATELIMIT_STRATEGY = os.environ.get("RATELIMIT_STRATEGY", "fixed-window")
+
+    # Password reset OTP configuration
+    PASSWORD_RESET_OTP_TTL_MINUTES = int(
+        os.environ.get("PASSWORD_RESET_OTP_TTL_MINUTES", "15")
+    )
+    PASSWORD_RESET_OTP_MAX_ATTEMPTS = int(
+        os.environ.get("PASSWORD_RESET_OTP_MAX_ATTEMPTS", "3")
+    )
+
 
 class DevelopmentConfig(Config):
     """
@@ -170,6 +214,7 @@ class TestingConfig(Config):
 
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    RATELIMIT_ENABLED = False  # Disable rate limiting in tests
 
     @classmethod
     def validate_config(cls):

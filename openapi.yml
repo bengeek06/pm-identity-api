@@ -3044,6 +3044,179 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /users/password-reset/request:
+    post:
+      tags: [Users]
+      summary: Request password reset (Phase 2)
+      security: []
+      description: |
+        Email-based self-service password reset request (Issue #12 Phase 2).
+        
+        Initiates a password reset by sending a 6-digit OTP code to the user's email.
+        Always returns 200 OK to prevent email enumeration attacks.
+        
+        Security Features:
+        - Rate limiting: 50 requests/hour, 200/day per IP
+        - No authentication required (public endpoint)
+        - Never reveals if email exists (always 200 OK)
+        - OTP expires in 15 minutes (configurable)
+        - Maximum 3 verification attempts per OTP
+        - Previous OTPs invalidated on new request
+        - All requests logged with IP address
+        
+        Email Service:
+        - Requires USE_EMAIL_SERVICE=true in configuration
+        - Sends HTML + plain text email with OTP code
+        - Email includes user's name and 15-minute expiration notice
+        
+        Process:
+        1. Validate email format
+        2. Check if user exists (never revealed in response)
+        3. Invalidate any previous OTPs for user
+        4. Generate 6-digit numeric OTP
+        5. Hash and store OTP with 15-minute expiration
+        6. Send OTP via email
+        7. Return generic success message (always 200)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Email address of the account to reset
+                  example: user@example.com
+      responses:
+        '200':
+          description: Request processed (generic message to prevent email enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: If an account with this email exists, a password reset code has been sent.
+        '400':
+          description: Bad request - invalid email format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid email format
+        '429':
+          description: Too many requests - rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Too many requests. Please try again later.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/password-reset/confirm:
+    post:
+      tags: [Users]
+      summary: Confirm password reset with OTP (Phase 2)
+      security: []
+      description: |
+        Completes password reset using OTP code from email (Issue #12 Phase 2).
+        
+        Verifies the OTP code and sets a new password for the user account.
+        
+        Security Features:
+        - Rate limiting: 50 requests/hour, 200/day per IP
+        - No authentication required (public endpoint)
+        - OTP must be valid, not expired, and not used
+        - Maximum 3 verification attempts per OTP
+        - Failed attempts increment counter
+        - Email case-insensitive matching
+        - New password must be at least 8 characters
+        - All requests logged with IP address
+        
+        Process:
+        1. Validate input (email, OTP, new password)
+        2. Find user by email (case-insensitive)
+        3. Retrieve valid OTP for user
+        4. Check OTP not expired (15 minutes)
+        5. Check attempts < 3
+        6. Verify OTP code matches hash
+        7. Hash and save new password
+        8. Mark OTP as used
+        9. Clear password_reset_required flag
+        10. Update last_password_change timestamp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp_code
+                - new_password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Email address of the account
+                  example: user@example.com
+                otp_code:
+                  type: string
+                  pattern: '^\d{6}$'
+                  description: 6-digit OTP code from email
+                  example: "123456"
+                new_password:
+                  type: string
+                  minLength: 8
+                  description: New password (minimum 8 characters)
+                  example: NewSecurePassword456
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset successful
+        '400':
+          description: Bad request - invalid input or OTP verification failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid or expired OTP code
+                    description: Generic error message (invalid OTP, expired, max attempts, password too short, etc.)
+        '429':
+          description: Too many requests - rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Too many requests. Please try again later.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /positions/{position_id}/users:
     parameters:
       - name: position_id

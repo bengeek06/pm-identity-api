@@ -5,7 +5,7 @@
 [![OpenAPI Spec](https://img.shields.io/badge/OpenAPI-3.0.3-blue.svg)](openapi.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 ![Flask](https://img.shields.io/badge/flask-%3E=2.0-green.svg)
-![Coverage](https://img.shields.io/badge/tests-366%20tests-green.svg)
+![Coverage](https://img.shields.io/badge/tests-376%20tests-green.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
 
 A production-ready API for managing users, companies, organizations, positions, subcontractors, and customers.  
@@ -32,7 +32,7 @@ The **Identity Service API** is a comprehensive, production-ready microservice f
 - **Authentication**: JWT tokens with HTTP-only cookie storage
 - **Authorization**: External Guardian service for role-based permissions
 - **Validation**: Marshmallow schemas for request/response validation
-- **Testing**: pytest with comprehensive test coverage (366 tests)
+- **Testing**: pytest with comprehensive test coverage (376 tests)
 - **Documentation**: OpenAPI 3.0.3 specification
 ---
 
@@ -43,7 +43,9 @@ The **Identity Service API** is a comprehensive, production-ready microservice f
 ├── app/
 │   ├── __init__.py
 │   ├── config.py
+│   ├── email_helper.py
 │   ├── logger.py
+│   ├── rate_limiter.py
 │   ├── routes.py
 │   ├── storage_helper.py
 │   ├── utils.py
@@ -52,6 +54,7 @@ The **Identity Service API** is a comprehensive, production-ready microservice f
 │   │   ├── company.py
 │   │   ├── customer.py
 │   │   ├── organization_unit.py
+│   │   ├── password_reset_otp.py
 │   │   ├── position.py
 │   │   ├── subcontractor.py
 │   │   └── user.py
@@ -64,6 +67,7 @@ The **Identity Service API** is a comprehensive, production-ready microservice f
 │   │   ├── health.py
 │   │   ├── init_db.py
 │   │   ├── organization_unit.py
+│   │   ├── password_reset.py
 │   │   ├── position.py
 │   │   ├── subcontractor.py
 │   │   ├── user.py
@@ -310,6 +314,8 @@ You can visualize it with [Swagger Editor](https://editor.swagger.io/) or [Redoc
 | DELETE | /users/{user_id}/avatar          | Delete user avatar image                    |✅            |
 | POST   | /users/{user_id}/admin-reset-password | Admin-initiated password reset         |✅            |
 | PATCH  | /users/me/change-password        | User changes own password                   |✅            |
+| POST   | /users/password-reset/request    | Request password reset OTP via email        |✅            |
+| POST   | /users/password-reset/confirm    | Confirm password reset with OTP             |✅            |
 
 #### 📷 **User Avatar Management**
 
@@ -427,8 +433,152 @@ Content-Type: application/json
 - All password operations are logged for audit trails
 - Timezone-aware timestamps (Python 3.12+ compatible)
 
-**Future Enhancement (Phase 2):**
-Email-based self-service password reset with OTP tokens is planned for a future release.
+**Email-Based Password Reset (Phase 2):**
+
+Self-service password reset with OTP codes sent via email.
+
+**Request Password Reset:**
+```bash
+POST /users/password-reset/request
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Response (Always 200 OK):**
+```json
+{
+  "message": "If an account with this email exists, a password reset code has been sent."
+}
+```
+
+**Security Features:**
+- **Rate Limiting**: 50 requests/hour, 200/day per IP address
+- **Email Enumeration Protection**: Always returns 200 OK, never reveals if email exists
+- **OTP Expiration**: 15 minutes (configurable via `PASSWORD_RESET_OTP_TTL_MINUTES`)
+- **Attempt Limiting**: Maximum 3 verification attempts per OTP
+- **Automatic Invalidation**: Previous OTPs invalidated on new request
+- **IP Logging**: All requests logged with IP address for security monitoring
+
+**Confirm Password Reset:**
+```bash
+POST /users/password-reset/confirm
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "otp_code": "123456",
+  "new_password": "NewSecurePassword456"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "message": "Password reset successful"
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "message": "Invalid or expired OTP code"
+}
+```
+
+**Email Service Configuration:**
+
+To enable email-based password reset, configure these environment variables:
+
+```bash
+# Enable/disable email service
+USE_EMAIL_SERVICE=true
+
+# SMTP Configuration
+MAIL_SERVER=smtp.gmail.com          # Your SMTP server
+MAIL_PORT=587                        # SMTP port (587 for TLS, 465 for SSL)
+MAIL_USE_TLS=true                    # Use TLS encryption
+MAIL_USE_SSL=false                   # Use SSL encryption (mutually exclusive with TLS)
+MAIL_USERNAME=noreply@example.com    # SMTP username
+MAIL_PASSWORD=your-app-password      # SMTP password or app-specific password
+MAIL_DEFAULT_SENDER=noreply@waterfall-identity.com  # Default sender address
+MAIL_MAX_EMAILS=100                  # Max emails per connection (optional)
+
+# Rate Limiting Configuration
+RATELIMIT_STORAGE_URI=memory://      # Storage backend (memory:// or redis://url)
+RATELIMIT_STRATEGY=fixed-window      # Rate limit strategy
+
+# OTP Configuration
+PASSWORD_RESET_OTP_TTL_MINUTES=15    # OTP expiration time (default: 15 minutes)
+PASSWORD_RESET_OTP_MAX_ATTEMPTS=3    # Max verification attempts (default: 3)
+```
+
+**Gmail Example Configuration:**
+```bash
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-specific-password  # Create at https://myaccount.google.com/apppasswords
+```
+
+**Email Template:**
+
+The password reset email includes:
+- Professional HTML formatting with CSS styling
+- Plain text fallback for email clients that don't support HTML
+- User's first name personalization
+- 6-digit OTP code prominently displayed
+- 15-minute expiration notice
+- Security warning about not sharing the code
+
+**Password Reset Flow (Phase 2):**
+1. User requests password reset at `/users/password-reset/request`
+2. System checks if email exists (never revealed in response)
+3. If user exists:
+   - Generate 6-digit OTP code
+   - Hash and store OTP with 15-minute expiration
+   - Send OTP via email to user
+   - Invalidate any previous OTPs
+4. Always return generic success message (prevents email enumeration)
+5. User receives email with OTP code
+6. User submits OTP and new password at `/users/password-reset/confirm`
+7. System validates:
+   - OTP exists and matches hash
+   - OTP not expired (< 15 minutes old)
+   - OTP not already used
+   - Attempts < 3
+   - New password >= 8 characters
+8. If valid:
+   - Update password
+   - Mark OTP as used
+   - Clear `password_reset_required` flag
+   - Update `last_password_change` timestamp
+
+**Database Schema:**
+
+Phase 2 adds the `password_reset_otp` table:
+```sql
+CREATE TABLE password_reset_otp (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) REFERENCES user(id) ON DELETE CASCADE,
+    otp_code VARCHAR(255) NOT NULL,  -- Hashed with werkzeug
+    attempts INTEGER DEFAULT 0,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL,
+    used_at DATETIME NULL
+);
+```
+
+**Testing Without Email Service:**
+
+When `USE_EMAIL_SERVICE=false`:
+- Password reset endpoints still work
+- OTP generation and validation work normally
+- Emails are not sent (logged instead)
+- Useful for development and testing
 
 ### 🎭 **User Roles Management**
 

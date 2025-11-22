@@ -32,9 +32,11 @@ from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 
+from app.email_helper import mail
 from app.logger import logger
 from app.models import db
 from app.models.user import User
+from app.rate_limiter import limiter
 from app.routes import register_routes
 
 # Initialize Flask extensions
@@ -52,6 +54,8 @@ def register_extensions(app):
     db.init_app(app)
     migrate.init_app(app, db)
     ma.init_app(app)
+    mail.init_app(app)
+    limiter.init_app(app)
     logger.info("Extensions registered successfully.")
 
 
