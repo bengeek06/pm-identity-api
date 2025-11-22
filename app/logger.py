@@ -55,21 +55,30 @@ if LOG_LEVEL not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
     LOG_LEVEL = "INFO"
 logging.basicConfig(level=getattr(logging, LOG_LEVEL), handlers=[handler])
 
-# Choose renderer based on environment
+# Choose renderer and processors based on environment
 if env in ("development", "testing"):
+    # ConsoleRenderer with colors handles exceptions itself
     renderer = structlog.dev.ConsoleRenderer(colors=True)
+    processors = [
+        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+        structlog.stdlib.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        renderer,
+    ]
 else:
+    # JSON renderer needs format_exc_info
     renderer = structlog.processors.JSONRenderer()
-
-# Configure structlog
-structlog.configure(
-    processors=[
+    processors = [
         structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
         structlog.stdlib.add_log_level,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         renderer,
-    ],
+    ]
+
+# Configure structlog
+structlog.configure(
+    processors=processors,
     logger_factory=structlog.stdlib.LoggerFactory(),
     wrapper_class=structlog.stdlib.BoundLogger,
     cache_logger_on_first_use=True,

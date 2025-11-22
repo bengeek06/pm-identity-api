@@ -33,6 +33,10 @@ def app():
     Initialise la base, crée et drop toutes les tables pour chaque session de test.
     """
     app = create_app("app.config.TestingConfig")
+
+    # Disable rate limiting for tests
+    app.config["RATELIMIT_ENABLED"] = False
+
     with app.app_context():
         db.drop_all()
         db.create_all()

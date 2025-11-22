@@ -21,6 +21,7 @@ Functions:
 from flask_restful import Api
 
 from app.logger import logger
+from app.rate_limiter import limiter
 from app.resources.company import CompanyListResource, CompanyResource
 from app.resources.company_logo import CompanyLogoResource
 from app.resources.config import ConfigResource
@@ -31,6 +32,8 @@ from app.resources.init_db import InitDBResource
 from app.resources.organization_unit import (OrganizationUnitChildrenResource,
                                              OrganizationUnitListResource,
                                              OrganizationUnitResource)
+from app.resources.password_reset import (PasswordResetConfirmResource,
+                                          PasswordResetRequestResource)
 from app.resources.position import (OrganizationUnitPositionsResource,
                                     PositionListResource, PositionResource)
 from app.resources.subcontractor import (SubcontractorListResource,
@@ -112,6 +115,18 @@ def register_routes(app):
         "/users/<string:user_id>/admin-reset-password",
     )
     api.add_resource(UserChangePasswordResource, "/users/me/change-password")
+
+    # Password reset endpoints (Phase 2) - with rate limiting
+    # Note: limiter decorators are applied via method decorators in the resource classes
+    limiter.limit("3 per 15 minutes")(PasswordResetRequestResource)
+    limiter.limit("3 per 15 minutes")(PasswordResetConfirmResource)
+
+    api.add_resource(
+        PasswordResetRequestResource, "/users/password-reset/request"
+    )
+    api.add_resource(
+        PasswordResetConfirmResource, "/users/password-reset/confirm"
+    )
     api.add_resource(UserRolesListResource, "/users/<string:user_id>/roles")
     api.add_resource(
         UserRolesResource,
