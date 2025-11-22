@@ -78,9 +78,8 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_verifed = db.Column("is_verified", db.Boolean, default=False)
     last_login_at = db.Column(db.DateTime, nullable=True)
-    # Allow nullable company_id for superuser creation
     company_id = db.Column(
-        db.String(36), db.ForeignKey("company.id"), nullable=True, index=True
+        db.String(36), db.ForeignKey("company.id"), nullable=False, index=True
     )
     position_id = db.Column(
         db.String(36), db.ForeignKey("position.id"), nullable=True
@@ -250,27 +249,3 @@ class User(db.Model):
             bool: True if password matches the stored hash, False otherwise.
         """
         return check_password_hash(self.hashed_password, password)
-
-    def is_superuser(self):
-        """
-        Check if the user is a superuser (no company_id).
-
-        Returns:
-            bool: True if user is a superuser, False otherwise.
-        """
-        return self.company_id is None
-
-    @classmethod
-    def get_superusers(cls):
-        """
-        Retrieve all superusers from the database.
-
-        Returns:
-            list[User]: List of superuser User objects, or an empty list if an
-                        error occurs.
-        """
-        try:
-            return cls.query.filter(cls.company_id.is_(None)).all()
-        except SQLAlchemyError as e:
-            logger.error("Error retrieving superusers: %s", str(e))
-            return []
