@@ -761,6 +761,16 @@ components:
           type: string
           enum: [en, fr]
           description: User language (en, fr)
+        password_reset_required:
+          type: boolean
+          default: false
+          readOnly: true
+          description: Indicates if user must change password on next login
+        last_password_change:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp of last password change
 
     UserCreate:
       type: object
@@ -2871,6 +2881,166 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user_id}/admin-reset-password:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user whose password to reset
+
+    post:
+      tags: [Users]
+      summary: Admin-initiated password reset
+      description: |
+        Admin-initiated password reset (Issue #12 Phase 1).
+        
+        Generates a secure temporary password for the specified user and marks them
+        as requiring a password change on next login.
+        
+        Security:
+        - Requires JWT authentication
+        - Requires Guardian 'update' permission on 'admin_password_reset' resource
+        - Multi-tenant isolation enforced (admin and user must be in same company)
+        - Temporary password is 12 characters with letters, digits, and special characters
+        - Password is shown only once in the response
+        
+        Process:
+        1. Verify user exists
+        2. Check multi-tenant isolation (same company)
+        3. Generate secure temporary password
+        4. Hash and save password
+        5. Set password_reset_required = true
+        6. Update last_password_change timestamp
+        7. Return temporary password (shown only once)
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset successful
+                  temporary_password:
+                    type: string
+                    example: aB3$xY9#kL2m
+                    description: Temporary password (shown only once)
+                  password_reset_required:
+                    type: boolean
+                    example: true
+                  note:
+                    type: string
+                    example: User must change password on next login. This is the only time the temporary password will be shown.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - either missing Guardian permission or user in different company
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cannot reset password for user in different company
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/me/change-password:
+    patch:
+      tags: [Users]
+      summary: User changes own password
+      description: |
+        User-initiated password change.
+        
+        Allows authenticated users to change their own password.
+        Required after admin-initiated password reset.
+        
+        Security:
+        - Requires JWT authentication
+        - Requires current password verification
+        - New password must be at least 8 characters
+        
+        Process:
+        1. Verify current password matches
+        2. Validate new password length
+        3. Hash and save new password
+        4. Clear password_reset_required flag
+        5. Update last_password_change timestamp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - new_password
+              properties:
+                current_password:
+                  type: string
+                  description: Current password for verification
+                  example: OldPassword123
+                new_password:
+                  type: string
+                  minLength: 8
+                  description: New password (minimum 8 characters)
+                  example: NewSecurePassword456
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password changed successfully
+                  password_reset_required:
+                    type: boolean
+                    example: false
+        '400':
+          description: Bad request - invalid input or password too short
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Current password is incorrect
+                    description: Error message (varies based on validation error)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User not found
         '500':
           $ref: '#/components/responses/InternalServerError'
 

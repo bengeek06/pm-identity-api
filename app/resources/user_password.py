@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from flask import g, request
 from flask_restful import Resource
 from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.logger import logger
 from app.models import db
@@ -160,9 +160,9 @@ class UserChangePasswordResource(Resource):
             }, 400
 
         # Verify current password
-        if not user.check_password(current_password):
+        if not check_password_hash(user.hashed_password, current_password):
             logger.warning("Invalid current password for user %s", user_id)
-            return {"message": "Current password is incorrect"}, 401
+            return {"message": "Current password is incorrect"}, 400
 
         # Validate new password (basic validation)
         if len(new_password) < 8:
