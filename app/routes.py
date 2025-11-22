@@ -39,6 +39,8 @@ from app.resources.subcontractor_logo import SubcontractorLogoResource
 from app.resources.user import UserListResource, UserResource
 from app.resources.user_auth import VerifyPasswordResource
 from app.resources.user_avatar import UserAvatarResource
+from app.resources.user_password import (AdminPasswordResetResource,
+                                         UserChangePasswordResource)
 from app.resources.user_permissions import UserPermissionsResource
 from app.resources.user_policies import UserPoliciesResource
 from app.resources.user_position import UserPositionResource
@@ -105,6 +107,11 @@ def register_routes(app):
     api.add_resource(UserListResource, "/users")
     api.add_resource(UserResource, "/users/<string:user_id>")
     api.add_resource(UserAvatarResource, "/users/<string:user_id>/avatar")
+    api.add_resource(
+        AdminPasswordResetResource,
+        "/users/<string:user_id>/admin-reset-password",
+    )
+    api.add_resource(UserChangePasswordResource, "/users/me/change-password")
     api.add_resource(UserRolesListResource, "/users/<string:user_id>/roles")
     api.add_resource(
         UserRolesResource,

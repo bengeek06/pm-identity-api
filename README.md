@@ -5,7 +5,7 @@
 [![OpenAPI Spec](https://img.shields.io/badge/OpenAPI-3.0.3-blue.svg)](openapi.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 ![Flask](https://img.shields.io/badge/flask-%3E=2.0-green.svg)
-![Coverage](https://img.shields.io/badge/tests-59%2B%20tests-green.svg)
+![Coverage](https://img.shields.io/badge/tests-366%20tests-green.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
 
 A production-ready API for managing users, companies, organizations, positions, subcontractors, and customers.  
@@ -32,7 +32,7 @@ The **Identity Service API** is a comprehensive, production-ready microservice f
 - **Authentication**: JWT tokens with HTTP-only cookie storage
 - **Authorization**: External Guardian service for role-based permissions
 - **Validation**: Marshmallow schemas for request/response validation
-- **Testing**: pytest with comprehensive test coverage (59+ tests)
+- **Testing**: pytest with comprehensive test coverage (366 tests)
 - **Documentation**: OpenAPI 3.0.3 specification
 ---
 
@@ -40,56 +40,111 @@ The **Identity Service API** is a comprehensive, production-ready microservice f
 
 ```
 .
-├── app
-│   ├── config.py
-│   ├── __init__.py
-│   ├── logger.py
-│   ├── models
-│   │   ├── company.py
-│   │   ├── customer.py
-│   │   ├── __init__.py
-│   │   ├── organization_unit.py
-│   │   ├── position.py
-│   │   ├── subcontractor.py
-│   │   └── user.py
-│   ├── resources
-│   │   ├── company.py
-│   │   ├── config.py
-│   │   ├── customer.py
-│   │   ├── health.py
-│   │   ├── init_db.py
-│   │   ├── __init__.py
-│   │   ├── organization_unit.py
-│   │   ├── position.py
-│   │   ├── subcontractor.py
-│   │   ├── user.py
-│   │   └── version.py
-│   ├── routes.py
-│   ├── schemas
-│   │   ├── company_schema.py
-│   │   ├── customer_schema.py
-│   │   ├── __init__.py
-│   │   ├── organization_unit_schema.py
-│   │   ├── position_schema.py
-│   │   ├── subcontractor_schema.py
-│   │   └── user_schema.py
-│   └── utils.py
+├── app/
+│   ├── __init__.py
+│   ├── config.py
+│   ├── logger.py
+│   ├── routes.py
+│   ├── storage_helper.py
+│   ├── utils.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── company.py
+│   │   ├── customer.py
+│   │   ├── organization_unit.py
+│   │   ├── position.py
+│   │   ├── subcontractor.py
+│   │   └── user.py
+│   ├── resources/
+│   │   ├── __init__.py
+│   │   ├── company.py
+│   │   ├── company_logo.py
+│   │   ├── config.py
+│   │   ├── customer.py
+│   │   ├── health.py
+│   │   ├── init_db.py
+│   │   ├── organization_unit.py
+│   │   ├── position.py
+│   │   ├── subcontractor.py
+│   │   ├── user.py
+│   │   ├── user_auth.py
+│   │   ├── user_avatar.py
+│   │   ├── user_password.py
+│   │   ├── user_permissions.py
+│   │   ├── user_policies.py
+│   │   ├── user_position.py
+│   │   ├── user_roles.py
+│   │   └── version.py
+│   └── schemas/
+│       ├── __init__.py
+│       ├── company_schema.py
+│       ├── customer_schema.py
+│       ├── organization_unit_schema.py
+│       ├── position_schema.py
+│       ├── subcontractor_schema.py
+│       └── user_schema.py
+├── docs/
+│   └── TESTING_STRATEGY.md
+├── migrations/
+│   ├── alembic.ini
+│   ├── env.py
+│   ├── README
+│   ├── script.py.mako
+│   └── versions/
+│       └── 9d10e1359386_init.py
+├── scripts/
+│   ├── integration.conf.example
+│   └── run-integration-tests.sh
+├── tests/
+│   ├── __init__.py
+│   ├── integration/
+│   │   ├── __init__.py
+│   │   ├── conftest.py
+│   │   ├── init_guardian.py
+│   │   ├── test_company_logo_integration.py
+│   │   ├── test_guardian_integration.py
+│   │   └── test_user_avatar_integration.py
+│   └── unit/
+│       ├── __init__.py
+│       ├── conftest.py
+│       ├── test_company.py
+│       ├── test_company_logo.py
+│       ├── test_config.py
+│       ├── test_customer.py
+│       ├── test_guardian_disabled.py
+│       ├── test_guardian_formats.py
+│       ├── test_health.py
+│       ├── test_init_api.py
+│       ├── test_init_db.py
+│       ├── test_jwt_forwarding.py
+│       ├── test_organization_unit.py
+│       ├── test_password_reset.py
+│       ├── test_position.py
+│       ├── test_run.py
+│       ├── test_simple_guardian.py
+│       ├── test_storage_helper.py
+│       ├── test_subcontractor.py
+│       ├── test_user.py
+│       ├── test_user_avatar.py
+│       ├── test_utils.py
+│       ├── test_version.py
+│       └── test_wsgi.py
 ├── CODE_OF_CONDUCT.md
 ├── COMMERCIAL-LICENSE.txt
 ├── CONTRIBUTING.md
+├── docker-compose.test.yml
 ├── docker-entrypoint.sh
 ├── Dockerfile
 ├── env.example
 ├── LICENSE
 ├── LICENSE.md
-├── migrations
 ├── openapi.yml
 ├── pytest.ini
 ├── README.md
 ├── requirements-dev.txt
 ├── requirements.txt
 ├── run.py
-├── tests
+├── sonar-project.properties
 ├── VERSION
 ├── wait-for-it.sh
 └── wsgi.py
@@ -253,6 +308,8 @@ You can visualize it with [Swagger Editor](https://editor.swagger.io/) or [Redoc
 | POST   | /users/{user_id}/avatar          | Upload user avatar image                    |✅            |
 | GET    | /users/{user_id}/avatar          | Download user avatar image                  |✅            |
 | DELETE | /users/{user_id}/avatar          | Delete user avatar image                    |✅            |
+| POST   | /users/{user_id}/admin-reset-password | Admin-initiated password reset         |✅            |
+| PATCH  | /users/me/change-password        | User changes own password                   |✅            |
 
 #### 📷 **User Avatar Management**
 
@@ -314,6 +371,64 @@ DELETE /users/{user_id}/avatar
 - Avatars are stored with normalized `.png` extensions (browser reads `Content-Type` header, not extension)
 - Set `USE_STORAGE_SERVICE=false` to disable avatar features (for testing/development)
 - When disabled, all avatar endpoints return 503 Service Unavailable
+
+#### 🔑 **Password Management**
+
+The Identity Service provides secure password management with admin reset and user self-service capabilities.
+
+**Admin Password Reset (Phase 1):**
+```bash
+POST /users/{user_id}/admin-reset-password
+```
+- Generates a secure 12-character temporary password
+- Marks user as requiring password change on next login
+- Enforces multi-tenant isolation (admin and user must be in same company)
+- Requires Guardian 'update' permission on 'admin_password_reset' resource
+- Temporary password shown only once in response
+
+**Response Example:**
+```json
+{
+  "message": "Password reset successful",
+  "temporary_password": "aB3$xY9#kL2m",
+  "password_reset_required": true,
+  "note": "User must change password on next login. This is the only time the temporary password will be shown."
+}
+```
+
+**User Password Change:**
+```bash
+PATCH /users/me/change-password
+Content-Type: application/json
+
+{
+  "current_password": "OldPassword123",
+  "new_password": "NewSecurePassword456"
+}
+```
+- Requires current password verification
+- New password must be at least 8 characters
+- Clears `password_reset_required` flag automatically
+- Updates `last_password_change` timestamp
+- User can only change their own password
+
+**Password Reset Flow:**
+1. Admin calls `/users/{user_id}/admin-reset-password`
+2. System generates temporary password and sets `password_reset_required = true`
+3. Admin communicates temporary password to user (out of band)
+4. User logs in with temporary password
+5. User calls `/users/me/change-password` to set new password
+6. System clears `password_reset_required` flag
+
+**Security Features:**
+- Temporary passwords use cryptographically secure random generation (`secrets` module)
+- Passwords are hashed using werkzeug's secure password hashing (PBKDF2)
+- Multi-tenant isolation prevents cross-company password resets
+- All password operations are logged for audit trails
+- Timezone-aware timestamps (Python 3.12+ compatible)
+
+**Future Enhancement (Phase 2):**
+Email-based self-service password reset with OTP tokens is planned for a future release.
 
 ### 🎭 **User Roles Management**
 
