@@ -2,9 +2,9 @@ name: Flask service
 
 on:
   push:
-    branches: [ main, guardian_staging ]
+    branches: [ main, staging, develop ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main, staging, develop ]
 
 permissions:
   contents: read
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10",  "3.11",  "3.12", "3.13"]
+        python-version: ["3.11",  "3.12", "3.13"]
 
     steps:
     - uses: actions/checkout@v4
@@ -46,5 +46,11 @@ jobs:
         MAX_AVATAR_SIZE_MB=5
         USE_STORAGE_SERVICE=false
         USE_GUARDIAN_SERVICE=false
+        USE_EMAIL_SERVICE=false
+        MAIL_SERVER=localhost
+        MAIL_PORT=587
+        MAIL_USERNAME=test@example.com
+        MAIL_PASSWORD=test-password
+        MAIL_DEFAULT_SENDER=noreply@test.com
         EOF
         pytest tests/unit
