@@ -318,16 +318,17 @@ class TestHealthEndpoint:
 
     def test_health_check_concurrent_requests(self, client):
         """Test concurrent health check requests."""
+        import queue
 
-        results = []
-        errors = []
+        results = queue.Queue()
+        errors = queue.Queue()
 
         def make_request():
             try:
                 response = client.get("/health")
-                results.append(response.status_code)
+                results.put(response.status_code)
             except RuntimeError as e:  # pylint: disable=broad-exception-caught
-                errors.append(str(e))
+                errors.put(str(e))
 
         # Start multiple threads making concurrent requests
         threads = []
@@ -343,7 +344,16 @@ class TestHealthEndpoint:
         for thread in threads:
             thread.join(timeout=5)  # 5 second timeout
 
+        # Collect results from queue
+        result_list = []
+        while not results.empty():
+            result_list.append(results.get())
+
+        error_list = []
+        while not errors.empty():
+            error_list.append(errors.get())
+
         # All requests should succeed
-        assert len(errors) == 0, f"Errors occurred: {errors}"
-        assert len(results) == 5
-        assert all(status == 200 for status in results)
+        assert len(error_list) == 0, f"Errors occurred: {error_list}"
+        assert len(result_list) == 5, f"Expected 5 results, got {len(result_list)}: {result_list}"
+        assert all(status == 200 for status in result_list), f"Not all status codes are 200: {result_list}"
