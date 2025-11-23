@@ -31,7 +31,7 @@ class ConfigResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self):
         """
         Retrieve the current application configuration.
@@ -68,7 +68,11 @@ class ConfigResource(Resource):
             "MAIL_MAX_EMAILS": os.getenv("MAIL_MAX_EMAILS"),
             "RATELIMIT_STORAGE_URI": os.getenv("RATELIMIT_STORAGE_URI"),
             "RATELIMIT_STRATEGY": os.getenv("RATELIMIT_STRATEGY"),
-            "PASSWORD_RESET_OTP_TTL_MINUTES": os.getenv("PASSWORD_RESET_OTP_TTL_MINUTES"),
-            "PASSWORD_RESET_OTP_MAX_ATTEMPTS": os.getenv("PASSWORD_RESET_OTP_MAX_ATTEMPTS"),
+            "PASSWORD_RESET_OTP_TTL_MINUTES": os.getenv(
+                "PASSWORD_RESET_OTP_TTL_MINUTES"
+            ),
+            "PASSWORD_RESET_OTP_MAX_ATTEMPTS": os.getenv(
+                "PASSWORD_RESET_OTP_MAX_ATTEMPTS"
+            ),
         }
         return config, 200

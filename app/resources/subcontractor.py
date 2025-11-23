@@ -49,7 +49,7 @@ class SubcontractorListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self):
         """
         Retrieve all subcontractors with optional filtering, pagination, and sorting.
@@ -134,7 +134,7 @@ class SubcontractorListResource(Resource):
             return {"message": "Error fetching subcontractors"}, 500
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self):
         """
         Create a new subcontractor.
@@ -192,7 +192,7 @@ class SubcontractorResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, subcontractor_id):
         """
         Retrieve a subcontractor by ID.
@@ -216,7 +216,7 @@ class SubcontractorResource(Resource):
         return schema.dump(subcontractor), 200
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def put(self, subcontractor_id):
         """
         Update a subcontractor by ID.
@@ -262,7 +262,7 @@ class SubcontractorResource(Resource):
             return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def patch(self, subcontractor_id):
         """
         Partially update a subcontractor by ID.
@@ -312,7 +312,7 @@ class SubcontractorResource(Resource):
             return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, subcontractor_id):
         """
         Delete a subcontractor by ID.

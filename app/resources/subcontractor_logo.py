@@ -37,7 +37,7 @@ class SubcontractorLogoResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def post(self, subcontractor_id):
         """
         Upload a subcontractor logo.
@@ -118,7 +118,7 @@ class SubcontractorLogoResource(Resource):
             return {"message": "Failed to upload logo"}, 500
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, subcontractor_id):
         """
         Retrieve the logo image for a subcontractor.
@@ -202,7 +202,7 @@ class SubcontractorLogoResource(Resource):
             return {"message": "Failed to retrieve logo"}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, subcontractor_id):
         """
         Delete subcontractor logo.

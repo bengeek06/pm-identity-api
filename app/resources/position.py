@@ -71,7 +71,7 @@ class PositionListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self):
         """
         Retrieve all positions with optional filtering, pagination, and sorting.
@@ -151,7 +151,7 @@ class PositionListResource(Resource):
             return {"message": "Error fetching positions"}, 500
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self):
         """
         Create a new position.
@@ -228,7 +228,7 @@ class PositionResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, position_id):
         """
         Retrieve a position by ID.
@@ -251,7 +251,7 @@ class PositionResource(Resource):
         return schema.dump(position), 200
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def put(self, position_id):
         """
         Update an existing position with the provided data.
@@ -297,7 +297,7 @@ class PositionResource(Resource):
             return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def patch(self, position_id):
         """
         Partially update an existing position with the provided data.
@@ -343,7 +343,7 @@ class PositionResource(Resource):
             return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, position_id):
         """
         Delete a position by ID.
@@ -383,7 +383,7 @@ class OrganizationUnitPositionsResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self, unit_id):
         """
         List all positions for a given organization unit.
@@ -401,7 +401,7 @@ class OrganizationUnitPositionsResource(Resource):
         return schema.dump(positions), 200
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self, unit_id):
         """
         Create a new position for a given organization unit.

@@ -36,7 +36,7 @@ class CompanyLogoResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def post(self, company_id):
         """
         Upload a company logo.
@@ -114,7 +114,7 @@ class CompanyLogoResource(Resource):
             return {"message": "Failed to upload logo"}, 500
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, company_id):
         """
         Retrieve the logo image for a company.
@@ -202,7 +202,7 @@ class CompanyLogoResource(Resource):
             return {"message": "Failed to retrieve logo"}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, company_id):
         """
         Delete company logo.

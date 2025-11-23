@@ -165,8 +165,20 @@ def check_access_required(operation):
     Decorator to check if the user has the required access for an operation.
 
     Args:
-        operation (str): The operation to check access for.
+        operation (str): The operation to check access for (LIST, CREATE, READ, UPDATE, DELETE).
+                        Must be in uppercase to match Guardian API requirements.
+
+    Raises:
+        ValueError: If operation is not one of the valid CRUD operations.
     """
+    # Validate operation at decorator definition time
+    valid_operations = {"LIST", "CREATE", "READ", "UPDATE", "DELETE"}
+
+    if operation not in valid_operations:
+        raise ValueError(
+            f"Invalid operation '{operation}'. "
+            f"Must be one of: {', '.join(sorted(valid_operations))}"
+        )
 
     def decorator(view_func):
         @wraps(view_func)

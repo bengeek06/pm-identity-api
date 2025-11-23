@@ -45,7 +45,7 @@ class AdminPasswordResetResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def post(self, user_id):
         """
         Admin-initiated password reset (Issue #12 Phase 1).

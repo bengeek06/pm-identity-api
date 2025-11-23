@@ -37,7 +37,7 @@ class CustomerLogoResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def post(self, customer_id):
         """
         Upload a customer logo.
@@ -117,7 +117,7 @@ class CustomerLogoResource(Resource):
             return {"message": "Failed to upload logo"}, 500
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, customer_id):
         """
         Retrieve the logo image for a customer.
@@ -201,7 +201,7 @@ class CustomerLogoResource(Resource):
             return {"message": "Failed to retrieve logo"}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, customer_id):
         """
         Delete customer logo.
