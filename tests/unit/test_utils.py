@@ -12,9 +12,11 @@ Tests for utility functions in app.utils module.
 
 from unittest import mock
 
+import pytest
 import requests
+from flask import Flask
 
-from app.utils import check_access
+from app.utils import check_access, check_access_required
 
 
 class TestCheckAccess:
@@ -289,3 +291,66 @@ class TestCheckAccess:
                     headers={},
                     timeout=5.0,
                 )
+
+    def test_check_access_operations_sent_uppercase(self, app):
+        """Test that operations are sent to Guardian in uppercase format."""
+        with app.app_context():
+            app.config["USE_GUARDIAN_SERVICE"] = True
+            app.config["GUARDIAN_SERVICE_URL"] = "http://guardian:8000"
+            app.config["GUARDIAN_SERVICE_TIMEOUT"] = 5
+
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "access_granted": True,
+                "reason": "Access granted",
+                "status": 200,
+            }
+
+            operations = ["LIST", "CREATE", "READ", "UPDATE", "DELETE"]
+
+            with mock.patch(
+                "requests.post", return_value=mock_response
+            ) as mock_post:
+                for operation in operations:
+                    mock_post.reset_mock()
+
+                    # Call check_access with uppercase operation
+                    check_access("user123", "company", operation)
+
+                    # Verify the operation is sent in uppercase
+                    call_args = mock_post.call_args
+                    assert (
+                        call_args[1]["json"]["operation"] == operation
+                    ), f"Operation {operation} should be sent as uppercase"
+
+
+class TestCheckAccessRequiredDecorator:
+    """Test cases for check_access_required decorator."""
+
+    def test_decorator_validates_operation_uppercase_only(self):
+        """Test that the decorator only accepts uppercase operations."""
+        from flask_restful import Resource
+
+        # Valid operations (uppercase) should not raise
+        valid_operations = ["LIST", "CREATE", "READ", "UPDATE", "DELETE"]
+        for op in valid_operations:
+            try:
+
+                class ValidResource(Resource):
+                    @check_access_required(op)
+                    def get(self):
+                        return {"message": "ok"}
+
+            except ValueError:
+                pytest.fail(f"Valid operation '{op}' raised ValueError")
+
+        # Invalid operations (lowercase or wrong) should raise ValueError
+        invalid_operations = ["list", "create", "invalid", "list_all"]
+        for op in invalid_operations:
+            with pytest.raises(ValueError, match="Invalid operation"):
+
+                class InvalidResource(Resource):
+                    @check_access_required(op)
+                    def get(self):
+                        return {"message": "ok"}

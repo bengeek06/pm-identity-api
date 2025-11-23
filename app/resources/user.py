@@ -254,7 +254,7 @@ class UserListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self):  # pylint: disable=too-many-locals
         """
         Get all users from the authenticated user's company.
@@ -351,7 +351,7 @@ class UserListResource(Resource):
             return {"message": "Error fetching users"}, 500
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self):
         """
         Create a new user.
@@ -439,7 +439,7 @@ class UserResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, user_id):
         """
         Get a user by ID.
@@ -461,7 +461,7 @@ class UserResource(Resource):
         return schema.dump(user), 200
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def put(self, user_id):
         """
         Update a user by ID.
@@ -534,7 +534,7 @@ class UserResource(Resource):
             return {"message": "Database error"}, 500
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def patch(self, user_id):
         """
         Partially update a user by ID.
@@ -604,7 +604,7 @@ class UserResource(Resource):
             return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, user_id):
         """
         Delete a user by ID.

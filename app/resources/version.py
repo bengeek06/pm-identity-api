@@ -47,7 +47,7 @@ class VersionResource(Resource):
             Retrieve the current API version.
     """
 
-    @check_access_required("list")
+    @check_access_required("LIST")
     @require_jwt_auth()
     def get(self):
         """

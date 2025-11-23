@@ -355,5 +355,9 @@ class TestHealthEndpoint:
 
         # All requests should succeed
         assert len(error_list) == 0, f"Errors occurred: {error_list}"
-        assert len(result_list) == 5, f"Expected 5 results, got {len(result_list)}: {result_list}"
-        assert all(status == 200 for status in result_list), f"Not all status codes are 200: {result_list}"
+        assert (
+            len(result_list) == 5
+        ), f"Expected 5 results, got {len(result_list)}: {result_list}"
+        assert all(
+            status == 200 for status in result_list
+        ), f"Not all status codes are 200: {result_list}"

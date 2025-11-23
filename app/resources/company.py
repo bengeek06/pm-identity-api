@@ -46,7 +46,7 @@ class CompanyListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self):
         """
         Retrieve all companies with optional filtering, pagination, and sorting.
@@ -128,7 +128,7 @@ class CompanyListResource(Resource):
             return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self):
         """
         Create a new company.
@@ -186,7 +186,7 @@ class CompanyResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, company_id):
         """
         Retrieve a specific company by its ID.
@@ -209,7 +209,7 @@ class CompanyResource(Resource):
         return company_schema.dump(company), 200
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def put(self, company_id):
         """
         Update an existing company with the provided data.
@@ -257,7 +257,7 @@ class CompanyResource(Resource):
             return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def patch(self, company_id):
         """
         Partially update an existing company with the provided data.
@@ -305,7 +305,7 @@ class CompanyResource(Resource):
             return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, company_id):
         """
         Delete a specific company by its ID.

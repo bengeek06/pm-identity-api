@@ -40,7 +40,7 @@ class UserPoliciesResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, user_id):
         """
         Retrieve all policies associated with a user's roles.

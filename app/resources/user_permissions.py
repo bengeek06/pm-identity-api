@@ -41,7 +41,7 @@ class UserPermissionsResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, user_id):
         """
         Retrieve all permissions associated with a user's policies.

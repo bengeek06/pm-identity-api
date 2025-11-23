@@ -37,7 +37,7 @@ class UserAvatarResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def post(self, user_id):
         """
         Upload a user avatar.
@@ -119,7 +119,7 @@ class UserAvatarResource(Resource):
             return {"message": "Failed to upload avatar"}, 500
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, user_id):
         """
         Retrieve the avatar image for a user.
@@ -221,7 +221,7 @@ class UserAvatarResource(Resource):
             return {"message": "Failed to retrieve avatar"}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, user_id):
         """
         Delete user avatar.

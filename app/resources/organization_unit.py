@@ -47,7 +47,7 @@ class OrganizationUnitListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self):
         """
         Retrieve all organization units with optional filtering, pagination, and sorting.
@@ -135,7 +135,7 @@ class OrganizationUnitListResource(Resource):
             return {"message": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self):
         """
         Create a new organization unit.
@@ -196,7 +196,7 @@ class OrganizationUnitResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, unit_id):
         """
         Retrieve an organization unit by its ID.
@@ -220,7 +220,7 @@ class OrganizationUnitResource(Resource):
         return org_unit_schema.dump(org_unit), 200
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def put(self, unit_id):
         """
         Update an existing organization unit by its ID.
@@ -270,7 +270,7 @@ class OrganizationUnitResource(Resource):
             return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def patch(self, unit_id):
         """
         Partially update an existing organization unit by its ID.
@@ -321,7 +321,7 @@ class OrganizationUnitResource(Resource):
             return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, unit_id):
         """
         Delete an organization unit by its ID, including all its descendants.
@@ -389,7 +389,7 @@ class OrganizationUnitChildrenResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self, unit_id):
         """
         Retrieve all children of a specific organization unit.

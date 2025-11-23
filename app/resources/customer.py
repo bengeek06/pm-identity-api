@@ -46,7 +46,7 @@ class CustomerListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self):
         """
         Retrieve all customers with optional filtering, pagination, and sorting.
@@ -129,7 +129,7 @@ class CustomerListResource(Resource):
             return {"message": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self):
         """
         Create a new customer.
@@ -187,7 +187,7 @@ class CustomerResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, customer_id):
         """
         Retrieve a customer by ID.
@@ -210,7 +210,7 @@ class CustomerResource(Resource):
         return customer_schema.dump(customer), 200
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def put(self, customer_id):
         """
         Update an existing customer by ID.
@@ -253,7 +253,7 @@ class CustomerResource(Resource):
             return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def patch(self, customer_id):
         """
         Partially update an existing customer by ID.
@@ -296,7 +296,7 @@ class CustomerResource(Resource):
             return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, customer_id):
         """
         Delete a customer by ID.

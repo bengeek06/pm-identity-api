@@ -130,7 +130,7 @@ class UserRolesListResource(Resource):
         return response.json(), 201
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self, user_id):
         """
         Get all roles for a specific user.
@@ -200,7 +200,7 @@ class UserRolesListResource(Resource):
         return {"roles": roles}, 200
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self, user_id):
         """
         Add a role to a specific user.
@@ -273,7 +273,7 @@ class UserRolesResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, user_id, user_role_id):
         """
         Get a specific role assignment for a user.
@@ -356,7 +356,7 @@ class UserRolesResource(Resource):
         return role_data, 200
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, user_id, user_role_id):
         """
         Delete a specific role assignment from a user.
