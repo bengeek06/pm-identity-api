@@ -14,7 +14,6 @@ from unittest import mock
 
 import pytest
 import requests
-from flask import Flask
 
 from app.utils import check_access, check_access_required
 
@@ -330,18 +329,40 @@ class TestCheckAccessRequiredDecorator:
 
     def test_decorator_validates_operation_uppercase_only(self):
         """Test that the decorator only accepts uppercase operations."""
+        # pylint: disable=import-outside-toplevel
         from flask_restful import Resource
+
+        def create_valid_resource(operation):
+            """Factory to create resource with given operation."""
+
+            class ValidResource(Resource):
+                """Test resource with valid operation."""
+
+                @check_access_required(operation)
+                def get(self):
+                    """GET method for testing."""
+                    return {"message": "ok"}
+
+            return ValidResource
+
+        def create_invalid_resource(operation):
+            """Factory to create resource with given operation."""
+
+            class InvalidResource(Resource):
+                """Test resource with invalid operation."""
+
+                @check_access_required(operation)
+                def get(self):
+                    """GET method for testing."""
+                    return {"message": "ok"}
+
+            return InvalidResource
 
         # Valid operations (uppercase) should not raise
         valid_operations = ["LIST", "CREATE", "READ", "UPDATE", "DELETE"]
         for op in valid_operations:
             try:
-
-                class ValidResource(Resource):
-                    @check_access_required(op)
-                    def get(self):
-                        return {"message": "ok"}
-
+                create_valid_resource(op)
             except ValueError:
                 pytest.fail(f"Valid operation '{op}' raised ValueError")
 
@@ -349,8 +370,4 @@ class TestCheckAccessRequiredDecorator:
         invalid_operations = ["list", "create", "invalid", "list_all"]
         for op in invalid_operations:
             with pytest.raises(ValueError, match="Invalid operation"):
-
-                class InvalidResource(Resource):
-                    @check_access_required(op)
-                    def get(self):
-                        return {"message": "ok"}
+                create_invalid_resource(op)
