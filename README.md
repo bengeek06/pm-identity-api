@@ -1,6 +1,6 @@
 # Identity Service API
 
-[![Tests](https://github.com/bengeek06/pm-identity-api/actions/workflows/python-app.yml/badge.svg?branch=guardian_staging)](https://github.com/bengeek06/pm-identity-api/actions)
+[![Tests](https://github.com/bengeek06/pm-identity-api/actions/workflows/python-app.yml/badge.svg?branch=develop)](https://github.com/bengeek06/pm-identity-api/actions)
 [![License: AGPL v3 / Commercial](https://img.shields.io/badge/license-AGPLv3%20%2F%20Commercial-blue)](LICENSE.md)
 [![OpenAPI Spec](https://img.shields.io/badge/OpenAPI-3.0.3-blue.svg)](openapi.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)
