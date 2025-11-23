@@ -172,19 +172,39 @@ Database URL and secrets are configured via environment variables (see `env.exam
 
 The service reads the following variables (see env.example):
 
-| Variable                  | Description |
-|---------------------------|-------------|
-| FLASK_ENV                 | Environment (development, testing, staging, production) |
-| LOG_LEVEL                 | Logging level (DEBUG, INFO, etc.) |
-| DATABASE_URL              | SQLAlchemy database URL |
-| GUARDIAN_SERVICE_URL      | External guardian service base URL (for RBAC verification) |
-| GUARDIAN_SERVICE_TIMEOUT  | Timeout in seconds for Guardian service API calls (default: 5) |
-| JWT_SECRET                | Secret used to sign JWTs |
-| INTERNAL_AUTH_TOKEN       | Shared secret with auth service |
-| STORAGE_SERVICE_URL       | Storage service base URL for avatar management (default: http://storage-service:5000) |
-| STORAGE_REQUEST_TIMEOUT   | Timeout in seconds for Storage service API calls (default: 30) |
-| MAX_AVATAR_SIZE_MB        | Maximum avatar file size in MB (default: 5) |
-| USE_STORAGE_SERVICE       | Enable/disable Storage Service integration (true/false, default: true) |
+| Variable                        | Description |
+|---------------------------------|-------------|
+| **Core Configuration** |
+| FLASK_ENV                       | Environment (development, testing, staging, production) |
+| LOG_LEVEL                       | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
+| DATABASE_URL                    | SQLAlchemy database URL |
+| JWT_SECRET                      | Secret used to sign JWTs |
+| INTERNAL_AUTH_TOKEN             | Shared secret with auth service |
+| **Guardian Service (RBAC)** |
+| USE_GUARDIAN_SERVICE            | Enable/disable Guardian Service integration (true/false, default: true) |
+| GUARDIAN_SERVICE_URL            | External Guardian service base URL (for RBAC verification) |
+| GUARDIAN_SERVICE_TIMEOUT        | Timeout in seconds for Guardian service API calls (default: 5) |
+| **Storage Service (Avatars)** |
+| USE_STORAGE_SERVICE             | Enable/disable Storage Service integration (true/false, default: true) |
+| STORAGE_SERVICE_URL             | Storage service base URL for avatar management (default: http://storage-service:5000) |
+| STORAGE_REQUEST_TIMEOUT         | Timeout in seconds for Storage service API calls (default: 30) |
+| MAX_AVATAR_SIZE_MB              | Maximum avatar file size in MB (default: 5) |
+| **Email Service (Password Reset)** |
+| USE_EMAIL_SERVICE               | Enable/disable email service (true/false, default: false) |
+| MAIL_SERVER                     | SMTP server hostname (e.g., smtp.gmail.com) |
+| MAIL_PORT                       | SMTP server port (587 for TLS, 465 for SSL) |
+| MAIL_USE_TLS                    | Use TLS encryption (true/false) |
+| MAIL_USE_SSL                    | Use SSL encryption (true/false, mutually exclusive with TLS) |
+| MAIL_USERNAME                   | SMTP username for authentication |
+| MAIL_PASSWORD                   | SMTP password or app-specific password |
+| MAIL_DEFAULT_SENDER             | Default sender email address |
+| MAIL_MAX_EMAILS                 | Maximum emails per connection (optional, default: 100) |
+| **Rate Limiting** |
+| RATELIMIT_STORAGE_URI           | Storage backend for rate limiting (memory:// or redis://url, default: memory://) |
+| RATELIMIT_STRATEGY              | Rate limit strategy (fixed-window, moving-window, default: fixed-window) |
+| **Password Reset OTP** |
+| PASSWORD_RESET_OTP_TTL_MINUTES  | OTP expiration time in minutes (default: 15) |
+| PASSWORD_RESET_OTP_MAX_ATTEMPTS | Maximum OTP verification attempts (default: 3) |
 
 ---
 
