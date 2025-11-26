@@ -124,7 +124,7 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
             value (str): The name to validate.
 
         Raises:
-            ValidationError: If the name already exists.
+            ValidationError: If the name already exists for another subcontractor.
 
         Returns:
             str: The validated name.
@@ -132,7 +132,16 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         _ = kwargs
 
         subcontractor = Subcontractor.get_by_name(value)
-        if subcontractor:
+        current_subcontractor = (
+            self.context.get("subcontractor")
+            if hasattr(self, "context")
+            else None
+        )
+        if subcontractor and (
+            not current_subcontractor
+            or subcontractor.id
+            != getattr(current_subcontractor, "id", None)
+        ):
             logger.error(
                 "Validation error: Subcontractor with name '%s' already exists.",
                 value,
