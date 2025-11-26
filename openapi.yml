@@ -919,7 +919,7 @@ components:
         - id
         - service
         - resource_name
-        - operations
+        - operation
       properties:
         id:
           type: string
@@ -935,11 +935,10 @@ components:
           type: string
           nullable: true
           description: Optional description of the permission
-        operations:
-          type: array
-          items:
-            type: string
-          description: List of operations allowed by this permission
+        operation:
+          type: string
+          enum: [LIST, CREATE, READ, UPDATE, DELETE]
+          description: Operation allowed by this permission (SINGULAR UPPERCASE as per Guardian spec)
         company_id:
           type: string
           format: uuid
