@@ -244,6 +244,8 @@ class SubcontractorResource(Resource):
                 logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
                 return {"error": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
+            # Pass current subcontractor in context for uniqueness validation
+            subcontractor_schema.context = {"subcontractor": subcontractor}
             updated_subcontractor = subcontractor_schema.load(
                 json_data, instance=subcontractor
             )
@@ -294,6 +296,8 @@ class SubcontractorResource(Resource):
                 logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
                 return {"message": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
+            # Pass current subcontractor in context for uniqueness validation
+            subcontractor_schema.context = {"subcontractor": subcontractor}
             updated_subcontractor = subcontractor_schema.load(
                 json_data, instance=subcontractor, partial=True
             )

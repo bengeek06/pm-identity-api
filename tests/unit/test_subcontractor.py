@@ -352,3 +352,154 @@ def test_delete_subcontractor_not_found(client):
     assert response.status_code == 404
     data = response.get_json()
     assert "error" in data or "message" in data
+
+
+##################################################
+# Test cases for Issue #59: Name Uniqueness Validation on Update
+##################################################
+
+
+def test_update_subcontractor_same_name(client, session):
+    """
+    Test PUT /subcontractors/<id> without changing the name.
+
+    This test verifies the fix for Issue #59: when updating a subcontractor
+    with the same name (e.g., only changing email), the validation should
+    pass and not raise "Name must be unique" error.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Create a subcontractor
+    sub = Subcontractor(
+        name="ABC Corp", email="old@example.com", company_id=company_id
+    )
+    session.add(sub)
+    session.commit()
+
+    # Update with same name but different email
+    payload = {"name": "ABC Corp", "email": "new@example.com"}
+    response = client.put(f"/subcontractors/{sub.id}", json=payload)
+
+    assert response.status_code == 200, response.get_json()
+    data = response.get_json()
+    assert data["name"] == "ABC Corp"
+    assert data["email"] == "new@example.com"
+
+
+def test_update_subcontractor_unique_new_name(client, session):
+    """
+    Test PUT /subcontractors/<id> with a unique new name.
+
+    This test verifies that updating a subcontractor's name to a new
+    unique value works correctly.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Create a subcontractor
+    sub = Subcontractor(name="ABC Corp", company_id=company_id)
+    session.add(sub)
+    session.commit()
+
+    # Update with a unique new name
+    payload = {"name": "XYZ Corp"}
+    response = client.put(f"/subcontractors/{sub.id}", json=payload)
+
+    assert response.status_code == 200, response.get_json()
+    data = response.get_json()
+    assert data["name"] == "XYZ Corp"
+
+
+def test_update_subcontractor_duplicate_name(client, session):
+    """
+    Test PUT /subcontractors/<id> with a name that already exists.
+
+    This test verifies that trying to update a subcontractor's name to
+    a value already used by another subcontractor fails with proper
+    validation error.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Create two subcontractors
+    sub1 = Subcontractor(name="ABC Corp", company_id=company_id)
+    sub2 = Subcontractor(name="XYZ Corp", company_id=company_id)
+    session.add_all([sub1, sub2])
+    session.commit()
+
+    # Try to update sub2 with sub1's name
+    payload = {"name": "ABC Corp"}
+    response = client.put(f"/subcontractors/{sub2.id}", json=payload)
+
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "errors" in data
+    assert "name" in data["errors"]
+    assert "unique" in str(data["errors"]["name"]).lower()
+
+
+def test_patch_subcontractor_same_name(client, session):
+    """
+    Test PATCH /subcontractors/<id> without changing the name.
+
+    This test verifies that partial updates work correctly when
+    name is unchanged (similar to PUT).
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Create a subcontractor
+    sub = Subcontractor(
+        name="ABC Corp",
+        email="old@example.com",
+        contact_person="John Doe",
+        company_id=company_id,
+    )
+    session.add(sub)
+    session.commit()
+
+    # Patch only the contact_person
+    payload = {"contact_person": "Jane Smith"}
+    response = client.patch(f"/subcontractors/{sub.id}", json=payload)
+
+    assert response.status_code == 200, response.get_json()
+    data = response.get_json()
+    assert data["name"] == "ABC Corp"  # Name unchanged
+    assert data["contact_person"] == "Jane Smith"
+
+
+def test_patch_subcontractor_duplicate_name(client, session):
+    """
+    Test PATCH /subcontractors/<id> with a duplicate name.
+
+    This test verifies that PATCH also correctly rejects duplicate names.
+    """
+    company_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Create two subcontractors
+    sub1 = Subcontractor(name="ABC Corp", company_id=company_id)
+    sub2 = Subcontractor(name="XYZ Corp", company_id=company_id)
+    session.add_all([sub1, sub2])
+    session.commit()
+
+    # Try to patch sub2 with sub1's name
+    payload = {"name": "ABC Corp"}
+    response = client.patch(f"/subcontractors/{sub2.id}", json=payload)
+
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "errors" in data
+    assert "name" in data["errors"]
+    assert "unique" in str(data["errors"]["name"]).lower()
