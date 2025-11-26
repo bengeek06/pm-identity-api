@@ -18,7 +18,14 @@ model, ensuring data integrity and proper formatting when handling API input
 and output.
 """
 
-from marshmallow import RAISE, ValidationError, fields, validate, validates
+from marshmallow import (
+    RAISE,
+    ValidationError,
+    fields,
+    validate,
+    validates,
+    validates_schema,
+)
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from app.logger import logger
@@ -84,7 +91,7 @@ class UserSchema(SQLAlchemyAutoSchema):
     id = fields.UUID(dump_only=True)
     email = fields.Email(required=True, validate=validate.Length(max=100))
     hashed_password = fields.String(
-        required=True, validate=validate.Length(max=255), load_only=True
+        required=False, validate=validate.Length(max=255), load_only=True
     )
     first_name = fields.String(validate=validate.Length(max=50))
     last_name = fields.String(validate=validate.Length(max=50))
@@ -119,6 +126,36 @@ class UserSchema(SQLAlchemyAutoSchema):
     )
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
+
+    @validates_schema
+    def validate_password_on_creation(self, data, **kwargs):
+        """
+        Validate that hashed_password is provided on user creation.
+        On updates, it's optional (only required if changing password).
+
+        Note: This validator runs AFTER the resource converts 'password' to 'hashed_password',
+        so we check if hashed_password is in the data.
+
+        Args:
+            data (dict): The full data dictionary being loaded.
+
+        Raises:
+            ValidationError: If password is missing on user creation.
+        """
+        _ = kwargs
+
+        # Get current user from context (None for creation, User instance for update)
+        current_user = (
+            self.context.get("user") if hasattr(self, "context") else None
+        )
+
+        # If this is a creation (no current_user) and no hashed_password provided
+        if not current_user and "hashed_password" not in data:
+            logger.error("Validation error: Password is required for user creation.")
+            raise ValidationError(
+                "Password is required for user creation.",
+                field_name="hashed_password",
+            )
 
     @validates("email")
     def validate_email(self, value, **kwargs):
