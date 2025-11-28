@@ -863,8 +863,44 @@ components:
           enum: [en, fr]
           description: User language (en, fr)
 
+    Role:
+      type: object
+      description: Role object enriched with details from Guardian Service
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the role (from Guardian Service)
+        name:
+          type: string
+          description: Name of the role
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the role
+        company_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Company identifier for multi-tenant isolation (null for global roles)
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the role was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the role was last updated
+
     UserRole:
       type: object
+      deprecated: true
+      description: |
+        DEPRECATED: This schema represents the junction table format.
+        
+        As of Issue #64, GET /users/{user_id}/roles now returns enriched Role objects
+        instead of UserRole junction table records. Use the Role schema instead.
+        
+        This schema is kept for backward compatibility documentation only.
       properties:
         id:
           type: string
@@ -1323,7 +1359,12 @@ components:
                 example: "User deleted successfully"
 
     UserRoles:
-      description: User roles list
+      description: |
+        User roles list with enriched role objects.
+        
+        As of Issue #64, this endpoint returns full Role objects from Guardian Service
+        instead of junction table records. Each role includes id, name, description,
+        company_id, and timestamps.
       content:
         application/json:
           schema:
@@ -1332,7 +1373,21 @@ components:
               roles:
                 type: array
                 items:
-                  $ref: '#/components/schemas/UserRole'
+                  $ref: '#/components/schemas/Role'
+          example:
+            roles:
+              - id: "550e8400-e29b-41d4-a716-446655440000"
+                name: "companyadmin"
+                description: "Company administrator with full access to company resources"
+                company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+                created_at: "2024-01-15T10:30:00Z"
+                updated_at: "2024-01-15T10:30:00Z"
+              - id: "660e8400-e29b-41d4-a716-446655440001"
+                name: "projectmanager"
+                description: "Project manager with access to project management features"
+                company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+                created_at: "2024-02-10T14:20:00Z"
+                updated_at: "2024-02-10T14:20:00Z"
 
     UserRoleCreated:
       description: Role assigned to user successfully
@@ -2677,8 +2732,21 @@ paths:
 
     get:
       tags: [Users]
-      summary: Get user roles
-      description: Returns the list of roles assigned to a user via the Guardian Service (RBAC)
+      summary: Get user roles (enriched)
+      description: |
+        Returns the list of roles assigned to a user via the Guardian Service (RBAC).
+        
+        **Enrichment (Issue #64):**
+        As of Issue #64, this endpoint returns full Role objects instead of junction table records.
+        Each role includes:
+        - id: Role identifier
+        - name: Role name
+        - description: Role description
+        - company_id: Company identifier for multi-tenant isolation
+        - created_at, updated_at: Timestamps
+        
+        The enrichment is performed by fetching role details from Guardian Service
+        for each role_id in the user-role associations.
       responses:
         '200':
           $ref: '#/components/responses/UserRoles'
