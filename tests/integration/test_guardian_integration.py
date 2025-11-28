@@ -248,13 +248,16 @@ def test_user_roles_endpoint_integration(
         len(data["roles"]) > 0
     ), "User should have at least one role (companyadmin)"
 
-    # Verify role structure
+    # Verify enriched role structure (Issue #64: roles are now enriched objects)
     for role in data["roles"]:
-        assert "role_id" in role, "Each role should have a 'role_id' field"
         assert "id" in role, "Each role should have an 'id' field"
+        assert "name" in role, "Each role should have a 'name' field"
+        # Optional fields that may be present
+        # assert "description" in role, "Each role should have a 'description' field"
+        # assert "company_id" in role, "Each role should have a 'company_id' field"
 
-    role_ids = [role["role_id"] for role in data["roles"]]
-    print(f"✅ User roles retrieved: {len(role_ids)} roles")
+    role_ids = [role["id"] for role in data["roles"]]
+    print(f"✅ User roles retrieved: {len(role_ids)} enriched roles")
 
 
 @pytest.mark.integration
