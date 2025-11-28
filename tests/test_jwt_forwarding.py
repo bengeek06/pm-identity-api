@@ -24,11 +24,27 @@ def test_jwt_cookie_forwarding_to_guardian(client):
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service response
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"roles": ["admin", "user"]}
+    junction_data = [
+        {"id": "ur1", "user_id": user_id, "role_id": "admin"},
+        {"id": "ur2", "user_id": user_id, "role_id": "user"},
+    ]
+    admin_role = {"id": "admin", "name": "Admin"}
+    user_role = {"id": "user", "name": "User"}
 
-    with mock.patch("requests.get", return_value=mock_response) as mock_get:
+    def mock_get_side_effect(url, **kwargs):
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 200
+        if "/user-roles" in url:
+            mock_resp.json.return_value = {"roles": junction_data}
+        elif "/roles/admin" in url:
+            mock_resp.json.return_value = admin_role
+        elif "/roles/user" in url:
+            mock_resp.json.return_value = user_role
+        return mock_resp
+
+    with mock.patch(
+        "requests.get", side_effect=mock_get_side_effect
+    ) as mock_get:
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
         ):
@@ -38,22 +54,25 @@ def test_jwt_cookie_forwarding_to_guardian(client):
             assert response.status_code == 200
 
             # Verify that the JWT cookie was forwarded to Guardian
-            mock_get.assert_called_once_with(
-                "http://guardian:5000/user-roles",
-                params={"user_id": user_id},
-                headers={"Cookie": f"access_token={jwt_token}"},
-                timeout=5,
+            # Should have 3 calls: /user-roles, /roles/admin, /roles/user
+            assert mock_get.call_count == 3
+
+            # Check first call (junction records)
+            first_call = mock_get.call_args_list[0]
+            assert "http://guardian:5000/user-roles" in first_call[0][0]
+            assert (
+                first_call[1]["headers"]["Cookie"]
+                == f"access_token={jwt_token}"
             )
 
-            # Extract the Cookie header that was sent to Guardian
-            call_args = mock_get.call_args
-            headers = call_args[1]["headers"]
-            cookie_header = headers["Cookie"]
+            # Verify all calls have JWT cookie
+            for call in mock_get.call_args_list:
+                headers = call[1]["headers"]
+                cookie_header = headers["Cookie"]
+                assert f"access_token={jwt_token}" in cookie_header
 
-            # Verify the cookie contains our JWT token
-            assert f"access_token={jwt_token}" in cookie_header
             print(
-                f"✅ JWT token successfully forwarded to Guardian: {cookie_header[:50]}..."
+                f"✅ JWT token successfully forwarded to Guardian in all {mock_get.call_count} calls"
             )
 
 

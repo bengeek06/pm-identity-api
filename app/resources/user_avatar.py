@@ -6,13 +6,14 @@ It proxies requests to the Storage Service to get the avatar image.
 """
 
 import os
+
 import requests
 from flask import Response
 from flask_restful import Resource
 
 from app.logger import logger
 from app.models.user import User
-from app.utils import require_jwt_auth, check_access_required
+from app.utils import check_access_required, require_jwt_auth
 
 
 class UserAvatarResource(Resource):
@@ -112,13 +113,17 @@ class UserAvatarResource(Resource):
                 logger.error(
                     f"Storage Service returned {response.status_code}: {response.text}"
                 )
-                return {"message": "Failed to retrieve avatar"}, response.status_code
+                return {
+                    "message": "Failed to retrieve avatar"
+                }, response.status_code
 
             # Stream the file back to the client
             logger.info(f"Serving avatar for user {user_id}")
             return Response(
                 response.iter_content(chunk_size=8192),
-                content_type=response.headers.get("Content-Type", "image/jpeg"),
+                content_type=response.headers.get(
+                    "Content-Type", "image/jpeg"
+                ),
                 headers={
                     "Content-Disposition": response.headers.get(
                         "Content-Disposition", "inline"

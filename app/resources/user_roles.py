@@ -10,16 +10,14 @@ assignments, retrieving specific role assignments, and removing role assignments
 
 import os
 
-from flask import request, g
+import requests
+from flask import g, request
 from flask_restful import Resource
-
 from werkzeug.exceptions import BadRequest
 
-import requests
-
 from app.logger import logger
-from app.utils import require_jwt_auth, check_access_required
 from app.models.user import User
+from app.utils import check_access_required, require_jwt_auth
 
 
 class UserRolesListResource(Resource):
@@ -106,8 +104,12 @@ class UserRolesListResource(Resource):
             tuple: (dict, int) - Response data and status code
         """
         if response.status_code == 409:
-            logger.warning("Role ID %s already assigned to user %s", role_id, user_id)
-            return {"message": f"Role '{role_id}' already assigned to user"}, 409
+            logger.warning(
+                "Role ID %s already assigned to user %s", role_id, user_id
+            )
+            return {
+                "message": f"Role '{role_id}' already assigned to user"
+            }, 409
         if response.status_code == 400:
             logger.error("Bad request to Guardian: %s", response.text)
             return {"message": "Invalid role or request data"}, 400
@@ -115,8 +117,150 @@ class UserRolesListResource(Resource):
             logger.error("Error assigning role in Guardian: %s", response.text)
             return {"message": "Error assigning role"}, 500
 
-        logger.info("Successfully assigned role ID %s to user %s", role_id, user_id)
+        logger.info(
+            "Successfully assigned role ID %s to user %s", role_id, user_id
+        )
         return response.json(), 201
+
+    @staticmethod
+    def _get_guardian_headers():
+        """
+        Get headers for Guardian service requests with JWT forwarding.
+
+        Returns:
+            dict: Headers dictionary with JWT cookie if available
+        """
+        jwt_token = request.cookies.get("access_token")
+        headers = {}
+        if jwt_token:
+            headers["Cookie"] = f"access_token={jwt_token}"
+        return headers
+
+    @staticmethod
+    def _fetch_user_roles_from_guardian(guardian_url, user_id, headers):
+        """
+        Fetch user-role junction records from Guardian service.
+
+        Args:
+            guardian_url (str): Guardian service base URL
+            user_id (str): The user ID
+            headers (dict): Request headers
+
+        Returns:
+            tuple: (list of user_roles, error_response)
+                - If successful: (list, None)
+                - If error: (None, (dict, int))
+        """
+        try:
+            response = requests.get(
+                f"{guardian_url}/user-roles",
+                params={"user_id": user_id},
+                headers=headers,
+                timeout=5,
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error("Error contacting Guardian service: %s", str(e))
+            return None, ({"message": "Error fetching roles"}, 500)
+
+        if response.status_code != 200:
+            logger.error(
+                "Error fetching roles from Guardian: %s", response.text
+            )
+            return None, ({"message": "Error fetching roles"}, 500)
+
+        response_data = response.json()
+        logger.debug("Guardian response data: %s", response_data)
+
+        # Handle both response formats
+        if isinstance(response_data, list):
+            user_roles = response_data
+        elif isinstance(response_data, dict) and "roles" in response_data:
+            user_roles = response_data.get("roles", [])
+        else:
+            logger.warning(
+                "Unexpected response format from Guardian, defaulting to empty roles: %s",
+                response_data,
+            )
+            user_roles = []
+
+        return user_roles, None
+
+    @staticmethod
+    def _fetch_role_details(guardian_url, role_id, headers):
+        """
+        Fetch full role object from Guardian service.
+
+        Args:
+            guardian_url (str): Guardian service base URL
+            role_id (str): The role ID to fetch
+            headers (dict): Request headers
+
+        Returns:
+            dict or None: Role data if successful, None otherwise
+        """
+        try:
+            role_response = requests.get(
+                f"{guardian_url}/roles/{role_id}",
+                headers=headers,
+                timeout=5,
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "Error contacting Guardian service for role %s: %s",
+                role_id,
+                str(e),
+            )
+            return None
+
+        if role_response.status_code == 404:
+            logger.warning("Role %s not found in Guardian, skipping", role_id)
+            return None
+
+        if role_response.status_code != 200:
+            logger.error(
+                "Error fetching role %s from Guardian: %s",
+                role_id,
+                role_response.text,
+            )
+            return None
+
+        return role_response.json()
+
+    @staticmethod
+    def _enrich_roles(user_roles, guardian_url, headers):
+        """
+        Enrich user-role junction records with full role objects from Guardian.
+
+        Args:
+            user_roles (list): List of user-role junction records
+            guardian_url (str): Guardian service base URL
+            headers (dict): Request headers
+
+        Returns:
+            list: List of enriched role objects (deduplicated)
+        """
+        enriched_roles = []
+        seen_role_ids = set()
+
+        for user_role in user_roles:
+            role_id = user_role.get("role_id")
+            if not role_id:
+                logger.warning("user_role missing role_id: %s", user_role)
+                continue
+
+            # Skip duplicates
+            if role_id in seen_role_ids:
+                continue
+            seen_role_ids.add(role_id)
+
+            # Fetch full role object from Guardian
+            role_data = UserRolesListResource._fetch_role_details(
+                guardian_url, role_id, headers
+            )
+            if role_data:
+                enriched_roles.append(role_data)
+
+        return enriched_roles
 
     @require_jwt_auth()
     @check_access_required("list")
@@ -128,77 +272,47 @@ class UserRolesListResource(Resource):
             user_id (str): The ID of the user whose roles to retrieve.
 
         Returns:
-            tuple: List of roles and HTTP status code 200.
+            tuple: List of enriched roles and HTTP status code 200.
         """
         logger.info("Fetching roles for user ID %s", user_id)
 
-        jwt_data = getattr(g, "jwt_data", {})
-        requesting_user_id = jwt_data.get("user_id")
-        company_id = jwt_data.get("company_id")
+        # Validate user access
+        _, error = self._validate_user_access(
+            user_id, g.jwt_data.get("company_id")
+        )
+        if error:
+            return error
 
-        if not requesting_user_id:
+        # Check JWT contains user_id
+        if not g.jwt_data.get("user_id"):
             logger.error("user_id missing in JWT")
             return {"message": "user_id missing in JWT"}, 400
 
-        # Verify that the requested user belongs to the same company
-        target_user = User.get_by_id(user_id)
-        if not target_user:
-            logger.warning("User with ID %s not found", user_id)
-            return {"message": "User not found"}, 404
-
-        if target_user.company_id != company_id:
-            logger.warning(
-                "User %s attempted to access roles for user %s from different company",
-                requesting_user_id,
-                user_id,
-            )
-            return {"message": "Access denied"}, 403
-
+        # Get Guardian URL
         guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
         if not guardian_url:
             logger.error("GUARDIAN_SERVICE_URL not set")
             return {"message": "Internal server error"}, 500
 
-        # Get JWT token from cookies to forward to Guardian service
-        jwt_token = request.cookies.get("access_token")
-        headers = {}
-        if jwt_token:
-            headers["Cookie"] = f"access_token={jwt_token}"
+        # Get headers with JWT forwarding
+        headers = self._get_guardian_headers()
 
-        try:
-            # Add a timeout to avoid hanging indefinitely and handle network errors
-            response = requests.get(
-                f"{guardian_url}/user-roles",
-                params={"user_id": user_id},
-                headers=headers,
-                timeout=5,
-            )
-        except requests.exceptions.RequestException as e:
-            logger.error("Error contacting Guardian service: %s", str(e))
-            return {"message": "Error fetching roles"}, 500
-        if response.status_code != 200:
-            logger.error("Error fetching roles from Guardian: %s", response.text)
-            return {"message": "Error fetching roles"}, 500
+        # Fetch user-role junction records from Guardian
+        user_roles, error = self._fetch_user_roles_from_guardian(
+            guardian_url, user_id, headers
+        )
+        if error:
+            return error
 
-        response_data = response.json()
-        logger.debug("Guardian response data: %s", response_data)
+        # Enrich roles with full role objects
+        enriched_roles = self._enrich_roles(user_roles, guardian_url, headers)
 
-        # Handle both response formats:
-        # - Direct list: [{"id": "role1", ...}, {"id": "role2", ...}]
-        # - Object with roles key: {"roles": [{"id": "role1", ...}, ...]}
-        # - Other formats: Default to empty list with warning
-        if isinstance(response_data, list):
-            roles = response_data
-        elif isinstance(response_data, dict) and "roles" in response_data:
-            roles = response_data.get("roles", [])
-        else:
-            logger.warning(
-                "Unexpected response format from Guardian, defaulting to empty roles: %s",
-                response_data,
-            )
-            roles = []
-
-        return {"roles": roles}, 200
+        logger.info(
+            "Successfully fetched %d unique roles for user %s",
+            len(enriched_roles),
+            user_id,
+        )
+        return {"roles": enriched_roles}, 200
 
     @require_jwt_auth()
     @check_access_required("create")
@@ -290,7 +404,9 @@ class UserRolesResource(Resource):
         Returns:
             tuple: Role assignment information and HTTP status code 200 on success.
         """
-        logger.info("Retrieving role assignment %s for user %s", user_role_id, user_id)
+        logger.info(
+            "Retrieving role assignment %s for user %s", user_role_id, user_id
+        )
 
         # Get company_id from JWT data stored in g by the decorator
         jwt_data = getattr(g, "jwt_data", {})
@@ -336,7 +452,9 @@ class UserRolesResource(Resource):
             logger.warning("Role assignment %s not found", user_role_id)
             return {"message": "Role assignment not found"}, 404
         if response.status_code != 200:
-            logger.error("Error retrieving role from Guardian: %s", response.text)
+            logger.error(
+                "Error retrieving role from Guardian: %s", response.text
+            )
             return {"message": "Error retrieving role"}, 500
 
         role_data = response.json()
@@ -369,7 +487,9 @@ class UserRolesResource(Resource):
         Returns:
             tuple: Empty response and HTTP status code 204 on success.
         """
-        logger.info("Removing role assignment %s from user %s", user_role_id, user_id)
+        logger.info(
+            "Removing role assignment %s from user %s", user_role_id, user_id
+        )
 
         # Get company_id from JWT data stored in g by the decorator
         jwt_data = getattr(g, "jwt_data", {})
@@ -415,7 +535,9 @@ class UserRolesResource(Resource):
             logger.warning("Role assignment %s not found", user_role_id)
             return {"message": "Role assignment not found"}, 404
         if get_response.status_code != 200:
-            logger.error("Error checking role in Guardian: %s", get_response.text)
+            logger.error(
+                "Error checking role in Guardian: %s", get_response.text
+            )
             return {"message": "Error removing role"}, 500
 
         role_data = get_response.json()
@@ -441,10 +563,14 @@ class UserRolesResource(Resource):
             return {"message": "Error removing role"}, 500
 
         if response.status_code == 404:
-            logger.warning("Role assignment %s not found for deletion", user_role_id)
+            logger.warning(
+                "Role assignment %s not found for deletion", user_role_id
+            )
             return {"message": "Role assignment not found"}, 404
         if response.status_code not in [204, 200]:
-            logger.error("Error removing role from Guardian: %s", response.text)
+            logger.error(
+                "Error removing role from Guardian: %s", response.text
+            )
             return {"message": "Error removing role"}, 500
 
         logger.info(

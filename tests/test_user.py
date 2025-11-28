@@ -749,6 +749,7 @@ def test_verify_password_missing_password(client, session):
 def test_get_user_roles_success(client):
     """
     Test GET /users/<user_id>/roles with successful response from Guardian service.
+    Now enriches roles with full role objects from Guardian.
     """
     # Create test data
     init_db_payload = get_init_db_payload()
@@ -760,12 +761,62 @@ def test_get_user_roles_success(client):
     jwt_token = create_jwt_token(company_id, user_id)
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    # Mock the Guardian service response
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"roles": ["admin", "user", "editor"]}
+    # Mock junction table response (user_roles)
+    role_id_1 = str(uuid.uuid4())
+    role_id_2 = str(uuid.uuid4())
 
-    with mock.patch("requests.get", return_value=mock_response) as mock_get:
+    mock_user_roles_response = mock.Mock()
+    mock_user_roles_response.status_code = 200
+    mock_user_roles_response.json.return_value = {
+        "roles": [
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "role_id": role_id_1,
+                "company_id": company_id,
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "role_id": role_id_2,
+                "company_id": company_id,
+            },
+        ]
+    }
+
+    # Mock enriched role objects
+    mock_role_1_response = mock.Mock()
+    mock_role_1_response.status_code = 200
+    mock_role_1_response.json.return_value = {
+        "id": role_id_1,
+        "name": "companyadmin",
+        "description": "Administrateur de l'entreprise",
+        "company_id": company_id,
+    }
+
+    mock_role_2_response = mock.Mock()
+    mock_role_2_response.status_code = 200
+    mock_role_2_response.json.return_value = {
+        "id": role_id_2,
+        "name": "projectmanager",
+        "description": "Chef de projet",
+        "company_id": company_id,
+    }
+
+    def mock_get_side_effect(url, **kwargs):
+        """Mock different responses based on URL"""
+        if "/user-roles" in url:
+            return mock_user_roles_response
+        elif f"/roles/{role_id_1}" in url:
+            return mock_role_1_response
+        elif f"/roles/{role_id_2}" in url:
+            return mock_role_2_response
+        # Default fallback
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 404
+        return mock_resp
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
         ):
@@ -775,15 +826,19 @@ def test_get_user_roles_success(client):
             assert response.status_code == 200
             data = response.get_json()
             assert "roles" in data
-            assert data["roles"] == ["admin", "user", "editor"]
+            assert len(data["roles"]) == 2
 
-        # Verify the Guardian service was called correctly
-        mock_get.assert_called_once_with(
-            "http://guardian:8000/user-roles",
-            params={"user_id": user_id},
-            headers={"Cookie": f"access_token={jwt_token}"},
-            timeout=5,
-        )
+            # Verify enriched role objects are returned
+            role_names = {role["name"] for role in data["roles"]}
+            assert "companyadmin" in role_names
+            assert "projectmanager" in role_names
+
+            # Verify each role has expected structure
+            for role in data["roles"]:
+                assert "id" in role
+                assert "name" in role
+                assert "description" in role
+                assert "company_id" in role
 
 
 def test_get_user_roles_missing_jwt(client):
@@ -1016,6 +1071,7 @@ def test_get_user_roles_different_company_access_denied(client, session):
 def test_get_user_roles_same_company_allowed(client, session):
     """
     Test GET /users/<user_id>/roles when accessing a user from the same company.
+    Now returns enriched role objects.
     """
     # Create test data
     init_db_payload = get_init_db_payload()
@@ -1039,12 +1095,41 @@ def test_get_user_roles_same_company_allowed(client, session):
     jwt_token = create_jwt_token(company_id, user1_id)
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
-    # Mock Guardian service response
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"roles": ["viewer"]}
+    # Mock junction table response
+    role_id = str(uuid.uuid4())
+    mock_user_roles_response = mock.Mock()
+    mock_user_roles_response.status_code = 200
+    mock_user_roles_response.json.return_value = {
+        "roles": [
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": str(user2.id),
+                "role_id": role_id,
+                "company_id": company_id,
+            }
+        ]
+    }
 
-    with mock.patch("requests.get", return_value=mock_response):
+    # Mock enriched role object
+    mock_role_response = mock.Mock()
+    mock_role_response.status_code = 200
+    mock_role_response.json.return_value = {
+        "id": role_id,
+        "name": "viewer",
+        "description": "Viewer role",
+        "company_id": company_id,
+    }
+
+    def mock_get_side_effect(url, **kwargs):
+        if "/user-roles" in url:
+            return mock_user_roles_response
+        elif f"/roles/{role_id}" in url:
+            return mock_role_response
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 404
+        return mock_resp
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
         ):
@@ -1052,7 +1137,223 @@ def test_get_user_roles_same_company_allowed(client, session):
             assert response.status_code == 200
             data = response.get_json()
             assert "roles" in data
-            assert data["roles"] == ["viewer"]
+            assert len(data["roles"]) == 1
+            assert data["roles"][0]["name"] == "viewer"
+
+
+##################################################
+# Test cases for enriched role objects (Issue #64)
+##################################################
+
+
+def test_get_user_roles_enrichment_with_duplicates(client):
+    """
+    Test GET /users/<user_id>/roles deduplicates roles when same role_id appears multiple times.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Mock junction table with duplicate role_id
+    role_id = str(uuid.uuid4())
+
+    mock_user_roles_response = mock.Mock()
+    mock_user_roles_response.status_code = 200
+    mock_user_roles_response.json.return_value = {
+        "roles": [
+            {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": role_id},
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "role_id": role_id,
+            },  # Duplicate
+        ]
+    }
+
+    # Mock enriched role object
+    mock_role_response = mock.Mock()
+    mock_role_response.status_code = 200
+    mock_role_response.json.return_value = {
+        "id": role_id,
+        "name": "admin",
+        "description": "Administrator",
+    }
+
+    call_count = 0
+
+    def mock_get_side_effect(url, **kwargs):
+        nonlocal call_count
+        if "/user-roles" in url:
+            return mock_user_roles_response
+        elif f"/roles/{role_id}" in url:
+            call_count += 1
+            return mock_role_response
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 404
+        return mock_resp
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/roles")
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert len(data["roles"]) == 1  # Deduplicated
+            assert data["roles"][0]["name"] == "admin"
+            assert call_count == 1  # Role fetched only once
+
+
+def test_get_user_roles_enrichment_role_not_found(client):
+    """
+    Test GET /users/<user_id>/roles when a role_id is not found in Guardian (404).
+    Should skip missing roles and continue with others.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Two roles: one exists, one doesn't
+    role_id_valid = str(uuid.uuid4())
+    role_id_missing = str(uuid.uuid4())
+
+    mock_user_roles_response = mock.Mock()
+    mock_user_roles_response.status_code = 200
+    mock_user_roles_response.json.return_value = {
+        "roles": [
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "role_id": role_id_valid,
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "role_id": role_id_missing,
+            },
+        ]
+    }
+
+    # Mock valid role
+    mock_valid_role_response = mock.Mock()
+    mock_valid_role_response.status_code = 200
+    mock_valid_role_response.json.return_value = {
+        "id": role_id_valid,
+        "name": "validrole",
+        "description": "Valid Role",
+    }
+
+    # Mock missing role (404)
+    mock_missing_role_response = mock.Mock()
+    mock_missing_role_response.status_code = 404
+
+    def mock_get_side_effect(url, **kwargs):
+        if "/user-roles" in url:
+            return mock_user_roles_response
+        elif f"/roles/{role_id_valid}" in url:
+            return mock_valid_role_response
+        elif f"/roles/{role_id_missing}" in url:
+            return mock_missing_role_response
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 404
+        return mock_resp
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/roles")
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert len(data["roles"]) == 1  # Only valid role returned
+            assert data["roles"][0]["name"] == "validrole"
+
+
+def test_get_user_roles_enrichment_guardian_error(client):
+    """
+    Test GET /users/<user_id>/roles when Guardian returns error for role fetch (500).
+    Should skip errored roles and continue with others.
+    """
+    # Create test data
+    init_db_payload = get_init_db_payload()
+    resp = client.post("/init-db", json=init_db_payload)
+    assert resp.status_code == 201
+    company_id = resp.get_json()["company"]["id"]
+    user_id = resp.get_json()["user"]["id"]
+
+    jwt_token = create_jwt_token(company_id, user_id)
+    client.set_cookie("access_token", jwt_token, domain="localhost")
+
+    # Two roles: one works, one errors
+    role_id_ok = str(uuid.uuid4())
+    role_id_error = str(uuid.uuid4())
+
+    mock_user_roles_response = mock.Mock()
+    mock_user_roles_response.status_code = 200
+    mock_user_roles_response.json.return_value = {
+        "roles": [
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "role_id": role_id_ok,
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "role_id": role_id_error,
+            },
+        ]
+    }
+
+    # Mock OK role
+    mock_ok_role_response = mock.Mock()
+    mock_ok_role_response.status_code = 200
+    mock_ok_role_response.json.return_value = {
+        "id": role_id_ok,
+        "name": "okrole",
+        "description": "OK Role",
+    }
+
+    # Mock error role (500)
+    mock_error_role_response = mock.Mock()
+    mock_error_role_response.status_code = 500
+    mock_error_role_response.text = "Internal Server Error"
+
+    def mock_get_side_effect(url, **kwargs):
+        if "/user-roles" in url:
+            return mock_user_roles_response
+        elif f"/roles/{role_id_ok}" in url:
+            return mock_ok_role_response
+        elif f"/roles/{role_id_error}" in url:
+            return mock_error_role_response
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 404
+        return mock_resp
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
+        with mock.patch.dict(
+            "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:8000"}
+        ):
+            response = client.get(f"/users/{user_id}/roles")
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert len(data["roles"]) == 1  # Only OK role returned
+            assert data["roles"][0]["name"] == "okrole"
 
 
 ##################################################

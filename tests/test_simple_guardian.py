@@ -21,18 +21,33 @@ def test_guardian_direct_list_format(client):
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service response as direct list (comme dans l'erreur)
-    roles_list = [
+    junction_list = [
         {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": "admin"},
         {"id": str(uuid.uuid4()), "user_id": user_id, "role_id": "user"},
     ]
 
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = (
-        roles_list  # Liste directe comme Guardian renvoie
-    )
+    # Mock enriched role objects
+    admin_role = {
+        "id": "admin",
+        "name": "Admin",
+        "description": "Administrator",
+    }
+    user_role = {"id": "user", "name": "User", "description": "Regular user"}
 
-    with mock.patch("requests.get", return_value=mock_response):
+    def mock_get_side_effect(url, **kwargs):
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 200
+        if "/user-roles" in url:
+            mock_resp.json.return_value = (
+                junction_list  # Liste directe comme Guardian renvoie
+            )
+        elif "/roles/admin" in url:
+            mock_resp.json.return_value = admin_role
+        elif "/roles/user" in url:
+            mock_resp.json.return_value = user_role
+        return mock_resp
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
         ):
@@ -44,8 +59,11 @@ def test_guardian_direct_list_format(client):
             assert "roles" in data
             assert isinstance(data["roles"], list)
             assert len(data["roles"]) == 2
-            assert data["roles"][0]["role_id"] == "admin"
-            assert data["roles"][1]["role_id"] == "user"
+            # Now we expect enriched role objects with name and description
+            assert data["roles"][0]["id"] == "admin"
+            assert data["roles"][0]["name"] == "Admin"
+            assert data["roles"][1]["id"] == "user"
+            assert data["roles"][1]["name"] == "User"
 
             print("✅ Guardian direct list format handled successfully!")
             print(f"Response: {data}")

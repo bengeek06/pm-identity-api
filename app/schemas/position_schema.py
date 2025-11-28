@@ -10,8 +10,8 @@ Position model, ensuring data integrity and proper formatting when handling API
 input and output.
 """
 
-from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow import fields, validate
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from app.models.position import Position
 
@@ -86,5 +86,7 @@ class PositionSchema(SQLAlchemyAutoSchema):
 
     level = fields.Integer(
         required=False,
-        validate=validate.Range(min=0, error="Level must be a positive integer."),
+        validate=validate.Range(
+            min=0, error="Level must be a positive integer."
+        ),
     )

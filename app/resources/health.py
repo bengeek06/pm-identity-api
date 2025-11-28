@@ -7,9 +7,11 @@ This module provides a simple health check endpoint to verify that the service i
 
 import os
 from datetime import datetime, timezone
+
 from flask_restful import Resource
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+
 from app.logger import logger
 from app.models import db
 from app.resources.version import API_VERSION
@@ -42,7 +44,9 @@ class HealthResource(Resource):
         health_data = {
             "status": "healthy",
             "service": "identity_service",
-            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "timestamp": datetime.now(timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z"),
             "version": API_VERSION,
             "environment": os.getenv("FLASK_ENV", "development"),
             "checks": {},
@@ -74,7 +78,9 @@ class HealthResource(Resource):
 
             # Check if result is as expected
             if result.scalar() == 1:
-                response_time_ms = (end_time - start_time).total_seconds() * 1000
+                response_time_ms = (
+                    end_time - start_time
+                ).total_seconds() * 1000
                 return {
                     "healthy": True,
                     "message": "Database connection successful",

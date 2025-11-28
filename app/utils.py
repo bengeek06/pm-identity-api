@@ -4,9 +4,10 @@ import os
 import re
 import uuid
 from functools import wraps
+
 import jwt
-from flask import request, g
 import requests
+from flask import g, request
 
 from app.logger import logger
 
@@ -99,7 +100,9 @@ def require_jwt_auth():
                 if user_id:
                     # Create mock JWT data from headers (for testing)
                     jwt_data = {"user_id": user_id, "company_id": company_id}
-                    logger.debug("Using headers for authentication (testing mode)")
+                    logger.debug(
+                        "Using headers for authentication (testing mode)"
+                    )
                 else:
                     return {"message": "Missing or invalid JWT token"}, 401
 
@@ -113,7 +116,9 @@ def require_jwt_auth():
 
             if not company_id:
                 logger.error("company_id missing in JWT token")
-                return {"message": "Invalid JWT token: missing company_id"}, 401
+                return {
+                    "message": "Invalid JWT token: missing company_id"
+                }, 401
 
             # Validate UUID format for company_id
             try:
@@ -159,7 +164,9 @@ def check_access_required(operation):
         @wraps(view_func)
         def wrapped(*args, **kwargs):
             resource_name = kwargs.get("resource_name") or (
-                request.view_args.get("resource_name") if request.view_args else None
+                request.view_args.get("resource_name")
+                if request.view_args
+                else None
             )
             # If not found, deduce from the resource class name
             if not resource_name:
@@ -177,10 +184,14 @@ def check_access_required(operation):
             # Essayer d'utiliser les données JWT déjà décodées si disponibles
             if not user_id and hasattr(g, "jwt_data") and g.jwt_data:
                 user_id = g.jwt_data.get("user_id")
-                logger.debug(f"Using user_id from already decoded JWT: {user_id}")
+                logger.debug(
+                    f"Using user_id from already decoded JWT: {user_id}"
+                )
             # Sinon, extraire user_id du cookie JWT
             elif not user_id:
-                logger.debug("User ID not found in g or headers, checking JWT cookie")
+                logger.debug(
+                    "User ID not found in g or headers, checking JWT cookie"
+                )
                 jwt_data = extract_jwt_data()
                 if jwt_data:
                     user_id = jwt_data.get("user_id")
@@ -188,7 +199,9 @@ def check_access_required(operation):
                 else:
                     logger.warning("JWT token not found or invalid")
             if not user_id or not resource_name:
-                logger.warning("Missing user_id or resource_name for access check.")
+                logger.warning(
+                    "Missing user_id or resource_name for access check."
+                )
                 return {
                     "error": "Missing user_id or resource_name for access check."
                 }, 400
@@ -245,7 +258,9 @@ def check_access(user_id, resource_name, operation):
                 logger.debug("Forwarding JWT cookie to Guardian service")
         except RuntimeError:
             # No request context available (e.g., during testing without Flask app context)
-            logger.debug("No request context available, skipping JWT cookie forwarding")
+            logger.debug(
+                "No request context available, skipping JWT cookie forwarding"
+            )
 
         response = requests.post(
             f"{guardian_service_url}/check-access",
@@ -272,7 +287,9 @@ def check_access(user_id, resource_name, operation):
             # Guardian service returned a 400 with detailed error message
             try:
                 response_data = response.json()
-                logger.warning(f"Guardian service returned 400: {response_data}")
+                logger.warning(
+                    f"Guardian service returned 400: {response_data}"
+                )
                 return (
                     response_data.get("access_granted", False),
                     response_data.get("reason", "Bad request"),

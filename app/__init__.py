@@ -18,15 +18,16 @@ Functions:
 """
 
 import os
-from flask import Flask, request, g
-from flask_migrate import Migrate
-from flask_marshmallow import Marshmallow
-from flask_cors import CORS
 
-from app.models import db
+from flask import Flask, g, request
+from flask_cors import CORS
+from flask_marshmallow import Marshmallow
+from flask_migrate import Migrate
+
 from app.logger import logger
-from app.routes import register_routes
+from app.models import db
 from app.models.user import User
+from app.routes import register_routes
 
 # Initialize Flask extensions
 migrate = Migrate()
@@ -222,7 +223,9 @@ def create_app(config_class):
     env = os.getenv("FLASK_ENV", "development")
     logger.info("Creating app in environment.", environment=env)
     if env in ("development", "staging"):
-        CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
+        CORS(
+            app, supports_credentials=True, resources={r"/*": {"origins": "*"}}
+        )
 
     register_extensions(app)
     register_error_handlers(app)

@@ -10,16 +10,15 @@ validation and serialization, and handle database errors gracefully.
 """
 
 from flask import request
+from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from flask_restful import Resource
 
-from app.models import db
 from app.logger import logger
-
+from app.models import db
 from app.models.company import Company
 from app.schemas.company_schema import CompanySchema
-from app.utils import require_jwt_auth, check_access_required
+from app.utils import check_access_required, require_jwt_auth
 
 
 class CompanyListResource(Resource):
@@ -157,7 +156,9 @@ class CompanyResource(Resource):
             logger.warning("Company with ID %s not found", company_id)
             return {"message": "Company not found"}, 404
 
-        company_schema = CompanySchema(context={"company": company}, session=db.session)
+        company_schema = CompanySchema(
+            context={"company": company}, session=db.session
+        )
 
         try:
             company = company_schema.load(json_data, instance=company)

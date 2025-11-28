@@ -15,8 +15,9 @@ Usage:
     logger.info("Your log message", extra_field="value")
 """
 
-import os
 import logging
+import os
+
 import colorlog
 import structlog
 

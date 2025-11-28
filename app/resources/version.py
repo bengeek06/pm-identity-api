@@ -7,13 +7,17 @@ through a REST endpoint.
 """
 
 import os
+
 from flask_restful import Resource
-from app.utils import require_jwt_auth, check_access_required
+
+from app.utils import check_access_required, require_jwt_auth
 
 
 def _read_version():
     """Read version from VERSION file."""
-    version_file_path = os.path.join(os.path.dirname(__file__), "..", "..", "VERSION")
+    version_file_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "VERSION"
+    )
     try:
         with open(version_file_path, "r", encoding="utf-8") as f:
             return f.read().strip()

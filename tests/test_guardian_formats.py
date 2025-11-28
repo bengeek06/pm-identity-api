@@ -22,15 +22,35 @@ def test_get_user_roles_with_direct_list_response(client):
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service response as direct list
-    roles_data = [
+    junction_data = [
         {"id": "role1", "user_id": user_id, "role_id": "admin"},
         {"id": "role2", "user_id": user_id, "role_id": "user"},
     ]
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = roles_data  # Direct list
 
-    with mock.patch("requests.get", return_value=mock_response):
+    # Mock enriched role objects
+    admin_role = {
+        "id": "admin",
+        "name": "Admin",
+        "description": "Administrator role",
+    }
+    user_role = {
+        "id": "user",
+        "name": "User",
+        "description": "Regular user role",
+    }
+
+    def mock_get_side_effect(url, **kwargs):
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 200
+        if "/user-roles" in url:
+            mock_resp.json.return_value = junction_data  # Direct list
+        elif "/roles/admin" in url:
+            mock_resp.json.return_value = admin_role
+        elif "/roles/user" in url:
+            mock_resp.json.return_value = user_role
+        return mock_resp
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
         ):
@@ -40,7 +60,10 @@ def test_get_user_roles_with_direct_list_response(client):
             assert response.status_code == 200
             data = response.get_json()
             assert "roles" in data
-            assert data["roles"] == roles_data
+            # Now we expect enriched role objects, not junction records
+            assert len(data["roles"]) == 2
+            assert data["roles"][0] == admin_role
+            assert data["roles"][1] == user_role
             print("✅ Direct list format handled correctly")
 
 
@@ -59,17 +82,37 @@ def test_get_user_roles_with_object_response(client):
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service response as object with roles key
-    roles_data = [
+    junction_data = [
         {"id": "role1", "user_id": user_id, "role_id": "admin"},
         {"id": "role2", "user_id": user_id, "role_id": "user"},
     ]
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "roles": roles_data
-    }  # Object with roles key
 
-    with mock.patch("requests.get", return_value=mock_response):
+    # Mock enriched role objects
+    admin_role = {
+        "id": "admin",
+        "name": "Admin",
+        "description": "Administrator role",
+    }
+    user_role = {
+        "id": "user",
+        "name": "User",
+        "description": "Regular user role",
+    }
+
+    def mock_get_side_effect(url, **kwargs):
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 200
+        if "/user-roles" in url:
+            mock_resp.json.return_value = {
+                "roles": junction_data
+            }  # Object with roles key
+        elif "/roles/admin" in url:
+            mock_resp.json.return_value = admin_role
+        elif "/roles/user" in url:
+            mock_resp.json.return_value = user_role
+        return mock_resp
+
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
         ):
@@ -79,7 +122,10 @@ def test_get_user_roles_with_object_response(client):
             assert response.status_code == 200
             data = response.get_json()
             assert "roles" in data
-            assert data["roles"] == roles_data
+            # Now we expect enriched role objects, not junction records
+            assert len(data["roles"]) == 2
+            assert data["roles"][0] == admin_role
+            assert data["roles"][1] == user_role
             print("✅ Object with roles key format handled correctly")
 
 
@@ -99,13 +145,16 @@ def test_get_user_roles_with_invalid_response_format(client):
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service response with unexpected format
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "unexpected": "format"
-    }  # Invalid format
+    def mock_get_side_effect(url, **kwargs):
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 200
+        if "/user-roles" in url:
+            mock_resp.json.return_value = {
+                "unexpected": "format"
+            }  # Invalid format
+        return mock_resp
 
-    with mock.patch("requests.get", return_value=mock_response):
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
         ):
@@ -136,11 +185,14 @@ def test_get_user_roles_empty_list(client):
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service response as empty list
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = []  # Empty list
+    def mock_get_side_effect(url, **kwargs):
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 200
+        if "/user-roles" in url:
+            mock_resp.json.return_value = []  # Empty list
+        return mock_resp
 
-    with mock.patch("requests.get", return_value=mock_response):
+    with mock.patch("requests.get", side_effect=mock_get_side_effect):
         with mock.patch.dict(
             "os.environ", {"GUARDIAN_SERVICE_URL": "http://guardian:5000"}
         ):

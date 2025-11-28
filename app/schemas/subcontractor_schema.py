@@ -10,8 +10,8 @@ Subcontractor model, ensuring data integrity and proper formatting when
 handling API input and output.
 """
 
+from marshmallow import ValidationError, fields, validate, validates
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import ValidationError, validate, fields, validates
 
 from app.logger import logger
 from app.models.subcontractor import Subcontractor
@@ -89,13 +89,17 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         allow_none=True,
         validate=[
             validate.Length(max=50),
-            validate.Regexp(r"^\d*$", error="Phone number must contain only digits."),
+            validate.Regexp(
+                r"^\d*$", error="Phone number must contain only digits."
+            ),
         ],
     )
 
     email = fields.Email(
         required=False,
-        validate=validate.Length(max=100, error="Email cannot exceed 100 characters."),
+        validate=validate.Length(
+            max=100, error="Email cannot exceed 100 characters."
+        ),
     )
 
     address = fields.String(

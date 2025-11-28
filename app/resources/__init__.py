@@ -9,8 +9,8 @@ are available for use throughout the application, including for database
 migrations, relationships, and resource definitions.
 """
 
-from app.models.user import User
-from app.models.organization_unit import OrganizationUnit
 from app.models.company import Company
-from app.models.position import Position
 from app.models.customer import Customer
+from app.models.organization_unit import OrganizationUnit
+from app.models.position import Position
+from app.models.user import User
