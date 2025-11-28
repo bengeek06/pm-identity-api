@@ -66,7 +66,10 @@ ENV FLASK_ENV=testing \
     APP_MODE=testing \
     PYTEST_ADDOPTS="-v" \
     DATABASE_URL=sqlite:///:memory: \
-    JWT_SECRET=test-jwt-secret-key
+    JWT_SECRET=test-jwt-secret-key \
+    USE_GUARDIAN_SERVICE=false \
+    USE_STORAGE_SERVICE=false \
+    USE_EMAIL_SERVICE=false
 
 # Pas d'entrypoint, juste exécuter pytest directement
 CMD ["pytest"]

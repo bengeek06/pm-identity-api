@@ -68,6 +68,7 @@ class Config:
     if not FLASK_ENV:
         raise ValueError("FLASK_ENV environment variable is not set.")
 
+    # Storage Service integration toggle
     use_storage_env = os.environ.get("USE_STORAGE_SERVICE")
     if use_storage_env is None:
         USE_STORAGE_SERVICE = False
@@ -78,6 +79,45 @@ class Config:
         # Storage Service URL (validated at startup if USE_STORAGE_SERVICE=True)
         STORAGE_SERVICE_URL = os.environ.get("STORAGE_SERVICE_URL")
         if not STORAGE_SERVICE_URL:
+            error_msg = (
+                "Configuration Error: USE_STORAGE_SERVICE is enabled (true) "
+                "but STORAGE_SERVICE_URL environment variable is not set. "
+                "Either set STORAGE_SERVICE_URL to a valid URL or disable "
+                "Storage Service integration by setting USE_STORAGE_SERVICE=false"
+            )
+            logger.error(error_msg)
+            logger.error(
+                "Current environment variables: "
+                "USE_STORAGE_SERVICE=%s, STORAGE_SERVICE_URL=%s",
+                os.environ.get("USE_STORAGE_SERVICE", "not set"),
+                os.environ.get("STORAGE_SERVICE_URL", "not set"),
+            )
+            raise ValueError(
+                "STORAGE_SERVICE_URL environment variable is not set "
+                "while USE_STORAGE_SERVICE is enabled."
+            )
+        STORAGE_REQUEST_TIMEOUT = int(
+            os.environ.get("STORAGE_REQUEST_TIMEOUT", "30")
+        )
+
+        # Maximum avatar file size in MB
+        MAX_AVATAR_SIZE_MB = int(os.environ.get("MAX_AVATAR_SIZE_MB", "5"))
+
+    # Guardian Service integration toggle
+    use_guardian_env = os.environ.get("USE_GUARDIAN_SERVICE", "true")
+    if use_guardian_env is None:
+        USE_GUARDIAN_SERVICE = False
+    else:
+        USE_GUARDIAN_SERVICE = use_guardian_env.lower() in (
+            "true",
+            "yes",
+            "1",
+        )
+
+    if USE_GUARDIAN_SERVICE:
+        # Guardian Service URL (validated at startup if USE_GUARDIAN_SERVICE=True)
+        GUARDIAN_SERVICE_URL = os.environ.get("GUARDIAN_SERVICE_URL")
+        if not GUARDIAN_SERVICE_URL:
             error_msg = (
                 "Configuration Error: USE_GUARDIAN_SERVICE is enabled (true) "
                 "but GUARDIAN_SERVICE_URL environment variable is not set. "
@@ -92,48 +132,9 @@ class Config:
                 os.environ.get("GUARDIAN_SERVICE_URL", "not set"),
             )
             raise ValueError(
-                "STORAGE_SERVICE_URL environment variable is not set "
-                "while USE_STORAGE_SERVICE is enabled."
+                "GUARDIAN_SERVICE_URL environment variable is not set "
+                "while USE_GUARDIAN_SERVICE is enabled."
             )
-        STORAGE_REQUEST_TIMEOUT = int(
-            os.environ.get("STORAGE_REQUEST_TIMEOUT", "30")
-        )
-
-        # Maximum avatar file size in MB
-        MAX_AVATAR_SIZE_MB = int(os.environ.get("MAX_AVATAR_SIZE_MB", "5"))
-
-        # Guardian Service integration toggle
-        use_guardian_env = os.environ.get("USE_GUARDIAN_SERVICE", "true")
-        if use_guardian_env is None:
-            USE_GUARDIAN_SERVICE = False
-        else:
-            USE_GUARDIAN_SERVICE = use_guardian_env.lower() in (
-                "true",
-                "yes",
-                "1",
-            )
-
-        if USE_GUARDIAN_SERVICE:
-            # Guardian Service URL (validated at startup if USE_GUARDIAN_SERVICE=True)
-            GUARDIAN_SERVICE_URL = os.environ.get("GUARDIAN_SERVICE_URL")
-            if not GUARDIAN_SERVICE_URL:
-                error_msg = (
-                    "Configuration Error: USE_GUARDIAN_SERVICE is enabled (true) "
-                    "but GUARDIAN_SERVICE_URL environment variable is not set. "
-                    "Either set GUARDIAN_SERVICE_URL to a valid URL or disable "
-                    "Guardian Service integration by setting USE_GUARDIAN_SERVICE=false"
-                )
-                logger.error(error_msg)
-                logger.error(
-                    "Current environment variables: "
-                    "USE_GUARDIAN_SERVICE=%s, GUARDIAN_SERVICE_URL=%s",
-                    os.environ.get("USE_GUARDIAN_SERVICE", "not set"),
-                    os.environ.get("GUARDIAN_SERVICE_URL", "not set"),
-                )
-                raise ValueError(
-                    "GUARDIAN_SERVICE_URL environment variable is not set "
-                    "while USE_GUARDIAN_SERVICE is enabled."
-                )
 
         GUARDIAN_SERVICE_TIMEOUT = float(
             os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5")
