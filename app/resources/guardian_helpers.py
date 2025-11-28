@@ -262,3 +262,49 @@ def fetch_permissions_for_policy(policy_id, guardian_url, headers):
     )
 
     return normalize_guardian_response(permissions_data, "permissions")
+
+
+def fetch_role_details(role_id, guardian_url, headers):
+    """
+    Fetch full role details for a specific role from Guardian Service.
+
+    Args:
+        role_id (str): The role ID
+        guardian_url (str): Guardian Service base URL
+        headers (dict): Request headers
+
+    Returns:
+        dict: Full role object with all fields, or minimal dict with just role_id if error
+    """
+    try:
+        role_response = requests.get(
+            f"{guardian_url}/roles/{role_id}",
+            headers=headers,
+            timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
+        )
+    except requests.exceptions.RequestException as e:
+        logger.error(
+            "Error contacting Guardian service for role %s: %s",
+            role_id,
+            str(e),
+        )
+        return {"role_id": role_id}
+
+    if role_response.status_code == 404:
+        logger.warning("Role %s not found in Guardian", role_id)
+        return {"role_id": role_id}
+
+    if role_response.status_code != 200:
+        logger.error(
+            "Error fetching role %s from Guardian: %s",
+            role_id,
+            role_response.text,
+        )
+        return {"role_id": role_id}
+
+    role_data = role_response.json()
+    logger.debug(
+        "Guardian role response for role %s: %s", role_id, role_data
+    )
+
+    return role_data

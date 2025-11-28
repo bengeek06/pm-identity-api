@@ -23,7 +23,10 @@ from werkzeug.exceptions import BadRequest
 
 from app.logger import logger
 from app.models.user import User
-from app.resources.guardian_helpers import validate_user_access
+from app.resources.guardian_helpers import (fetch_role_details,
+                                            get_guardian_headers,
+                                            normalize_guardian_response,
+                                            validate_user_access)
 from app.utils import check_access_required, require_jwt_auth
 
 
@@ -139,7 +142,7 @@ class UserRolesListResource(Resource):
             user_id (str): The ID of the user whose roles to retrieve.
 
         Returns:
-            tuple: List of roles and HTTP status code 200.
+            tuple: List of enriched roles and HTTP status code 200.
         """
         logger.info("Fetching roles for user ID %s", user_id)
 
@@ -156,11 +159,7 @@ class UserRolesListResource(Resource):
             return {"roles": []}, 200
 
         guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
-        # Get JWT token from cookies to forward to Guardian service
-        jwt_token = request.cookies.get("access_token")
-        headers = {}
-        if jwt_token:
-            headers["Cookie"] = f"access_token={jwt_token}"
+        headers = get_guardian_headers()
 
         try:
             # Add a timeout to avoid hanging indefinitely and handle network errors
@@ -182,22 +181,37 @@ class UserRolesListResource(Resource):
         response_data = response.json()
         logger.debug("Guardian response data: %s", response_data)
 
-        # Handle both response formats:
-        # - Direct list: [{"id": "role1", ...}, {"id": "role2", ...}]
-        # - Object with roles key: {"roles": [{"id": "role1", ...}, ...]}
-        # - Other formats: Default to empty list with warning
-        if isinstance(response_data, list):
-            roles = response_data
-        elif isinstance(response_data, dict) and "roles" in response_data:
-            roles = response_data.get("roles", [])
-        else:
-            logger.warning(
-                "Unexpected response format from Guardian, defaulting to empty roles: %s",
-                response_data,
-            )
-            roles = []
+        # Normalize the response (handles list or dict with "roles" key)
+        user_roles = normalize_guardian_response(response_data, "roles")
 
-        return {"roles": roles}, 200
+        # Enrich each role by fetching full role details from Guardian
+        enriched_roles = []
+        for user_role in user_roles:
+            # Handle both formats:
+            # - Full object: {"id": "ur1", "user_id": "...", "role_id": "admin"}
+            # - String: "admin"
+            if isinstance(user_role, dict):
+                role_id = user_role.get("role_id")
+            elif isinstance(user_role, str):
+                role_id = user_role
+            else:
+                logger.warning("Unexpected user_role format: %s", user_role)
+                continue
+
+            if not role_id:
+                logger.warning("user_role missing role_id: %s", user_role)
+                continue
+
+            # Fetch full role details from Guardian
+            role_details = fetch_role_details(role_id, guardian_url, headers)
+            enriched_roles.append(role_details)
+
+        logger.info(
+            "Successfully fetched %d enriched roles for user %s",
+            len(enriched_roles),
+            user_id,
+        )
+        return {"roles": enriched_roles}, 200
 
     @require_jwt_auth()
     @check_access_required("CREATE")
