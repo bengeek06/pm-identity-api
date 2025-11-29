@@ -262,6 +262,7 @@ class UserListResource(Resource):
         Supports optional filtering, pagination, and sorting.
 
         Query Parameters:
+            id__in (str, optional): Comma-separated list of UUIDs to filter by
             email (str, optional): Filter by exact email match
             search (str, optional): Search in email, first_name, last_name
             page (int, optional): Page number (default: 1, min: 1)
@@ -281,8 +282,29 @@ class UserListResource(Resource):
                 logger.error("company_id missing in JWT")
                 return {"message": "company_id missing in JWT"}, 400
 
+            # Handle id__in filter - return empty list if empty string
+            id__in = request.args.get("id__in")
+            if id__in is not None and id__in.strip() == "":
+                return {
+                    "data": [],
+                    "pagination": {
+                        "page": 1,
+                        "limit": 50,
+                        "total": 0,
+                        "pages": 0,
+                        "has_next": False,
+                        "has_prev": False,
+                    },
+                }, 200
+
             # Filter users by company_id to only return users from the same company
             query = User.query.filter_by(company_id=company_id)
+
+            # Apply id__in filter if provided
+            if id__in is not None:
+                ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
+                if ids:
+                    query = query.filter(User.id.in_(ids))
 
             # Apply email filter if provided
             email = request.args.get("email")

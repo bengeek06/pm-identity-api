@@ -1416,6 +1416,13 @@ paths:
       summary: List all customers
       description: Returns the list of all customers with optional filtering, search, pagination, and sorting
       parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only customers with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
         - name: name
           in: query
           required: false
@@ -1714,6 +1721,13 @@ paths:
       summary: List all positions
       description: Returns the list of all positions with optional filtering, search, pagination, and sorting
       parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only positions with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
         - name: title
           in: query
           required: false
@@ -1950,6 +1964,13 @@ paths:
       summary: List all organization units
       description: Returns the list of all organization units with optional filtering, search, pagination, and sorting
       parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only organization units with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
         - name: name
           in: query
           required: false
@@ -2156,6 +2177,13 @@ paths:
       summary: List all companies
       description: Returns the list of all companies with optional filtering, search, pagination, and sorting
       parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only companies with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
         - name: name
           in: query
           required: false
@@ -2660,6 +2688,13 @@ paths:
       summary: List all users
       description: Returns the list of all users for the authenticated company with optional filtering, search, pagination, and sorting
       parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only users with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
         - name: email
           in: query
           required: false
@@ -3432,6 +3467,13 @@ paths:
       summary: List all subcontractors
       description: Returns the list of all subcontractors with optional filtering, search, pagination, and sorting
       parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only subcontractors with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
         - name: name
           in: query
           required: false

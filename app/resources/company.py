@@ -52,6 +52,7 @@ class CompanyListResource(Resource):
         Retrieve all companies with optional filtering, pagination, and sorting.
 
         Query Parameters:
+            id__in (str, optional): Comma-separated list of UUIDs to filter by
             name (str, optional): Filter by exact company name match
             search (str, optional): Search in name and description
             page (int, optional): Page number (default: 1, min: 1)
@@ -65,7 +66,28 @@ class CompanyListResource(Resource):
         logger.info("Retrieving all companies")
 
         try:
+            # Handle id__in filter - return empty list if empty string
+            id__in = request.args.get("id__in")
+            if id__in is not None and id__in.strip() == "":
+                return {
+                    "data": [],
+                    "pagination": {
+                        "page": 1,
+                        "limit": 50,
+                        "total": 0,
+                        "pages": 0,
+                        "has_next": False,
+                        "has_prev": False,
+                    },
+                }, 200
+
             query = Company.query
+
+            # Apply id__in filter if provided
+            if id__in is not None:
+                ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
+                if ids:
+                    query = query.filter(Company.id.in_(ids))
 
             # Apply name filter if provided
             name = request.args.get("name")

@@ -77,6 +77,7 @@ class PositionListResource(Resource):
         Retrieve all positions with optional filtering, pagination, and sorting.
 
         Query Parameters:
+            id__in (str, optional): Comma-separated list of UUIDs to filter by
             title (str, optional): Filter by exact position title match
             search (str, optional): Search in title and description
             page (int, optional): Page number (default: 1, min: 1)
@@ -88,7 +89,28 @@ class PositionListResource(Resource):
             tuple: Paginated response with data and metadata, HTTP 200
         """
         try:
+            # Handle id__in filter - return empty list if empty string
+            id__in = request.args.get("id__in")
+            if id__in is not None and id__in.strip() == "":
+                return {
+                    "data": [],
+                    "pagination": {
+                        "page": 1,
+                        "limit": 50,
+                        "total": 0,
+                        "pages": 0,
+                        "has_next": False,
+                        "has_prev": False,
+                    },
+                }, 200
+
             query = Position.query
+
+            # Apply id__in filter if provided
+            if id__in is not None:
+                ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
+                if ids:
+                    query = query.filter(Position.id.in_(ids))
 
             # Apply title filter if provided
             title = request.args.get("title")
