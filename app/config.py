@@ -176,6 +176,10 @@ class Config:
     )
     RATELIMIT_STRATEGY = os.environ.get("RATELIMIT_STRATEGY", "fixed-window")
 
+    # Read RATELIMIT_ENABLED from environment (default: True)
+    ratelimit_enabled_env = os.environ.get("RATELIMIT_ENABLED", "true")
+    RATELIMIT_ENABLED = ratelimit_enabled_env.lower() in ("true", "yes", "1")
+
     # Password reset OTP configuration
     PASSWORD_RESET_OTP_TTL_MINUTES = int(
         os.environ.get("PASSWORD_RESET_OTP_TTL_MINUTES", "15")
@@ -215,7 +219,8 @@ class TestingConfig(Config):
 
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    RATELIMIT_ENABLED = False  # Disable rate limiting in tests
+    # Disable rate limiting by default in testing environment
+    RATELIMIT_ENABLED = False
 
     @classmethod
     def validate_config(cls):
