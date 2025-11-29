@@ -69,7 +69,8 @@ ENV FLASK_ENV=testing \
     JWT_SECRET=test-jwt-secret-key \
     USE_GUARDIAN_SERVICE=false \
     USE_STORAGE_SERVICE=false \
-    USE_EMAIL_SERVICE=false
+    USE_EMAIL_SERVICE=false \
+    RATELIMIT_ENABLED=false
 
 # Pas d'entrypoint, juste exécuter pytest directement
 CMD ["pytest"]
