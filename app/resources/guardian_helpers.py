@@ -288,11 +288,23 @@ def fetch_role_details(role_id, guardian_url, headers):
             role_id,
             str(e),
         )
-        return {"role_id": role_id}
+        # Return minimal valid structure with required fields
+        return {
+            "id": role_id,
+            "name": f"Unknown Role ({role_id})",
+            "description": "Role details unavailable",
+            "company_id": None,
+        }
 
     if role_response.status_code == 404:
         logger.warning("Role %s not found in Guardian", role_id)
-        return {"role_id": role_id}
+        # Return minimal valid structure for not found roles
+        return {
+            "id": role_id,
+            "name": f"Unknown Role ({role_id})",
+            "description": "Role not found in Guardian",
+            "company_id": None,
+        }
 
     if role_response.status_code != 200:
         logger.error(
@@ -300,11 +312,15 @@ def fetch_role_details(role_id, guardian_url, headers):
             role_id,
             role_response.text,
         )
-        return {"role_id": role_id}
+        # Return minimal valid structure for errors
+        return {
+            "id": role_id,
+            "name": f"Unknown Role ({role_id})",
+            "description": "Error fetching role details",
+            "company_id": None,
+        }
 
     role_data = role_response.json()
-    logger.debug(
-        "Guardian role response for role %s: %s", role_id, role_data
-    )
+    logger.debug("Guardian role response for role %s: %s", role_id, role_data)
 
     return role_data

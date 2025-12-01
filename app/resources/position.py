@@ -23,10 +23,15 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from app.constants import (LOG_DATABASE_ERROR, LOG_INTEGRITY_ERROR,
-                           LOG_VALIDATION_ERROR, MSG_DATABASE_ERROR,
-                           MSG_INTEGRITY_ERROR, MSG_POSITION_NOT_FOUND,
-                           MSG_VALIDATION_ERROR)
+from app.constants import (
+    LOG_DATABASE_ERROR,
+    LOG_INTEGRITY_ERROR,
+    LOG_VALIDATION_ERROR,
+    MSG_DATABASE_ERROR,
+    MSG_INTEGRITY_ERROR,
+    MSG_POSITION_NOT_FOUND,
+    MSG_VALIDATION_ERROR,
+)
 from app.logger import logger
 from app.models import db
 from app.models.organization_unit import OrganizationUnit
@@ -108,7 +113,9 @@ class PositionListResource(Resource):
 
             # Apply id__in filter if provided
             if id__in is not None:
-                ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
+                ids = [
+                    uuid.strip() for uuid in id__in.split(",") if uuid.strip()
+                ]
                 if ids:
                     query = query.filter(Position.id.in_(ids))
 

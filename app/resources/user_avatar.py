@@ -20,9 +20,13 @@ from flask_restful import Resource
 from app.logger import logger
 from app.models import db
 from app.models.user import User
-from app.storage_helper import (AvatarValidationError, StorageServiceError,
-                                delete_avatar, is_storage_service_enabled,
-                                upload_avatar_via_proxy)
+from app.storage_helper import (
+    AvatarValidationError,
+    StorageServiceError,
+    delete_avatar,
+    is_storage_service_enabled,
+    upload_avatar_via_proxy,
+)
 from app.utils import check_access_required, require_jwt_auth
 
 

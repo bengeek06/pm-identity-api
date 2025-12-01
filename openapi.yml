@@ -893,25 +893,62 @@ components:
 
     UserRole:
       type: object
-      deprecated: true
       description: |
-        DEPRECATED: This schema represents the junction table format.
+        Enriched UserRole object combining junction table metadata with full role details.
         
-        As of Issue #64, GET /users/{user_id}/roles now returns enriched Role objects
-        instead of UserRole junction table records. Use the Role schema instead.
-        
-        This schema is kept for backward compatibility documentation only.
+        As of Issue #73, this schema now includes the nested 'role' object with complete
+        role information from Guardian Service, enabling proper display and deletion operations.
       properties:
         id:
           type: string
-          description: Unique identifier of the user role
+          description: Unique identifier of the user role junction (use this for DELETE operations)
+          example: "ur-12345"
         user_id:
           type: string
           format: uuid
           description: User identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
         role_id:
           type: string
-          description: Role identifier (managed by Guardian Service)
+          description: Role identifier (from Guardian Service)
+          example: "role-001"
+        created_at:
+          type: string
+          format: date-time
+          description: When the role was assigned to the user
+          example: "2025-01-15T10:30:00Z"
+        role:
+          type: object
+          description: Full role details from Guardian Service
+          properties:
+            id:
+              type: string
+              description: Role identifier
+              example: "role-001"
+            name:
+              type: string
+              description: Role name
+              example: "Administrator"
+            description:
+              type: string
+              nullable: true
+              description: Role description
+              example: "Full system access"
+            company_id:
+              type: string
+              format: uuid
+              description: Company identifier for multi-tenant isolation
+              example: "987fcdeb-51a2-43d1-9f12-345678901234"
+            created_at:
+              type: string
+              format: date-time
+              description: When the role was created
+              example: "2025-01-10T08:00:00Z"
+            updated_at:
+              type: string
+              format: date-time
+              description: When the role was last updated
+              example: "2025-01-10T08:00:00Z"
 
     UserRoleAssignment:
       type: object
@@ -1362,9 +1399,13 @@ components:
       description: |
         User roles list with enriched role objects.
         
-        As of Issue #64, this endpoint returns full Role objects from Guardian Service
-        instead of junction table records. Each role includes id, name, description,
-        company_id, and timestamps.
+        As of Issue #73, this endpoint returns enriched UserRole objects that include:
+        - Junction metadata (id, user_id, role_id, created_at) for proper DELETE operations
+        - Nested role details (name, description) from Guardian Service for display
+        
+        This structure allows the frontend to:
+        1. Display role names using role.name
+        2. Delete roles correctly using the junction id
       content:
         application/json:
           schema:
@@ -1373,21 +1414,31 @@ components:
               roles:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Role'
+                  $ref: '#/components/schemas/UserRole'
           example:
             roles:
-              - id: "550e8400-e29b-41d4-a716-446655440000"
-                name: "companyadmin"
-                description: "Company administrator with full access to company resources"
-                company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+              - id: "ur-001"
+                user_id: "550e8400-e29b-41d4-a716-446655440000"
+                role_id: "role-001"
                 created_at: "2024-01-15T10:30:00Z"
-                updated_at: "2024-01-15T10:30:00Z"
-              - id: "660e8400-e29b-41d4-a716-446655440001"
-                name: "projectmanager"
-                description: "Project manager with access to project management features"
-                company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+                role:
+                  id: "role-001"
+                  name: "companyadmin"
+                  description: "Company administrator with full access to company resources"
+                  company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+              - id: "ur-002"
+                user_id: "550e8400-e29b-41d4-a716-446655440000"
+                role_id: "role-002"
                 created_at: "2024-02-10T14:20:00Z"
-                updated_at: "2024-02-10T14:20:00Z"
+                role:
+                  id: "role-002"
+                  name: "projectmanager"
+                  description: "Project manager with access to project management features"
+                  company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+                  created_at: "2024-02-10T14:20:00Z"
+                  updated_at: "2024-02-10T14:20:00Z"
 
     UserRoleCreated:
       description: Role assigned to user successfully

@@ -139,8 +139,7 @@ class SubcontractorSchema(SQLAlchemyAutoSchema):
         )
         if subcontractor and (
             not current_subcontractor
-            or subcontractor.id
-            != getattr(current_subcontractor, "id", None)
+            or subcontractor.id != getattr(current_subcontractor, "id", None)
         ):
             logger.error(
                 "Validation error: Subcontractor with name '%s' already exists.",

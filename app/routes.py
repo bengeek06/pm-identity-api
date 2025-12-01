@@ -29,21 +29,32 @@ from app.resources.customer import CustomerListResource, CustomerResource
 from app.resources.customer_logo import CustomerLogoResource
 from app.resources.health import HealthResource
 from app.resources.init_db import InitDBResource
-from app.resources.organization_unit import (OrganizationUnitChildrenResource,
-                                             OrganizationUnitListResource,
-                                             OrganizationUnitResource)
-from app.resources.password_reset import (PasswordResetConfirmResource,
-                                          PasswordResetRequestResource)
-from app.resources.position import (OrganizationUnitPositionsResource,
-                                    PositionListResource, PositionResource)
-from app.resources.subcontractor import (SubcontractorListResource,
-                                         SubcontractorResource)
+from app.resources.organization_unit import (
+    OrganizationUnitChildrenResource,
+    OrganizationUnitListResource,
+    OrganizationUnitResource,
+)
+from app.resources.password_reset import (
+    PasswordResetConfirmResource,
+    PasswordResetRequestResource,
+)
+from app.resources.position import (
+    OrganizationUnitPositionsResource,
+    PositionListResource,
+    PositionResource,
+)
+from app.resources.subcontractor import (
+    SubcontractorListResource,
+    SubcontractorResource,
+)
 from app.resources.subcontractor_logo import SubcontractorLogoResource
 from app.resources.user import UserListResource, UserResource
 from app.resources.user_auth import VerifyPasswordResource
 from app.resources.user_avatar import UserAvatarResource
-from app.resources.user_password import (AdminPasswordResetResource,
-                                         UserChangePasswordResource)
+from app.resources.user_password import (
+    AdminPasswordResetResource,
+    UserChangePasswordResource,
+)
 from app.resources.user_permissions import UserPermissionsResource
 from app.resources.user_policies import UserPoliciesResource
 from app.resources.user_position import UserPositionResource

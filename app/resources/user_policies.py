@@ -20,10 +20,12 @@ from flask import current_app
 from flask_restful import Resource
 
 from app.logger import logger
-from app.resources.guardian_helpers import (fetch_policies_for_roles,
-                                            fetch_user_roles,
-                                            get_guardian_headers,
-                                            validate_user_access)
+from app.resources.guardian_helpers import (
+    fetch_policies_for_roles,
+    fetch_user_roles,
+    get_guardian_headers,
+    validate_user_access,
+)
 from app.utils import check_access_required, require_jwt_auth
 
 

@@ -291,7 +291,9 @@ class TestCustomerIdInFilter:
         jwt_token = create_jwt_token(company_id, str(uuid.uuid4()))
         client.set_cookie("access_token", jwt_token, domain="localhost")
 
-        response = client.get(f"/customers?id__in={customer1.id},{customer2.id}")
+        response = client.get(
+            f"/customers?id__in={customer1.id},{customer2.id}"
+        )
         assert response.status_code == 200
         result = response.get_json()
         assert len(result["data"]) == 2
@@ -479,7 +481,9 @@ class TestPositionIdInFilter:
         jwt_token = create_jwt_token(company_id, str(uuid.uuid4()))
         client.set_cookie("access_token", jwt_token, domain="localhost")
 
-        response = client.get(f"/positions?id__in={position1.id},{position2.id}")
+        response = client.get(
+            f"/positions?id__in={position1.id},{position2.id}"
+        )
         assert response.status_code == 200
         result = response.get_json()
         assert len(result["data"]) == 2
@@ -637,7 +641,9 @@ class TestIdInFilterEdgeCases:
         client.set_cookie("access_token", jwt_token, domain="localhost")
 
         # Test with spaces around IDs
-        response = client.get(f"/companies?id__in= {company1.id} , {company2.id} ")
+        response = client.get(
+            f"/companies?id__in= {company1.id} , {company2.id} "
+        )
         assert response.status_code == 200
         result = response.get_json()
         assert len(result["data"]) == 2
