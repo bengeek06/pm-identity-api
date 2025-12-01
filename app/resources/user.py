@@ -30,17 +30,26 @@ from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import generate_password_hash
 
-from app.constants import (LOG_DATABASE_ERROR, LOG_INTEGRITY_ERROR,
-                           LOG_VALIDATION_ERROR, MSG_DATABASE_ERROR,
-                           MSG_INTEGRITY_ERROR, MSG_VALIDATION_ERROR)
+from app.constants import (
+    LOG_DATABASE_ERROR,
+    LOG_INTEGRITY_ERROR,
+    LOG_VALIDATION_ERROR,
+    MSG_DATABASE_ERROR,
+    MSG_INTEGRITY_ERROR,
+    MSG_VALIDATION_ERROR,
+)
 from app.logger import logger
 from app.models import db
 from app.models.company import Company
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
-from app.storage_helper import (AvatarValidationError, StorageServiceError,
-                                create_user_directories, delete_user_storage,
-                                upload_avatar_via_proxy)
+from app.storage_helper import (
+    AvatarValidationError,
+    StorageServiceError,
+    create_user_directories,
+    delete_user_storage,
+    upload_avatar_via_proxy,
+)
 from app.utils import check_access_required, require_jwt_auth
 
 # Content type constants
@@ -302,7 +311,9 @@ class UserListResource(Resource):
 
             # Apply id__in filter if provided
             if id__in is not None:
-                ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
+                ids = [
+                    uuid.strip() for uuid in id__in.split(",") if uuid.strip()
+                ]
                 if ids:
                     query = query.filter(User.id.in_(ids))
 

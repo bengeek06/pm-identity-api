@@ -151,7 +151,9 @@ class UserSchema(SQLAlchemyAutoSchema):
 
         # If this is a creation (no current_user) and no hashed_password provided
         if not current_user and "hashed_password" not in data:
-            logger.error("Validation error: Password is required for user creation.")
+            logger.error(
+                "Validation error: Password is required for user creation."
+            )
             raise ValidationError(
                 "Password is required for user creation.",
                 field_name="hashed_password",

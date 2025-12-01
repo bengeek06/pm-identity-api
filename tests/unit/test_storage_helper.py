@@ -18,11 +18,16 @@ from unittest import mock
 
 import pytest
 
-from app.storage_helper import (AvatarValidationError, StorageServiceError,
-                                delete_avatar, delete_logo,
-                                is_storage_service_enabled,
-                                upload_avatar_via_proxy, upload_logo_via_proxy,
-                                validate_avatar)
+from app.storage_helper import (
+    AvatarValidationError,
+    StorageServiceError,
+    delete_avatar,
+    delete_logo,
+    is_storage_service_enabled,
+    upload_avatar_via_proxy,
+    upload_logo_via_proxy,
+    validate_avatar,
+)
 
 # ============================================================================
 # Tests: is_storage_service_enabled

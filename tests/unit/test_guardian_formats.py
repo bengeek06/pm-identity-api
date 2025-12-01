@@ -39,9 +39,13 @@ def test_get_user_roles_with_direct_list_response(client, app):
         {"id": "ur1", "user_id": user_id, "role_id": "admin"},
         {"id": "ur2", "user_id": user_id, "role_id": "user"},
     ]
-    
+
     # Mock enriched role details
-    admin_role = {"id": "admin", "name": "Administrator", "description": "Admin role"}
+    admin_role = {
+        "id": "admin",
+        "name": "Administrator",
+        "description": "Admin role",
+    }
     user_role = {"id": "user", "name": "User", "description": "User role"}
 
     # Mock check_access response
@@ -76,14 +80,28 @@ def test_get_user_roles_with_direct_list_response(client, app):
         with mock.patch("requests.post", return_value=mock_check_access):
             response = client.get(f"/users/{user_id}/roles")
 
-        # Verify the response contains enriched roles
+        # Verify the response contains enriched roles (Issue #73 format)
         assert response.status_code == 200
         data = response.get_json()
         assert "roles" in data
         assert len(data["roles"]) == 2
-        assert data["roles"][0] == admin_role
-        assert data["roles"][1] == user_role
-        print("✅ Direct list format handled correctly with role enrichment")
+
+        # Verify enriched structure with junction metadata + nested role
+        first_role = data["roles"][0]
+        assert first_role["id"] == "ur1"  # Junction ID
+        assert first_role["user_id"] == user_id
+        assert first_role["role_id"] == "admin"
+        assert first_role["role"] == admin_role  # Nested role details
+
+        second_role = data["roles"][1]
+        assert second_role["id"] == "ur2"  # Junction ID
+        assert second_role["user_id"] == user_id
+        assert second_role["role_id"] == "user"
+        assert second_role["role"] == user_role  # Nested role details
+
+        print(
+            "✅ Direct list format handled correctly with enriched role structure (Issue #73)"
+        )
 
 
 def test_get_user_roles_with_object_response(client, app):
@@ -110,9 +128,13 @@ def test_get_user_roles_with_object_response(client, app):
         {"id": "ur1", "user_id": user_id, "role_id": "admin"},
         {"id": "ur2", "user_id": user_id, "role_id": "user"},
     ]
-    
+
     # Mock enriched role details
-    admin_role = {"id": "admin", "name": "Administrator", "description": "Admin role"}
+    admin_role = {
+        "id": "admin",
+        "name": "Administrator",
+        "description": "Admin role",
+    }
     user_role = {"id": "user", "name": "User", "description": "User role"}
 
     # Mock check_access response
@@ -129,7 +151,9 @@ def test_get_user_roles_with_object_response(client, app):
         if "/user-roles" in url:
             mock_response = mock.Mock()
             mock_response.status_code = 200
-            mock_response.json.return_value = {"roles": roles_data}  # Object with roles key
+            mock_response.json.return_value = {
+                "roles": roles_data
+            }  # Object with roles key
             return mock_response
         elif "/roles/admin" in url:
             mock_response = mock.Mock()
@@ -147,14 +171,28 @@ def test_get_user_roles_with_object_response(client, app):
         with mock.patch("requests.post", return_value=mock_check_access):
             response = client.get(f"/users/{user_id}/roles")
 
-        # Verify the response contains enriched roles
+        # Verify the response contains enriched roles (Issue #73 format)
         assert response.status_code == 200
         data = response.get_json()
         assert "roles" in data
         assert len(data["roles"]) == 2
-        assert data["roles"][0] == admin_role
-        assert data["roles"][1] == user_role
-        print("✅ Object with roles key format handled correctly with role enrichment")
+
+        # Verify enriched structure with junction metadata + nested role
+        first_role = data["roles"][0]
+        assert first_role["id"] == "ur1"  # Junction ID
+        assert first_role["user_id"] == user_id
+        assert first_role["role_id"] == "admin"
+        assert first_role["role"] == admin_role  # Nested role details
+
+        second_role = data["roles"][1]
+        assert second_role["id"] == "ur2"  # Junction ID
+        assert second_role["user_id"] == user_id
+        assert second_role["role_id"] == "user"
+        assert second_role["role"] == user_role  # Nested role details
+
+        print(
+            "✅ Object with roles key format handled correctly with enriched role structure (Issue #73)"
+        )
 
 
 def test_get_user_roles_with_invalid_response_format(client, app):

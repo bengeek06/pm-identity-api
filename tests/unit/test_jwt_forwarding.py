@@ -35,7 +35,11 @@ def test_jwt_cookie_forwarding_to_guardian(client, app):
     client.set_cookie("access_token", jwt_token, domain="localhost")
 
     # Mock Guardian service responses
-    admin_role = {"id": "admin", "name": "Administrator", "description": "Admin role"}
+    admin_role = {
+        "id": "admin",
+        "name": "Administrator",
+        "description": "Admin role",
+    }
     user_role = {"id": "user", "name": "User", "description": "User role"}
 
     # Mock check_access response
@@ -66,7 +70,9 @@ def test_jwt_cookie_forwarding_to_guardian(client, app):
             return mock_response
         return mock.Mock(status_code=404)
 
-    with mock.patch("requests.get", side_effect=mock_get_side_effect) as mock_get:
+    with mock.patch(
+        "requests.get", side_effect=mock_get_side_effect
+    ) as mock_get:
         with mock.patch("requests.post", return_value=mock_check_access):
             response = client.get(f"/users/{user_id}/roles")
 
@@ -80,7 +86,9 @@ def test_jwt_cookie_forwarding_to_guardian(client, app):
             first_call = mock_get.call_args_list[0]
             assert first_call[0][0] == "http://guardian:8000/user-roles"
             assert first_call[1]["params"] == {"user_id": user_id}
-            assert first_call[1]["headers"] == {"Cookie": f"access_token={jwt_token}"}
+            assert first_call[1]["headers"] == {
+                "Cookie": f"access_token={jwt_token}"
+            }
             assert first_call[1]["timeout"] == 5
 
             # Extract the Cookie header that was sent to Guardian

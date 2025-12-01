@@ -248,16 +248,37 @@ def test_user_roles_endpoint_integration(
         len(data["roles"]) > 0
     ), "User should have at least one role (companyadmin)"
 
-    # Verify enriched role structure (Issue #64: roles are now enriched objects)
-    for role in data["roles"]:
-        assert "id" in role, "Each role should have an 'id' field"
-        assert "name" in role, "Each role should have a 'name' field"
-        # Optional fields that may be present
-        # assert "description" in role, "Each role should have a 'description' field"
-        # assert "company_id" in role, "Each role should have a 'company_id' field"
+    # Verify enriched role structure (Issue #73: roles are now enriched with junction metadata + nested role)
+    for user_role in data["roles"]:
+        # Junction metadata
+        assert (
+            "id" in user_role
+        ), "Each user role should have a junction 'id' field"
+        assert (
+            "user_id" in user_role
+        ), "Each user role should have a 'user_id' field"
+        assert (
+            "role_id" in user_role
+        ), "Each user role should have a 'role_id' field"
+        assert (
+            "created_at" in user_role
+        ), "Each user role should have a 'created_at' field"
 
-    role_ids = [role["id"] for role in data["roles"]]
-    print(f"✅ User roles retrieved: {len(role_ids)} enriched roles")
+        # Nested role object from Guardian
+        assert (
+            "role" in user_role
+        ), "Each user role should have a nested 'role' object"
+        role = user_role["role"]
+        assert "id" in role, "Nested role should have an 'id' field"
+        assert "name" in role, "Nested role should have a 'name' field"
+        # Optional fields that may be present
+        # assert "description" in role, "Nested role should have a 'description' field"
+        # assert "company_id" in role, "Nested role should have a 'company_id' field"
+
+    junction_ids = [user_role["id"] for user_role in data["roles"]]
+    print(
+        f"✅ User roles retrieved: {len(junction_ids)} enriched user roles with nested role objects"
+    )
 
 
 @pytest.mark.integration
