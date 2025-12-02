@@ -1824,6 +1824,16 @@ paths:
             enum: [asc, desc]
             default: asc
           description: Sort order (ascending or descending)
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [organization_unit]
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: organization_unit
+          example: "organization_unit"
       responses:
         '200':
           $ref: '#/components/responses/PositionList'
@@ -1876,6 +1886,17 @@ paths:
       tags: [Positions]
       summary: Get a position by ID
       description: Returns details of a specific position
+      parameters:
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [organization_unit]
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: organization_unit
+          example: "organization_unit"
       responses:
         '200':
           $ref: '#/components/responses/PositionDetails'
@@ -2067,6 +2088,15 @@ paths:
             enum: [asc, desc]
             default: asc
           description: Sort order (ascending or descending)
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: positions, parent, children
+          example: "positions,parent,children"
       responses:
         '200':
           $ref: '#/components/responses/OrganizationUnitList'
@@ -2117,6 +2147,16 @@ paths:
       tags: [Organizations]
       summary: Get an organization unit by ID
       description: Returns details of a specific organization unit
+      parameters:
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: positions, parent, children
+          example: "positions,parent,children"
       responses:
         '200':
           $ref: '#/components/responses/OrganizationUnitDetails'
@@ -2737,7 +2777,7 @@ paths:
     get:
       tags: [Users]
       summary: List all users
-      description: Returns the list of all users for the authenticated company with optional filtering, search, pagination, and sorting
+      description: Returns the list of all users for the authenticated company with optional filtering, search, pagination, sorting, and expansion of related entities
       parameters:
         - name: id__in
           in: query
@@ -2792,6 +2832,16 @@ paths:
             enum: [asc, desc]
             default: asc
           description: Sort order (ascending or descending)
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related entities to include inline in the response.
+            Supported values: `position`.
+            Unknown values are silently ignored.
+          example: "position"
       responses:
         '200':
           $ref: '#/components/responses/UserList'
@@ -2841,7 +2891,18 @@ paths:
     get:
       tags: [Users]
       summary: Get a user by ID
-      description: Returns details of a specific user
+      description: Returns details of a specific user with optional expansion of related entities
+      parameters:
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related entities to include inline in the response.
+            Supported values: `position`.
+            Unknown values are silently ignored.
+          example: "position"
       responses:
         '200':
           $ref: '#/components/responses/UserDetails'
@@ -2919,6 +2980,241 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user_id}/avatar:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user
+
+    get:
+      tags: [Users]
+      summary: Get user avatar image
+      description: |
+        Retrieves the avatar image for a user.
+        
+        This endpoint proxies the request to the Storage Service and streams
+        the image back to the client. The response is the actual image file,
+        not JSON.
+        
+        **Caching:**
+        The response includes `Cache-Control: public, max-age=3600` header
+        for client-side caching (1 hour).
+        
+        **Image Format:**
+        The actual image format (JPEG, PNG, WebP, etc.) is indicated by the
+        `Content-Type` header in the response, regardless of the stored filename.
+      responses:
+        '200':
+          description: Avatar image file
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Type:
+              description: MIME type of the image (e.g., image/jpeg, image/png)
+              schema:
+                type: string
+            Content-Disposition:
+              description: Content disposition header (inline)
+              schema:
+                type: string
+            Cache-Control:
+              description: Caching directive
+              schema:
+                type: string
+                example: "public, max-age=3600"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: User not found or user has no avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                userNotFound:
+                  summary: User not found
+                  value:
+                    message: "User not found"
+                noAvatar:
+                  summary: User has no avatar
+                  value:
+                    message: "User has no avatar"
+        '503':
+          description: Storage Service is disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Avatar storage is disabled in this environment"
+        '504':
+          description: Storage Service timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Storage service timeout"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Users]
+      summary: Upload user avatar
+      description: |
+        Uploads an avatar image for a user.
+        
+        **Authorization:**
+        Users can only upload their own avatar. The JWT user_id must match
+        the user_id in the path.
+        
+        **File Requirements:**
+        - Accepts common image formats (JPEG, PNG, WebP, GIF)
+        - Maximum file size is enforced by the Storage Service
+        - Images are stored with a normalized `.png` extension but retain
+          their original format
+        
+        **Storage:**
+        The avatar is uploaded to the Storage Service and stored in the
+        user's dedicated bucket at `avatars/{user_id}.png`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - avatar
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: The avatar image file to upload
+      responses:
+        '201':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Avatar uploaded successfully"
+                  avatar_file_id:
+                    type: string
+                    format: uuid
+                    description: Storage Service file_id reference
+                  has_avatar:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad request (no file provided or validation error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                noFile:
+                  summary: No avatar file provided
+                  value:
+                    message: "No avatar file provided"
+                validation:
+                  summary: Avatar validation failed
+                  value:
+                    message: "Invalid image format"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied - cannot manage other user's avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Access denied: cannot manage other user's avatar"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: Storage Service is disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Storage Service disabled"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Users]
+      summary: Delete user avatar
+      description: |
+        Deletes the avatar for a user.
+        
+        **Authorization:**
+        Users can only delete their own avatar. The JWT user_id must match
+        the user_id in the path.
+        
+        **Cleanup:**
+        This operation:
+        1. Deletes the avatar file from the Storage Service
+        2. Clears the `avatar_file_id` and sets `has_avatar` to false in the database
+        
+        If the Storage Service deletion fails, the database is still updated
+        to prevent orphaned references.
+      responses:
+        '204':
+          description: Avatar deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied - cannot delete other user's avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Access denied: cannot delete other user's avatar"
+        '404':
+          description: User not found or user has no avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                userNotFound:
+                  summary: User not found
+                  value:
+                    message: "User not found"
+                noAvatar:
+                  summary: User has no avatar to delete
+                  value:
+                    message: "User has no avatar to delete"
         '500':
           $ref: '#/components/responses/InternalServerError'
 

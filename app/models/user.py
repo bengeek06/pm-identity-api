@@ -97,6 +97,7 @@ class User(db.Model):
     )
 
     company = db.relationship("Company", back_populates="users", lazy=True)
+    position = db.relationship("Position", lazy="select")
 
     def __repr__(self):
         """

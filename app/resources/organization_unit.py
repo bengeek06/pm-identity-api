@@ -22,6 +22,7 @@ from flask import g, request
 from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import joinedload
 
 from app.constants import (
     LOG_DATABASE_ERROR,
@@ -34,8 +35,110 @@ from app.constants import (
 from app.logger import logger
 from app.models import db
 from app.models.organization_unit import OrganizationUnit
-from app.schemas.organization_unit_schema import OrganizationUnitSchema
-from app.utils import check_access_required, require_jwt_auth
+from app.schemas.organization_unit_schema import (
+    OrganizationUnitNestedSchema,
+    OrganizationUnitSchema,
+)
+from app.schemas.position_schema import PositionNestedSchema
+from app.utils import check_access_required, parse_expand, require_jwt_auth
+
+
+# Allowed expansions for organization unit endpoints
+ORG_UNIT_ALLOWED_EXPANSIONS = {"positions", "parent", "children"}
+
+
+def _empty_paginated_response():
+    """Return an empty paginated response."""
+    return {
+        "data": [],
+        "pagination": {
+            "page": 1,
+            "limit": 50,
+            "total": 0,
+            "pages": 0,
+            "has_next": False,
+            "has_prev": False,
+        },
+    }
+
+
+def _get_pagination_params():
+    """Extract and validate pagination parameters from request."""
+    page = max(1, request.args.get("page", 1, type=int))
+    limit = min(max(1, request.args.get("limit", 50, type=int)), 1000)
+    return page, limit
+
+
+def _apply_sorting(query, model, extra_fields=None):
+    """Apply sorting to query based on request parameters."""
+    allowed_sorts = ["created_at", "updated_at"] + (extra_fields or [])
+    sort_field = request.args.get("sort", "created_at")
+    if sort_field not in allowed_sorts:
+        sort_field = "created_at"
+    sort_order = request.args.get("order", "asc")
+    column = getattr(model, sort_field)
+    return query.order_by(column.desc() if sort_order == "desc" else column.asc())
+
+
+def _build_pagination_meta(paginated, page, limit):
+    """Build pagination metadata dictionary."""
+    return {
+        "page": page,
+        "limit": limit,
+        "total": paginated.total,
+        "pages": paginated.pages,
+        "has_next": paginated.has_next,
+        "has_prev": paginated.has_prev,
+    }
+
+
+def _build_org_unit_query_with_expansions(query, expansions):
+    """Apply eager loading options to query based on requested expansions."""
+    if "positions" in expansions:
+        query = query.options(joinedload(OrganizationUnit.positions))
+    if "parent" in expansions:
+        query = query.options(joinedload(OrganizationUnit.parent))
+    if "children" in expansions:
+        query = query.options(joinedload(OrganizationUnit.children))
+    return query
+
+
+def _apply_org_unit_filters(query, id__in, name, search):
+    """Apply filters to organization unit query."""
+    if id__in is not None:
+        ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
+        if ids:
+            query = query.filter(OrganizationUnit.id.in_(ids))
+    if name:
+        query = query.filter_by(name=name)
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                OrganizationUnit.name.ilike(search_pattern),
+                OrganizationUnit.description.ilike(search_pattern),
+            )
+        )
+    return query
+
+
+def _apply_org_unit_expansions(data, items, expansions):
+    """Apply expansion data to serialized organization units."""
+    if not expansions:
+        return
+    position_schema = PositionNestedSchema(many=True)
+    nested_schema = OrganizationUnitNestedSchema()
+    nested_schema_many = OrganizationUnitNestedSchema(many=True)
+
+    for i, org_unit in enumerate(items):
+        if "positions" in expansions:
+            data[i]["positions"] = position_schema.dump(org_unit.positions)
+        if "parent" in expansions:
+            data[i]["parent"] = (
+                nested_schema.dump(org_unit.parent) if org_unit.parent else None
+            )
+        if "children" in expansions:
+            data[i]["children"] = nested_schema_many.dump(org_unit.children)
 
 
 class OrganizationUnitListResource(Resource):
@@ -64,6 +167,8 @@ class OrganizationUnitListResource(Resource):
             limit (int, optional): Items per page (default: 50, max: 1000)
             sort (str, optional): Field to sort by (created_at, updated_at, name, level)
             order (str, optional): Sort order (asc, desc, default: asc)
+            expand (str, optional): Comma-separated list of relations to expand
+                                    (e.g., positions,parent,children)
 
         Returns:
             tuple: Paginated response with data and metadata, HTTP 200
@@ -71,92 +176,42 @@ class OrganizationUnitListResource(Resource):
         logger.info("Retrieving all organization units")
 
         try:
-            # Handle id__in filter - return empty list if empty string
+            # Parse expand parameter and get filters
+            expansions = parse_expand(
+                request.args.get("expand"), ORG_UNIT_ALLOWED_EXPANSIONS
+            )
             id__in = request.args.get("id__in")
+
+            # Handle empty id__in filter
             if id__in is not None and id__in.strip() == "":
-                return {
-                    "data": [],
-                    "pagination": {
-                        "page": 1,
-                        "limit": 50,
-                        "total": 0,
-                        "pages": 0,
-                        "has_next": False,
-                        "has_prev": False,
-                    },
-                }, 200
+                return _empty_paginated_response(), 200
 
-            query = OrganizationUnit.query
+            # Build query with expansions and filters
+            query = _build_org_unit_query_with_expansions(
+                OrganizationUnit.query, expansions
+            )
+            query = _apply_org_unit_filters(
+                query,
+                id__in,
+                request.args.get("name"),
+                request.args.get("search"),
+            )
 
-            # Apply id__in filter if provided
-            if id__in is not None:
-                ids = [
-                    uuid.strip() for uuid in id__in.split(",") if uuid.strip()
-                ]
-                if ids:
-                    query = query.filter(OrganizationUnit.id.in_(ids))
-
-            # Apply name filter if provided
-            name = request.args.get("name")
-            if name:
-                query = query.filter_by(name=name)
-
-            # Apply search filter if provided (searches in name and description)
-            search = request.args.get("search")
-            if search:
-                search_pattern = f"%{search}%"
-                query = query.filter(
-                    db.or_(
-                        OrganizationUnit.name.ilike(search_pattern),
-                        OrganizationUnit.description.ilike(search_pattern),
-                    )
-                )
-
-            # Pagination parameters
-            page = request.args.get("page", 1, type=int)
-            limit = request.args.get("limit", 50, type=int)
-
-            # Validate and constrain pagination params
-            page = max(1, page)
-            limit = min(max(1, limit), 1000)
-
-            # Sorting parameters
-            sort_field = request.args.get("sort", "created_at")
-            sort_order = request.args.get("order", "asc")
-
-            # Validate sort field
-            allowed_sorts = ["created_at", "updated_at", "name", "level"]
-            if sort_field not in allowed_sorts:
-                sort_field = "created_at"
-
-            # Apply sorting
-            if sort_order == "desc":
-                query = query.order_by(
-                    getattr(OrganizationUnit, sort_field).desc()
-                )
-            else:
-                query = query.order_by(
-                    getattr(OrganizationUnit, sort_field).asc()
-                )
+            # Get pagination and sorting params
+            page, limit = _get_pagination_params()
+            query = _apply_sorting(query, OrganizationUnit, ["name", "level"])
 
             # Execute pagination
-            paginated = query.paginate(
-                page=page, per_page=limit, error_out=False
-            )
+            paginated = query.paginate(page=page, per_page=limit, error_out=False)
 
-            org_unit_schema = OrganizationUnitSchema(
-                session=db.session, many=True
-            )
+            # Serialize and apply expansions
+            schema = OrganizationUnitSchema(session=db.session, many=True)
+            data = schema.dump(paginated.items)
+            _apply_org_unit_expansions(data, paginated.items, expansions)
+
             return {
-                "data": org_unit_schema.dump(paginated.items),
-                "pagination": {
-                    "page": page,
-                    "limit": limit,
-                    "total": paginated.total,
-                    "pages": paginated.pages,
-                    "has_next": paginated.has_next,
-                    "has_prev": paginated.has_prev,
-                },
+                "data": data,
+                "pagination": _build_pagination_meta(paginated, page, limit),
             }, 200
         except SQLAlchemyError as e:
             logger.error(LOG_DATABASE_ERROR, str(e))
@@ -232,6 +287,10 @@ class OrganizationUnitResource(Resource):
         Args:
             unit_id (str): The ID of the organization unit.
 
+        Query Parameters:
+            expand (str, optional): Comma-separated list of relations to expand
+                                    (e.g., positions,parent,children)
+
         Returns:
             tuple: The serialized organization unit and HTTP status code 200
                    on success.
@@ -239,13 +298,42 @@ class OrganizationUnitResource(Resource):
         """
         logger.info("Retrieving organization unit with ID %s", unit_id)
 
-        org_unit = OrganizationUnit.get_by_id(unit_id)
+        # Parse expand parameter
+        expand_param = request.args.get("expand")
+        expansions = parse_expand(expand_param, ORG_UNIT_ALLOWED_EXPANSIONS)
+
+        # Build query with optional eager loading
+        query = OrganizationUnit.query.filter_by(id=unit_id)
+        if "positions" in expansions:
+            query = query.options(joinedload(OrganizationUnit.positions))
+        if "parent" in expansions:
+            query = query.options(joinedload(OrganizationUnit.parent))
+        if "children" in expansions:
+            query = query.options(joinedload(OrganizationUnit.children))
+
+        org_unit = query.first()
         if not org_unit:
             logger.warning("Organization unit with ID %s not found", unit_id)
             return {"error": MSG_ORG_UNIT_NOT_FOUND}, 404
 
         org_unit_schema = OrganizationUnitSchema(session=db.session)
-        return org_unit_schema.dump(org_unit), 200
+        data = org_unit_schema.dump(org_unit)
+
+        # Apply expansions
+        if "positions" in expansions:
+            position_schema = PositionNestedSchema(many=True)
+            data["positions"] = position_schema.dump(org_unit.positions)
+        if "parent" in expansions:
+            nested_schema = OrganizationUnitNestedSchema()
+            if org_unit.parent:
+                data["parent"] = nested_schema.dump(org_unit.parent)
+            else:
+                data["parent"] = None
+        if "children" in expansions:
+            nested_schema_many = OrganizationUnitNestedSchema(many=True)
+            data["children"] = nested_schema_many.dump(org_unit.children)
+
+        return data, 200
 
     @require_jwt_auth()
     @check_access_required("UPDATE")

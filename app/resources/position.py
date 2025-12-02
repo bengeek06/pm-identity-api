@@ -22,6 +22,7 @@ from flask import g, request
 from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import joinedload
 
 from app.constants import (
     LOG_DATABASE_ERROR,
@@ -36,8 +37,91 @@ from app.logger import logger
 from app.models import db
 from app.models.organization_unit import OrganizationUnit
 from app.models.position import Position
+from app.schemas.organization_unit_schema import OrganizationUnitNestedSchema
 from app.schemas.position_schema import PositionSchema
-from app.utils import check_access_required, require_jwt_auth
+from app.utils import check_access_required, parse_expand, require_jwt_auth
+
+
+# Allowed expansions for position endpoints
+POSITION_ALLOWED_EXPANSIONS = {"organization_unit"}
+
+
+def _empty_paginated_response():
+    """Return an empty paginated response."""
+    return {
+        "data": [],
+        "pagination": {
+            "page": 1,
+            "limit": 50,
+            "total": 0,
+            "pages": 0,
+            "has_next": False,
+            "has_prev": False,
+        },
+    }
+
+
+def _get_pagination_params():
+    """Extract and validate pagination parameters from request."""
+    page = max(1, request.args.get("page", 1, type=int))
+    limit = min(max(1, request.args.get("limit", 50, type=int)), 1000)
+    return page, limit
+
+
+def _apply_sorting(query, model, extra_fields=None):
+    """Apply sorting to query based on request parameters."""
+    allowed_sorts = ["created_at", "updated_at"] + (extra_fields or [])
+    sort_field = request.args.get("sort", "created_at")
+    if sort_field not in allowed_sorts:
+        sort_field = "created_at"
+    sort_order = request.args.get("order", "asc")
+    column = getattr(model, sort_field)
+    return query.order_by(column.desc() if sort_order == "desc" else column.asc())
+
+
+def _build_pagination_meta(paginated, page, limit):
+    """Build pagination metadata dictionary."""
+    return {
+        "page": page,
+        "limit": limit,
+        "total": paginated.total,
+        "pages": paginated.pages,
+        "has_next": paginated.has_next,
+        "has_prev": paginated.has_prev,
+    }
+
+
+def _apply_position_filters(query, id__in, title, search):
+    """Apply filters to position query."""
+    if id__in is not None:
+        ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
+        if ids:
+            query = query.filter(Position.id.in_(ids))
+    if title:
+        query = query.filter_by(title=title)
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Position.title.ilike(search_pattern),
+                Position.description.ilike(search_pattern),
+            )
+        )
+    return query
+
+
+def _apply_position_expansions(data, items, expansions):
+    """Apply expansion data to serialized positions."""
+    if "organization_unit" not in expansions:
+        return
+    org_unit_schema = OrganizationUnitNestedSchema()
+    for i, position in enumerate(items):
+        if position.organization_unit:
+            data[i]["organization_unit"] = org_unit_schema.dump(
+                position.organization_unit
+            )
+        else:
+            data[i]["organization_unit"] = None
 
 
 def validate_organization_unit_ownership(org_unit, org_unit_id):
@@ -89,91 +173,48 @@ class PositionListResource(Resource):
             limit (int, optional): Items per page (default: 50, max: 1000)
             sort (str, optional): Field to sort by (created_at, updated_at, title)
             order (str, optional): Sort order (asc, desc, default: asc)
+            expand (str, optional): Comma-separated list of relations to expand
+                                    (e.g., organization_unit)
 
         Returns:
             tuple: Paginated response with data and metadata, HTTP 200
         """
         try:
-            # Handle id__in filter - return empty list if empty string
+            # Parse expand parameter and get filters
+            expansions = parse_expand(
+                request.args.get("expand"), POSITION_ALLOWED_EXPANSIONS
+            )
             id__in = request.args.get("id__in")
+
+            # Handle empty id__in filter
             if id__in is not None and id__in.strip() == "":
-                return {
-                    "data": [],
-                    "pagination": {
-                        "page": 1,
-                        "limit": 50,
-                        "total": 0,
-                        "pages": 0,
-                        "has_next": False,
-                        "has_prev": False,
-                    },
-                }, 200
+                return _empty_paginated_response(), 200
 
+            # Build query with eager loading
             query = Position.query
+            if "organization_unit" in expansions:
+                query = query.options(joinedload(Position.organization_unit))
 
-            # Apply id__in filter if provided
-            if id__in is not None:
-                ids = [
-                    uuid.strip() for uuid in id__in.split(",") if uuid.strip()
-                ]
-                if ids:
-                    query = query.filter(Position.id.in_(ids))
-
-            # Apply title filter if provided
-            title = request.args.get("title")
-            if title:
-                query = query.filter_by(title=title)
-
-            # Apply search filter if provided (searches in title and description)
-            search = request.args.get("search")
-            if search:
-                search_pattern = f"%{search}%"
-                query = query.filter(
-                    db.or_(
-                        Position.title.ilike(search_pattern),
-                        Position.description.ilike(search_pattern),
-                    )
-                )
-
-            # Pagination parameters
-            page = request.args.get("page", 1, type=int)
-            limit = request.args.get("limit", 50, type=int)
-
-            # Validate and constrain pagination params
-            page = max(1, page)
-            limit = min(max(1, limit), 1000)
-
-            # Sorting parameters
-            sort_field = request.args.get("sort", "created_at")
-            sort_order = request.args.get("order", "asc")
-
-            # Validate sort field
-            allowed_sorts = ["created_at", "updated_at", "title"]
-            if sort_field not in allowed_sorts:
-                sort_field = "created_at"
-
-            # Apply sorting
-            if sort_order == "desc":
-                query = query.order_by(getattr(Position, sort_field).desc())
-            else:
-                query = query.order_by(getattr(Position, sort_field).asc())
-
-            # Execute pagination
-            paginated = query.paginate(
-                page=page, per_page=limit, error_out=False
+            # Apply filters
+            query = _apply_position_filters(
+                query, id__in, request.args.get("title"), request.args.get("search")
             )
 
+            # Get pagination and sorting params
+            page, limit = _get_pagination_params()
+            query = _apply_sorting(query, Position, ["title"])
+
+            # Execute pagination
+            paginated = query.paginate(page=page, per_page=limit, error_out=False)
+
+            # Serialize and apply expansions
             schema = PositionSchema(many=True)
+            data = schema.dump(paginated.items)
+            _apply_position_expansions(data, paginated.items, expansions)
+
             return {
-                "data": schema.dump(paginated.items),
-                "pagination": {
-                    "page": page,
-                    "limit": limit,
-                    "total": paginated.total,
-                    "pages": paginated.pages,
-                    "has_next": paginated.has_next,
-                    "has_prev": paginated.has_prev,
-                },
+                "data": data,
+                "pagination": _build_pagination_meta(paginated, page, limit),
             }, 200
         except SQLAlchemyError as e:
             logger.error("Error fetching positions: %s", str(e))
@@ -265,19 +306,44 @@ class PositionResource(Resource):
         Args:
             position_id (str): The ID of the position to retrieve.
 
+        Query Parameters:
+            expand (str, optional): Comma-separated list of relations to expand
+                                    (e.g., organization_unit)
+
         Returns:
             tuple: The serialized position and HTTP status code 200 on success.
                    HTTP status code 404 if the position is not found.
         """
         logger.info("Retrieving position with ID: %s", position_id)
 
-        position = Position.get_by_id(position_id)
+        # Parse expand parameter
+        expand_param = request.args.get("expand")
+        expansions = parse_expand(expand_param, POSITION_ALLOWED_EXPANSIONS)
+
+        # Build query with optional eager loading
+        query = Position.query.filter_by(id=position_id)
+        if "organization_unit" in expansions:
+            query = query.options(joinedload(Position.organization_unit))
+
+        position = query.first()
         if not position:
             logger.warning("Position with ID %s not found", position_id)
             return {"message": MSG_POSITION_NOT_FOUND}, 404
 
         schema = PositionSchema(session=db.session)
-        return schema.dump(position), 200
+        data = schema.dump(position)
+
+        # Expand organization_unit if requested
+        if "organization_unit" in expansions:
+            org_unit_schema = OrganizationUnitNestedSchema()
+            if position.organization_unit:
+                data["organization_unit"] = org_unit_schema.dump(
+                    position.organization_unit
+                )
+            else:
+                data["organization_unit"] = None
+
+        return data, 200
 
     @require_jwt_auth()
     @check_access_required("UPDATE")

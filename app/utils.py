@@ -35,6 +35,42 @@ def camel_to_snake(name):
     return re.sub(r"_+", "_", snake)
 
 
+def parse_expand(expand_param, allowed_expansions=None):
+    """
+    Parse the ?expand= query parameter into a set of expansion names.
+
+    Args:
+        expand_param (str or None): Comma-separated list of expansions
+                                    (e.g., "position,organization").
+        allowed_expansions (set or None): Optional set of allowed expansion names.
+                                          If provided, unknown expansions are silently ignored.
+
+    Returns:
+        set: Set of valid expansion names to apply.
+
+    Examples:
+        >>> parse_expand("position,organization", {"position", "organization"})
+        {'position', 'organization'}
+        >>> parse_expand("position,unknown", {"position"})
+        {'position'}
+        >>> parse_expand(None)
+        set()
+        >>> parse_expand("")
+        set()
+    """
+    if not expand_param:
+        return set()
+
+    # Parse comma-separated values, strip whitespace, filter empty
+    expansions = {e.strip().lower() for e in expand_param.split(",") if e.strip()}
+
+    # Filter to allowed expansions if provided
+    if allowed_expansions:
+        expansions = expansions & allowed_expansions
+
+    return expansions
+
+
 def extract_jwt_data():
     """
     Extract and decode JWT data from request cookies.
