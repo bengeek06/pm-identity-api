@@ -28,6 +28,7 @@ from flask import g, request
 from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import joinedload
 from werkzeug.security import generate_password_hash
 
 from app.constants import (
@@ -42,6 +43,7 @@ from app.logger import logger
 from app.models import db
 from app.models.company import Company
 from app.models.user import User
+from app.schemas.position_schema import PositionNestedSchema
 from app.schemas.user_schema import UserSchema
 from app.storage_helper import (
     AvatarValidationError,
@@ -50,10 +52,13 @@ from app.storage_helper import (
     delete_user_storage,
     upload_avatar_via_proxy,
 )
-from app.utils import check_access_required, require_jwt_auth
+from app.utils import check_access_required, parse_expand, require_jwt_auth
 
 # Content type constants
 CONTENT_TYPE_MULTIPART = "multipart/form-data"
+
+# Allowed expansions for user endpoints
+USER_ALLOWED_EXPANSIONS = {"position"}
 
 
 # Helper functions for user operations
@@ -268,7 +273,7 @@ class UserListResource(Resource):
         """
         Get all users from the authenticated user's company.
 
-        Supports optional filtering, pagination, and sorting.
+        Supports optional filtering, pagination, sorting, and expansion.
 
         Query Parameters:
             id__in (str, optional): Comma-separated list of UUIDs to filter by
@@ -278,6 +283,7 @@ class UserListResource(Resource):
             limit (int, optional): Items per page (default: 50, max: 1000)
             sort (str, optional): Sort by (created_at, updated_at, email)
             order (str, optional): Sort order (asc, desc, default: asc)
+            expand (str, optional): Comma-separated relations to expand (position)
 
         Returns:
             tuple: Paginated response with data and metadata, HTTP 200
@@ -290,6 +296,10 @@ class UserListResource(Resource):
             if not company_id:
                 logger.error("company_id missing in JWT")
                 return {"message": "company_id missing in JWT"}, 400
+
+            # Parse expand parameter
+            expand_param = request.args.get("expand")
+            expansions = parse_expand(expand_param, USER_ALLOWED_EXPANSIONS)
 
             # Handle id__in filter - return empty list if empty string
             id__in = request.args.get("id__in")
@@ -308,6 +318,10 @@ class UserListResource(Resource):
 
             # Filter users by company_id to only return users from the same company
             query = User.query.filter_by(company_id=company_id)
+
+            # Apply eager loading for expansions
+            if "position" in expansions:
+                query = query.options(joinedload(User.position))
 
             # Apply id__in filter if provided
             if id__in is not None:
@@ -365,8 +379,18 @@ class UserListResource(Resource):
             schema = UserSchema(many=True)
             # Manually exclude sensitive fields after dump
             result_data = schema.dump(paginated.items)
-            for user in result_data:
-                user.pop("hashed_password", None)
+
+            # Add expanded relations to result
+            position_schema = PositionNestedSchema()
+            for i, user_data in enumerate(result_data):
+                user_data.pop("hashed_password", None)
+                # Add position expansion if requested
+                if "position" in expansions:
+                    user_obj = paginated.items[i]
+                    if user_obj.position:
+                        user_data["position"] = position_schema.dump(user_obj.position)
+                    else:
+                        user_data["position"] = None
 
             return {
                 "data": result_data,
@@ -480,18 +504,43 @@ class UserResource(Resource):
         Args:
             user_id (str): The ID of the user to retrieve.
 
+        Query Parameters:
+            expand (str, optional): Comma-separated relations to expand (position)
+
         Returns:
             tuple: The serialized user and HTTP status code 200 on success.
                    HTTP status code 404 if the user is not found.
         """
         logger.info("Fetching user with ID %s", user_id)
 
-        user = User.get_by_id(user_id)
+        # Parse expand parameter
+        expand_param = request.args.get("expand")
+        expansions = parse_expand(expand_param, USER_ALLOWED_EXPANSIONS)
+
+        # Build query with eager loading if needed
+        if expansions:
+            query = User.query.filter_by(id=user_id)
+            if "position" in expansions:
+                query = query.options(joinedload(User.position))
+            user = query.first()
+        else:
+            user = User.get_by_id(user_id)
+
         if not user:
             return {"message": "User not found"}, 404
 
         schema = UserSchema()
-        return schema.dump(user), 200
+        result = schema.dump(user)
+
+        # Add expanded relations
+        if "position" in expansions:
+            if user.position:
+                position_schema = PositionNestedSchema()
+                result["position"] = position_schema.dump(user.position)
+            else:
+                result["position"] = None
+
+        return result, 200
 
     @require_jwt_auth()
     @check_access_required("UPDATE")

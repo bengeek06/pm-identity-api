@@ -18,10 +18,25 @@ Position model, ensuring data integrity and proper formatting when handling API
 input and output.
 """
 
-from marshmallow import RAISE, fields, validate
+from marshmallow import RAISE, Schema, fields, validate
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from app.models.position import Position
+
+
+class PositionNestedSchema(Schema):
+    """
+    Lightweight schema for nested position data in expand responses.
+
+    Used when expanding position in user responses to avoid circular
+    references and limit data exposure.
+    """
+
+    id = fields.String(dump_only=True)
+    title = fields.String(dump_only=True)
+    description = fields.String(dump_only=True)
+    level = fields.Integer(dump_only=True)
+    organization_unit_id = fields.String(dump_only=True)
 
 
 class PositionSchema(SQLAlchemyAutoSchema):

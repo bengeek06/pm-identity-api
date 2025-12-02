@@ -2737,7 +2737,7 @@ paths:
     get:
       tags: [Users]
       summary: List all users
-      description: Returns the list of all users for the authenticated company with optional filtering, search, pagination, and sorting
+      description: Returns the list of all users for the authenticated company with optional filtering, search, pagination, sorting, and expansion of related entities
       parameters:
         - name: id__in
           in: query
@@ -2792,6 +2792,16 @@ paths:
             enum: [asc, desc]
             default: asc
           description: Sort order (ascending or descending)
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related entities to include inline in the response.
+            Supported values: `position`.
+            Unknown values are silently ignored.
+          example: "position"
       responses:
         '200':
           $ref: '#/components/responses/UserList'
@@ -2841,7 +2851,18 @@ paths:
     get:
       tags: [Users]
       summary: Get a user by ID
-      description: Returns details of a specific user
+      description: Returns details of a specific user with optional expansion of related entities
+      parameters:
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related entities to include inline in the response.
+            Supported values: `position`.
+            Unknown values are silently ignored.
+          example: "position"
       responses:
         '200':
           $ref: '#/components/responses/UserDetails'
