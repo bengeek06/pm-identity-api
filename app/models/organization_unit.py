@@ -78,6 +78,18 @@ class OrganizationUnit(db.Model):
         cascade="all, delete-orphan",
         lazy=True,
     )
+    parent = db.relationship(
+        "OrganizationUnit",
+        remote_side=[id],
+        foreign_keys=[parent_id],
+        lazy="select",
+    )
+    children = db.relationship(
+        "OrganizationUnit",
+        foreign_keys=[parent_id],
+        lazy="select",
+        overlaps="parent",
+    )
 
     def __repr__(self):
         return (

@@ -1824,6 +1824,16 @@ paths:
             enum: [asc, desc]
             default: asc
           description: Sort order (ascending or descending)
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [organization_unit]
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: organization_unit
+          example: "organization_unit"
       responses:
         '200':
           $ref: '#/components/responses/PositionList'
@@ -1876,6 +1886,17 @@ paths:
       tags: [Positions]
       summary: Get a position by ID
       description: Returns details of a specific position
+      parameters:
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [organization_unit]
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: organization_unit
+          example: "organization_unit"
       responses:
         '200':
           $ref: '#/components/responses/PositionDetails'
@@ -2067,6 +2088,15 @@ paths:
             enum: [asc, desc]
             default: asc
           description: Sort order (ascending or descending)
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: positions, parent, children
+          example: "positions,parent,children"
       responses:
         '200':
           $ref: '#/components/responses/OrganizationUnitList'
@@ -2117,6 +2147,16 @@ paths:
       tags: [Organizations]
       summary: Get an organization unit by ID
       description: Returns details of a specific organization unit
+      parameters:
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: positions, parent, children
+          example: "positions,parent,children"
       responses:
         '200':
           $ref: '#/components/responses/OrganizationUnitDetails'

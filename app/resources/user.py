@@ -61,6 +61,84 @@ CONTENT_TYPE_MULTIPART = "multipart/form-data"
 USER_ALLOWED_EXPANSIONS = {"position"}
 
 
+def _empty_paginated_response():
+    """Return an empty paginated response."""
+    return {
+        "data": [],
+        "pagination": {
+            "page": 1,
+            "limit": 50,
+            "total": 0,
+            "pages": 0,
+            "has_next": False,
+            "has_prev": False,
+        },
+    }
+
+
+def _get_pagination_params():
+    """Extract and validate pagination parameters from request."""
+    page = max(1, request.args.get("page", 1, type=int))
+    limit = min(max(1, request.args.get("limit", 50, type=int)), 1000)
+    return page, limit
+
+
+def _apply_sorting(query, model, extra_fields=None):
+    """Apply sorting to query based on request parameters."""
+    allowed_sorts = ["created_at", "updated_at"] + (extra_fields or [])
+    sort_field = request.args.get("sort", "created_at")
+    if sort_field not in allowed_sorts:
+        sort_field = "created_at"
+    sort_order = request.args.get("order", "asc")
+    column = getattr(model, sort_field)
+    return query.order_by(column.desc() if sort_order == "desc" else column.asc())
+
+
+def _build_pagination_meta(paginated, page, limit):
+    """Build pagination metadata dictionary."""
+    return {
+        "page": page,
+        "limit": limit,
+        "total": paginated.total,
+        "pages": paginated.pages,
+        "has_next": paginated.has_next,
+        "has_prev": paginated.has_prev,
+    }
+
+
+def _apply_user_filters(query, id__in, email, search):
+    """Apply filters to user query."""
+    if id__in is not None:
+        ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
+        if ids:
+            query = query.filter(User.id.in_(ids))
+    if email:
+        query = query.filter_by(email=email)
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                User.email.ilike(search_pattern),
+                User.first_name.ilike(search_pattern),
+                User.last_name.ilike(search_pattern),
+            )
+        )
+    return query
+
+
+def _apply_user_expansions(result_data, items, expansions):
+    """Apply expansion data and post-processing to serialized users."""
+    position_schema = PositionNestedSchema()
+    for i, user_data in enumerate(result_data):
+        user_data.pop("hashed_password", None)
+        if "position" in expansions:
+            user_obj = items[i]
+            if user_obj.position:
+                user_data["position"] = position_schema.dump(user_obj.position)
+            else:
+                user_data["position"] = None
+
+
 # Helper functions for user operations
 def _validate_avatar_url_field(avatar_url_value, context="POST"):
     """Log warning if avatar_url is sent by frontend (this is a bug)."""
@@ -269,7 +347,7 @@ class UserListResource(Resource):
 
     @require_jwt_auth()
     @check_access_required("LIST")
-    def get(self):  # pylint: disable=too-many-locals
+    def get(self):
         """
         Get all users from the authenticated user's company.
 
@@ -292,116 +370,45 @@ class UserListResource(Resource):
         try:
             # Get company_id from JWT data stored in g by the decorator
             company_id = g.company_id
-
             if not company_id:
                 logger.error("company_id missing in JWT")
                 return {"message": "company_id missing in JWT"}, 400
 
-            # Parse expand parameter
-            expand_param = request.args.get("expand")
-            expansions = parse_expand(expand_param, USER_ALLOWED_EXPANSIONS)
-
-            # Handle id__in filter - return empty list if empty string
+            # Parse expand parameter and get filters
+            expansions = parse_expand(
+                request.args.get("expand"), USER_ALLOWED_EXPANSIONS
+            )
             id__in = request.args.get("id__in")
+
+            # Handle empty id__in filter
             if id__in is not None and id__in.strip() == "":
-                return {
-                    "data": [],
-                    "pagination": {
-                        "page": 1,
-                        "limit": 50,
-                        "total": 0,
-                        "pages": 0,
-                        "has_next": False,
-                        "has_prev": False,
-                    },
-                }, 200
+                return _empty_paginated_response(), 200
 
-            # Filter users by company_id to only return users from the same company
+            # Build query with eager loading
             query = User.query.filter_by(company_id=company_id)
-
-            # Apply eager loading for expansions
             if "position" in expansions:
                 query = query.options(joinedload(User.position))
 
-            # Apply id__in filter if provided
-            if id__in is not None:
-                ids = [
-                    uuid.strip() for uuid in id__in.split(",") if uuid.strip()
-                ]
-                if ids:
-                    query = query.filter(User.id.in_(ids))
-
-            # Apply email filter if provided
-            email = request.args.get("email")
-            if email:
-                query = query.filter_by(email=email)
-
-            # Apply search filter if provided (searches in email, first_name, last_name)
-            search = request.args.get("search")
-            if search:
-                search_pattern = f"%{search}%"
-                query = query.filter(
-                    db.or_(
-                        User.email.ilike(search_pattern),
-                        User.first_name.ilike(search_pattern),
-                        User.last_name.ilike(search_pattern),
-                    )
-                )
-
-            # Pagination parameters
-            page = request.args.get("page", 1, type=int)
-            limit = request.args.get("limit", 50, type=int)
-
-            # Validate and constrain pagination params
-            page = max(1, page)
-            limit = min(max(1, limit), 1000)
-
-            # Sorting parameters
-            sort_field = request.args.get("sort", "created_at")
-            sort_order = request.args.get("order", "asc")
-
-            # Validate sort field
-            allowed_sorts = ["created_at", "updated_at", "email"]
-            if sort_field not in allowed_sorts:
-                sort_field = "created_at"
-
-            # Apply sorting
-            if sort_order == "desc":
-                query = query.order_by(getattr(User, sort_field).desc())
-            else:
-                query = query.order_by(getattr(User, sort_field).asc())
-
-            # Execute pagination
-            paginated = query.paginate(
-                page=page, per_page=limit, error_out=False
+            # Apply filters
+            query = _apply_user_filters(
+                query, id__in, request.args.get("email"), request.args.get("search")
             )
 
-            schema = UserSchema(many=True)
-            # Manually exclude sensitive fields after dump
-            result_data = schema.dump(paginated.items)
+            # Get pagination and sorting params
+            page, limit = _get_pagination_params()
+            query = _apply_sorting(query, User, ["email"])
 
-            # Add expanded relations to result
-            position_schema = PositionNestedSchema()
-            for i, user_data in enumerate(result_data):
-                user_data.pop("hashed_password", None)
-                # Add position expansion if requested
-                if "position" in expansions:
-                    user_obj = paginated.items[i]
-                    if user_obj.position:
-                        user_data["position"] = position_schema.dump(user_obj.position)
-                    else:
-                        user_data["position"] = None
+            # Execute pagination
+            paginated = query.paginate(page=page, per_page=limit, error_out=False)
+
+            # Serialize and apply expansions
+            schema = UserSchema(many=True)
+            result_data = schema.dump(paginated.items)
+            _apply_user_expansions(result_data, paginated.items, expansions)
 
             return {
                 "data": result_data,
-                "pagination": {
-                    "page": page,
-                    "limit": limit,
-                    "total": paginated.total,
-                    "pages": paginated.pages,
-                    "has_next": paginated.has_next,
-                    "has_prev": paginated.has_prev,
-                },
+                "pagination": _build_pagination_meta(paginated, page, limit),
             }, 200
         except SQLAlchemyError as e:
             logger.error("Error fetching users: %s", str(e))

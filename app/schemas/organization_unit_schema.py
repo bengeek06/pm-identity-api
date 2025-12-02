@@ -20,10 +20,26 @@ handling API input and output.
 
 from typing import Any, Dict
 
-from marshmallow import RAISE, ValidationError, fields, validate, validates
+from marshmallow import RAISE, Schema, ValidationError, fields, validate, validates
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from app.models.organization_unit import OrganizationUnit
+
+
+class OrganizationUnitNestedSchema(Schema):
+    """
+    Lightweight schema for nested organization unit data in expand responses.
+
+    Used when expanding organization_unit in position responses to avoid
+    circular references and limit data exposure.
+    """
+
+    id = fields.String(dump_only=True)
+    name = fields.String(dump_only=True)
+    description = fields.String(dump_only=True)
+    level = fields.Integer(dump_only=True)
+    parent_id = fields.String(dump_only=True)
+    path = fields.String(dump_only=True)
 
 
 class OrganizationUnitSchema(SQLAlchemyAutoSchema):

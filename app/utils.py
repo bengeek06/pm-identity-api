@@ -40,7 +40,8 @@ def parse_expand(expand_param, allowed_expansions=None):
     Parse the ?expand= query parameter into a set of expansion names.
 
     Args:
-        expand_param (str or None): Comma-separated list of expansions (e.g., "position,organization").
+        expand_param (str or None): Comma-separated list of expansions
+                                    (e.g., "position,organization").
         allowed_expansions (set or None): Optional set of allowed expansion names.
                                           If provided, unknown expansions are silently ignored.
 
