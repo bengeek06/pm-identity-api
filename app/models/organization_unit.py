@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 Module: organization_unit
 
@@ -10,9 +18,11 @@ as a department or division.
 """
 
 import uuid
+
 from sqlalchemy.exc import SQLAlchemyError
-from app.models import db
+
 from app.logger import logger
+from app.models import db
 
 
 class OrganizationUnit(db.Model):
@@ -40,9 +50,13 @@ class OrganizationUnit(db.Model):
 
     __tablename__ = "organization_unit"
 
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = db.Column(
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     name = db.Column(db.String(100), nullable=False)
-    company_id = db.Column(db.String(36), db.ForeignKey("company.id"), nullable=False)
+    company_id = db.Column(
+        db.String(36), db.ForeignKey("company.id"), nullable=False
+    )
     description = db.Column(db.String(255), nullable=True)
     parent_id = db.Column(
         db.String(36), db.ForeignKey("organization_unit.id"), nullable=True
@@ -63,6 +77,18 @@ class OrganizationUnit(db.Model):
         back_populates="organization_unit",
         cascade="all, delete-orphan",
         lazy=True,
+    )
+    parent = db.relationship(
+        "OrganizationUnit",
+        remote_side=[id],
+        foreign_keys=[parent_id],
+        lazy="select",
+    )
+    children = db.relationship(
+        "OrganizationUnit",
+        foreign_keys=[parent_id],
+        lazy="select",
+        overlaps="parent",
     )
 
     def __repr__(self):
@@ -99,7 +125,9 @@ class OrganizationUnit(db.Model):
         try:
             return cls.query.filter_by(id=unit_id).first()
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving organization unit by ID {unit_id}: {e}")
+            logger.error(
+                f"Error retrieving organization unit by ID {unit_id}: {e}"
+            )
             return None
 
     @classmethod
@@ -116,7 +144,9 @@ class OrganizationUnit(db.Model):
         try:
             return cls.query.filter_by(name=name).first()
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving organization unit by name {name}: {e}")
+            logger.error(
+                f"Error retrieving organization unit by name {name}: {e}"
+            )
             return None
 
     @classmethod
@@ -133,7 +163,9 @@ class OrganizationUnit(db.Model):
         try:
             return cls.query.filter_by(company_id=company_id).all()
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving org units for company ID {company_id}: {e}")
+            logger.error(
+                f"Error retrieving org units for company ID {company_id}: {e}"
+            )
             return []
 
     @classmethod
@@ -151,7 +183,9 @@ class OrganizationUnit(db.Model):
         try:
             return cls.query.filter_by(parent_id=parent_id).all()
         except SQLAlchemyError as e:
-            logger.error("Error retrieving children for parent ID %s: %s", parent_id, e)
+            logger.error(
+                "Error retrieving children for parent ID %s: %s", parent_id, e
+            )
             return []
 
     def update_path_and_level(self):

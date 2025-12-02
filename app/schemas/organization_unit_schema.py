@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 organization_unit_schema.py
 ---------------------------
@@ -11,10 +19,27 @@ handling API input and output.
 """
 
 from typing import Any, Dict
+
+from marshmallow import RAISE, Schema, ValidationError, fields, validate, validates
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import RAISE, fields, validate, validates, ValidationError
 
 from app.models.organization_unit import OrganizationUnit
+
+
+class OrganizationUnitNestedSchema(Schema):
+    """
+    Lightweight schema for nested organization unit data in expand responses.
+
+    Used when expanding organization_unit in position responses to avoid
+    circular references and limit data exposure.
+    """
+
+    id = fields.String(dump_only=True)
+    name = fields.String(dump_only=True)
+    description = fields.String(dump_only=True)
+    level = fields.Integer(dump_only=True)
+    parent_id = fields.String(dump_only=True)
+    path = fields.String(dump_only=True)
 
 
 class OrganizationUnitSchema(SQLAlchemyAutoSchema):
@@ -52,7 +77,14 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
         model = OrganizationUnit
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at", "path", "level")
+        dump_only = (
+            "id",
+            "created_at",
+            "updated_at",
+            "path",
+            "level",
+            "company_id",
+        )
         unknown = RAISE
 
     name = fields.String(
@@ -64,15 +96,10 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
         ),
     )
 
-    company_id = fields.String(
-        required=True,
-        validate=validate.Length(min=1, error="Company ID cannot be empty."),
-    )
-
     description = fields.String(
         allow_none=True,
         validate=validate.Length(
-            max=200, error="Description cannot exceed 200 characters."
+            max=255, error="Description cannot exceed 255 characters."
         ),
     )
 
@@ -111,7 +138,9 @@ class OrganizationUnitSchema(SQLAlchemyAutoSchema):
         # Prevent a node from being its own parent
         context = getattr(self, "context", {}) or {}
         if context.get("current_id") and value == context["current_id"]:
-            raise ValidationError("An organization unit cannot be its own parent.")
+            raise ValidationError(
+                "An organization unit cannot be its own parent."
+            )
 
         # Prevent cycles (parent_id must not be a descendant)
         current_id = context.get("current_id")

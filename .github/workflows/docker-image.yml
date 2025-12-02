@@ -2,7 +2,7 @@ name: Build and Publish Docker Image
 
 on:
   push:
-    branches: [ main, fix_issues ]
+    branches: [ main, staging, develop ]
     paths:
       - "Dockerfile"
       - "**/*.py"
@@ -10,7 +10,7 @@ on:
       - "requirements-dev.txt"
       - ".github/workflows/docker-image.yml"
   pull_request:
-    branches: [ main ]
+    branches: [ main, staging, develop ]
 
 permissions:
   contents: read
@@ -47,9 +47,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run tests
+      - name: Run unit tests
         run: |
-          docker run --rm test-image:${{ github.run_id }}
+          docker run --rm test-image:${{ github.run_id }} pytest tests/unit/
 
   build:
     name: Build (no push on PR)
@@ -118,6 +118,10 @@ jobs:
             if [ -n "${{ steps.meta.outputs.version_tag }}" ]; then
               TAGS="${TAGS},${IMAGE}:${{ steps.meta.outputs.version_tag }}"
             fi
+          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+            TAGS="${TAGS},${IMAGE}:staging"
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            TAGS="${TAGS},${IMAGE}:develop"
           fi
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 

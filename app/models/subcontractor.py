@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 Module: subcontractor
 
@@ -10,9 +18,11 @@ company.
 """
 
 import uuid
+
 from sqlalchemy.exc import SQLAlchemyError
-from app.models import db
+
 from app.logger import logger
+from app.models import db
 
 
 class Subcontractor(db.Model):
@@ -39,14 +49,20 @@ class Subcontractor(db.Model):
 
     __tablename__ = "subcontractor"
 
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = db.Column(
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     name = db.Column(db.String(100), nullable=False)
-    company_id = db.Column(db.String(36), db.ForeignKey("company.id"), nullable=False)
+    company_id = db.Column(
+        db.String(36), db.ForeignKey("company.id"), nullable=False
+    )
     description = db.Column(db.String(255), nullable=True)
     contact_person = db.Column(db.String(100), nullable=True)
     phone_number = db.Column(db.String(50), nullable=True)
     email = db.Column(db.String(100), nullable=True)
     address = db.Column(db.String(200), nullable=True)
+    logo_file_id = db.Column(db.String(36), nullable=True)
+    has_logo = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
@@ -139,5 +155,22 @@ class Subcontractor(db.Model):
         try:
             return cls.query.filter_by(name=name).first()
         except SQLAlchemyError as e:
-            logger.error("Error retrieving subcontractor by name %s: %s", name, e)
+            logger.error(
+                "Error retrieving subcontractor by name %s: %s", name, e
+            )
             return None
+
+    def set_logo(self, file_id: str) -> None:
+        """
+        Set subcontractor logo file_id and flag.
+
+        Args:
+            file_id (str): Storage Service file_id for the logo.
+        """
+        self.logo_file_id = file_id
+        self.has_logo = True
+
+    def remove_logo(self) -> None:
+        """Clear subcontractor logo reference and flag."""
+        self.logo_file_id = None
+        self.has_logo = False

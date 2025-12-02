@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 module: subcontractor
 
@@ -9,16 +17,29 @@ updating, and deleting subcontractors. The resources use Marshmallow schemas
 for validation and serialization, and handle database errors gracefully.
 """
 
-from flask import request, g
+from flask import g, request
+from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from flask_restful import Resource
 
-from app.models import db
+from app.constants import (
+    LOG_DATABASE_ERROR,
+    LOG_INTEGRITY_ERROR,
+    LOG_VALIDATION_ERROR,
+    MSG_DATABASE_ERROR,
+    MSG_INTEGRITY_ERROR,
+    MSG_SUBCONTRACTOR_DELETED,
+    MSG_SUBCONTRACTOR_NOT_FOUND,
+    MSG_VALIDATION_ERROR,
+)
 from app.logger import logger
+from app.models import db
 from app.models.subcontractor import Subcontractor
 from app.schemas.subcontractor_schema import SubcontractorSchema
-from app.utils import require_jwt_auth, check_access_required
+from app.utils import check_access_required, require_jwt_auth
+
+# Error message constants
+ERROR_SUBCONTRACTOR_NOT_FOUND = "Subcontractor with ID %s not found"
 
 
 class SubcontractorListResource(Resource):
@@ -34,31 +55,123 @@ class SubcontractorListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self):
         """
-        Retrieve all subcontractors.
+        Retrieve all subcontractors with optional filtering, pagination, and sorting.
+
+        Query Parameters:
+            id__in (str, optional): Comma-separated list of UUIDs to filter by
+            name (str, optional): Filter by exact subcontractor name match
+            search (str, optional): Search in name, email, contact_person
+            page (int, optional): Page number (default: 1, min: 1)
+            limit (int, optional): Items per page (default: 50, max: 1000)
+            sort (str, optional): Field to sort by (created_at, updated_at, name)
+            order (str, optional): Sort order (asc, desc, default: asc)
 
         Returns:
-            tuple: A tuple containing a list of serialized subcontractors and
-                   the HTTP status code 200.
+            tuple: Paginated response with data and metadata, HTTP 200
         """
         try:
-            subcontractors = Subcontractor.query.all()
+            # Handle id__in filter - return empty list if empty string
+            id__in = request.args.get("id__in")
+            if id__in is not None and id__in.strip() == "":
+                return {
+                    "data": [],
+                    "pagination": {
+                        "page": 1,
+                        "limit": 50,
+                        "total": 0,
+                        "pages": 0,
+                        "has_next": False,
+                        "has_prev": False,
+                    },
+                }, 200
+
+            query = Subcontractor.query
+
+            # Apply id__in filter if provided
+            if id__in is not None:
+                ids = [
+                    uuid.strip() for uuid in id__in.split(",") if uuid.strip()
+                ]
+                if ids:
+                    query = query.filter(Subcontractor.id.in_(ids))
+
+            # Apply name filter if provided
+            name = request.args.get("name")
+            if name:
+                query = query.filter_by(name=name)
+
+            # Apply search filter if provided (searches in name, email, contact_person)
+            search = request.args.get("search")
+            if search:
+                search_pattern = f"%{search}%"
+                query = query.filter(
+                    db.or_(
+                        Subcontractor.name.ilike(search_pattern),
+                        Subcontractor.email.ilike(search_pattern),
+                        Subcontractor.contact_person.ilike(search_pattern),
+                    )
+                )
+
+            # Pagination parameters
+            page = request.args.get("page", 1, type=int)
+            limit = request.args.get("limit", 50, type=int)
+
+            # Validate and constrain pagination params
+            page = max(1, page)
+            limit = min(max(1, limit), 1000)
+
+            # Sorting parameters
+            sort_field = request.args.get("sort", "created_at")
+            sort_order = request.args.get("order", "asc")
+
+            # Validate sort field
+            allowed_sorts = ["created_at", "updated_at", "name"]
+            if sort_field not in allowed_sorts:
+                sort_field = "created_at"
+
+            # Apply sorting
+            if sort_order == "desc":
+                query = query.order_by(
+                    getattr(Subcontractor, sort_field).desc()
+                )
+            else:
+                query = query.order_by(
+                    getattr(Subcontractor, sort_field).asc()
+                )
+
+            # Execute pagination
+            paginated = query.paginate(
+                page=page, per_page=limit, error_out=False
+            )
+
             schema = SubcontractorSchema(many=True)
-            return schema.dump(subcontractors), 200
+            return {
+                "data": schema.dump(paginated.items),
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": paginated.total,
+                    "pages": paginated.pages,
+                    "has_next": paginated.has_next,
+                    "has_prev": paginated.has_prev,
+                },
+            }, 200
         except SQLAlchemyError as e:
             logger.error("Error fetching subcontractors: %s", str(e))
             return {"message": "Error fetching subcontractors"}, 500
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self):
         """
         Create a new subcontractor.
 
         Expects:
-            JSON payload with at least the 'name' and 'company_id' fields.
+            JSON payload with at least the 'name' field.
+            company_id is automatically extracted from JWT token.
 
         Returns:
             tuple: The serialized created subcontractor and HTTP status code
@@ -70,25 +183,24 @@ class SubcontractorListResource(Resource):
         json_data = request.get_json()
         subcontractor_schema = SubcontractorSchema(session=db.session)
 
-        # Inject company_id from JWT token (stored in g by require_jwt_auth)
-        json_data["company_id"] = g.company_id
-
         try:
-            subcontractor = subcontractor_schema.load(json_data)
-            db.session.add(subcontractor)
+            new_subcontractor = subcontractor_schema.load(json_data)
+            # Assign company_id from JWT after load
+            new_subcontractor.company_id = g.company_id
+            db.session.add(new_subcontractor)
             db.session.commit()
-            return subcontractor_schema.dump(subcontractor), 201
+            return subcontractor_schema.dump(new_subcontractor), 201
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
 
 class SubcontractorResource(Resource):
@@ -110,7 +222,7 @@ class SubcontractorResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, subcontractor_id):
         """
         Retrieve a subcontractor by ID.
@@ -127,14 +239,14 @@ class SubcontractorResource(Resource):
 
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
-            logger.warning("Subcontractor with ID %s not found", subcontractor_id)
-            return {"message": "Subcontractor not found"}, 404
+            logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
+            return {"error": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
         schema = SubcontractorSchema(session=db.session)
         return schema.dump(subcontractor), 200
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def put(self, subcontractor_id):
         """
         Update a subcontractor by ID.
@@ -159,28 +271,30 @@ class SubcontractorResource(Resource):
         try:
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
-                logger.warning("Subcontractor with ID %s not found", subcontractor_id)
-                return {"message": "Subcontractor not found"}, 404
+                logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
+                return {"error": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
+            # Pass current subcontractor in context for uniqueness validation
+            subcontractor_schema.context = {"subcontractor": subcontractor}
             updated_subcontractor = subcontractor_schema.load(
                 json_data, instance=subcontractor
             )
             db.session.commit()
             return subcontractor_schema.dump(updated_subcontractor), 200
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def patch(self, subcontractor_id):
         """
         Partially update a subcontractor by ID.
@@ -197,36 +311,42 @@ class SubcontractorResource(Resource):
                    HTTP status code 404 if the subcontractor is not found.
                    HTTP status code 400 for validation errors.
         """
-        logger.info("Partially updating subcontractor with ID: %s", subcontractor_id)
+        logger.info(
+            "Partially updating subcontractor with ID: %s", subcontractor_id
+        )
 
         json_data = request.get_json()
-        subcontractor_schema = SubcontractorSchema(session=db.session, partial=True)
+        subcontractor_schema = SubcontractorSchema(
+            session=db.session, partial=True
+        )
 
         try:
             subcontractor = Subcontractor.get_by_id(subcontractor_id)
             if not subcontractor:
-                logger.warning("Subcontractor with ID %s not found", subcontractor_id)
-                return {"message": "Subcontractor not found"}, 404
+                logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
+                return {"message": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
+            # Pass current subcontractor in context for uniqueness validation
+            subcontractor_schema.context = {"subcontractor": subcontractor}
             updated_subcontractor = subcontractor_schema.load(
                 json_data, instance=subcontractor, partial=True
             )
             db.session.commit()
             return subcontractor_schema.dump(updated_subcontractor), 200
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, subcontractor_id):
         """
         Delete a subcontractor by ID.
@@ -240,14 +360,14 @@ class SubcontractorResource(Resource):
         """
         subcontractor = Subcontractor.get_by_id(subcontractor_id)
         if not subcontractor:
-            logger.warning("Subcontractor with ID %s not found", subcontractor_id)
-            return {"message": "Subcontractor not found"}, 404
+            logger.warning(ERROR_SUBCONTRACTOR_NOT_FOUND, subcontractor_id)
+            return {"message": MSG_SUBCONTRACTOR_NOT_FOUND}, 404
 
         try:
             db.session.delete(subcontractor)
             db.session.commit()
-            return {"message": "Subcontractor deleted successfully"}, 204
+            return {"message": MSG_SUBCONTRACTOR_DELETED}, 204
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500

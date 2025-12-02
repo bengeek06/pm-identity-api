@@ -1,11 +1,11 @@
 # Identity Service API
 
-[![Tests](https://github.com/bengeek06/pm-identity-api/actions/workflows/python-app.yml/badge.svg?branch=guardian_staging)](https://github.com/bengeek06/pm-identity-api/actions)
+[![Tests](https://github.com/bengeek06/pm-identity-api/actions/workflows/python-app.yml/badge.svg?branch=develop)](https://github.com/bengeek06/pm-identity-api/actions)
 [![License: AGPL v3 / Commercial](https://img.shields.io/badge/license-AGPLv3%20%2F%20Commercial-blue)](LICENSE.md)
 [![OpenAPI Spec](https://img.shields.io/badge/OpenAPI-3.0.3-blue.svg)](openapi.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 ![Flask](https://img.shields.io/badge/flask-%3E=2.0-green.svg)
-![Coverage](https://img.shields.io/badge/tests-59%2B%20tests-green.svg)
+![Coverage](https://img.shields.io/badge/tests-376%20tests-green.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
 
 A production-ready API for managing users, companies, organizations, positions, subcontractors, and customers.  
@@ -32,7 +32,7 @@ The **Identity Service API** is a comprehensive, production-ready microservice f
 - **Authentication**: JWT tokens with HTTP-only cookie storage
 - **Authorization**: External Guardian service for role-based permissions
 - **Validation**: Marshmallow schemas for request/response validation
-- **Testing**: pytest with comprehensive test coverage (59+ tests)
+- **Testing**: pytest with comprehensive test coverage (376 tests)
 - **Documentation**: OpenAPI 3.0.3 specification
 ---
 
@@ -40,55 +40,115 @@ The **Identity Service API** is a comprehensive, production-ready microservice f
 
 ```
 .
-├── app
-│   ├── config.py
-│   ├── __init__.py
-│   ├── logger.py
-│   ├── models
-│   │   ├── company.py
-│   │   ├── customer.py
-│   │   ├── __init__.py
-│   │   ├── organization_unit.py
-│   │   ├── position.py
-│   │   ├── subcontractor.py
-│   │   └── user.py
-│   ├── resources
-│   │   ├── company.py
-│   │   ├── config.py
-│   │   ├── customer.py
-│   │   ├── health.py
-│   │   ├── init_db.py
-│   │   ├── __init__.py
-│   │   ├── organization_unit.py
-│   │   ├── position.py
-│   │   ├── subcontractor.py
-│   │   ├── user.py
-│   │   └── version.py
-│   ├── routes.py
-│   ├── schemas
-│   │   ├── company_schema.py
-│   │   ├── customer_schema.py
-│   │   ├── __init__.py
-│   │   ├── organization_unit_schema.py
-│   │   ├── position_schema.py
-│   │   ├── subcontractor_schema.py
-│   │   └── user_schema.py
-│   └── utils.py
+├── app/
+│   ├── __init__.py
+│   ├── config.py
+│   ├── email_helper.py
+│   ├── logger.py
+│   ├── rate_limiter.py
+│   ├── routes.py
+│   ├── storage_helper.py
+│   ├── utils.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── company.py
+│   │   ├── customer.py
+│   │   ├── organization_unit.py
+│   │   ├── password_reset_otp.py
+│   │   ├── position.py
+│   │   ├── subcontractor.py
+│   │   └── user.py
+│   ├── resources/
+│   │   ├── __init__.py
+│   │   ├── company.py
+│   │   ├── company_logo.py
+│   │   ├── config.py
+│   │   ├── customer.py
+│   │   ├── health.py
+│   │   ├── init_db.py
+│   │   ├── organization_unit.py
+│   │   ├── password_reset.py
+│   │   ├── position.py
+│   │   ├── subcontractor.py
+│   │   ├── user.py
+│   │   ├── user_auth.py
+│   │   ├── user_avatar.py
+│   │   ├── user_password.py
+│   │   ├── user_permissions.py
+│   │   ├── user_policies.py
+│   │   ├── user_position.py
+│   │   ├── user_roles.py
+│   │   └── version.py
+│   └── schemas/
+│       ├── __init__.py
+│       ├── company_schema.py
+│       ├── customer_schema.py
+│       ├── organization_unit_schema.py
+│       ├── position_schema.py
+│       ├── subcontractor_schema.py
+│       └── user_schema.py
+├── docs/
+│   └── TESTING_STRATEGY.md
+├── migrations/
+│   ├── alembic.ini
+│   ├── env.py
+│   ├── README
+│   ├── script.py.mako
+│   └── versions/
+│       └── 9d10e1359386_init.py
+├── scripts/
+│   ├── integration.conf.example
+│   └── run-integration-tests.sh
+├── tests/
+│   ├── __init__.py
+│   ├── integration/
+│   │   ├── __init__.py
+│   │   ├── conftest.py
+│   │   ├── init_guardian.py
+│   │   ├── test_company_logo_integration.py
+│   │   ├── test_guardian_integration.py
+│   │   └── test_user_avatar_integration.py
+│   └── unit/
+│       ├── __init__.py
+│       ├── conftest.py
+│       ├── test_company.py
+│       ├── test_company_logo.py
+│       ├── test_config.py
+│       ├── test_customer.py
+│       ├── test_guardian_disabled.py
+│       ├── test_guardian_formats.py
+│       ├── test_health.py
+│       ├── test_init_api.py
+│       ├── test_init_db.py
+│       ├── test_jwt_forwarding.py
+│       ├── test_organization_unit.py
+│       ├── test_password_reset.py
+│       ├── test_position.py
+│       ├── test_run.py
+│       ├── test_simple_guardian.py
+│       ├── test_storage_helper.py
+│       ├── test_subcontractor.py
+│       ├── test_user.py
+│       ├── test_user_avatar.py
+│       ├── test_utils.py
+│       ├── test_version.py
+│       └── test_wsgi.py
 ├── CODE_OF_CONDUCT.md
 ├── COMMERCIAL-LICENSE.txt
+├── CONTRIBUTING.md
+├── docker-compose.test.yml
 ├── docker-entrypoint.sh
 ├── Dockerfile
 ├── env.example
 ├── LICENSE
 ├── LICENSE.md
-├── migrations
 ├── openapi.yml
 ├── pytest.ini
 ├── README.md
 ├── requirements-dev.txt
 ├── requirements.txt
 ├── run.py
-├── tests
+├── sonar-project.properties
 ├── VERSION
 ├── wait-for-it.sh
 └── wsgi.py
@@ -112,15 +172,39 @@ Database URL and secrets are configured via environment variables (see `env.exam
 
 The service reads the following variables (see env.example):
 
-| Variable                  | Description |
-|---------------------------|-------------|
-| FLASK_ENV                 | Environment (development, testing, staging, production) |
-| LOG_LEVEL                 | Logging level (DEBUG, INFO, etc.) |
-| DATABASE_URL              | SQLAlchemy database URL |
-| GUARDIAN_SERVICE_URL      | External guardian service base URL (for RBAC verification) |
-| GUARDIAN_SERVICE_TIMEOUT  | Timeout in seconds for Guardian service API calls (default: 5) |
-| JWT_SECRET                | Secret used to sign JWTs |
-| INTERNAL_AUTH_TOKEN       | Shared secret with auth service |
+| Variable                        | Description |
+|---------------------------------|-------------|
+| **Core Configuration** |
+| FLASK_ENV                       | Environment (development, testing, staging, production) |
+| LOG_LEVEL                       | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
+| DATABASE_URL                    | SQLAlchemy database URL |
+| JWT_SECRET                      | Secret used to sign JWTs |
+| INTERNAL_AUTH_TOKEN             | Shared secret with auth service |
+| **Guardian Service (RBAC)** |
+| USE_GUARDIAN_SERVICE            | Enable/disable Guardian Service integration (true/false, default: true) |
+| GUARDIAN_SERVICE_URL            | External Guardian service base URL (for RBAC verification) |
+| GUARDIAN_SERVICE_TIMEOUT        | Timeout in seconds for Guardian service API calls (default: 5) |
+| **Storage Service (Avatars)** |
+| USE_STORAGE_SERVICE             | Enable/disable Storage Service integration (true/false, default: true) |
+| STORAGE_SERVICE_URL             | Storage service base URL for avatar management (default: http://storage-service:5000) |
+| STORAGE_REQUEST_TIMEOUT         | Timeout in seconds for Storage service API calls (default: 30) |
+| MAX_AVATAR_SIZE_MB              | Maximum avatar file size in MB (default: 5) |
+| **Email Service (Password Reset)** |
+| USE_EMAIL_SERVICE               | Enable/disable email service (true/false, default: false) |
+| MAIL_SERVER                     | SMTP server hostname (e.g., smtp.gmail.com) |
+| MAIL_PORT                       | SMTP server port (587 for TLS, 465 for SSL) |
+| MAIL_USE_TLS                    | Use TLS encryption (true/false) |
+| MAIL_USE_SSL                    | Use SSL encryption (true/false, mutually exclusive with TLS) |
+| MAIL_USERNAME                   | SMTP username for authentication |
+| MAIL_PASSWORD                   | SMTP password or app-specific password |
+| MAIL_DEFAULT_SENDER             | Default sender email address |
+| MAIL_MAX_EMAILS                 | Maximum emails per connection (optional, default: 100) |
+| **Rate Limiting** |
+| RATELIMIT_STORAGE_URI           | Storage backend for rate limiting (memory:// or redis://url, default: memory://) |
+| RATELIMIT_STRATEGY              | Rate limit strategy (fixed-window, moving-window, default: fixed-window) |
+| **Password Reset OTP** |
+| PASSWORD_RESET_OTP_TTL_MINUTES  | OTP expiration time in minutes (default: 15) |
+| PASSWORD_RESET_OTP_MAX_ATTEMPTS | Maximum OTP verification attempts (default: 3) |
 
 ---
 
@@ -245,6 +329,276 @@ You can visualize it with [Swagger Editor](https://editor.swagger.io/) or [Redoc
 | GET    | /users/{user_id}/roles/{role_id} | Get specific role assignment for a user     |✅            |
 | DELETE | /users/{user_id}/roles/{role_id} | Remove specific role from a user            |✅            |
 | GET    | /positions/{position_id}/users   | Get users assigned to a specific position   |✅            |
+| POST   | /users/{user_id}/avatar          | Upload user avatar image                    |✅            |
+| GET    | /users/{user_id}/avatar          | Download user avatar image                  |✅            |
+| DELETE | /users/{user_id}/avatar          | Delete user avatar image                    |✅            |
+| POST   | /users/{user_id}/admin-reset-password | Admin-initiated password reset         |✅            |
+| PATCH  | /users/me/change-password        | User changes own password                   |✅            |
+| POST   | /users/password-reset/request    | Request password reset OTP via email        |✅            |
+| POST   | /users/password-reset/confirm    | Confirm password reset with OTP             |✅            |
+
+#### 📷 **User Avatar Management**
+
+User avatars are managed through the Storage Service integration. The workflow is designed to avoid 404 errors on the frontend:
+
+**Upload Avatar:**
+```bash
+POST /users/{user_id}/avatar
+Content-Type: multipart/form-data
+
+# Form data:
+avatar: [image file - JPG, PNG, GIF, BMP, WEBP]
+```
+- Maximum file size: 5 MB (configurable via `MAX_AVATAR_SIZE_MB`)
+- Supported formats: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.webp`
+- Access control: Only the user themselves can upload their avatar
+- Response includes `file_id` for tracking
+
+**Download Avatar (Frontend Integration):**
+```bash
+GET /users/{user_id}/avatar
+```
+
+**⚠️ Important for Frontend**: Before attempting to download an avatar, **check the `has_avatar` field** from the user object:
+```json
+GET /users/{user_id}
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "email": "user@example.com",
+  "has_avatar": true,  // ← Check this before downloading
+  ...
+}
+```
+
+**Recommended Frontend Pattern:**
+```javascript
+// 1. Fetch user data
+const user = await fetch('/users/{user_id}').then(r => r.json());
+
+// 2. Only download avatar if has_avatar is true
+if (user.has_avatar) {
+  const avatarUrl = '/users/{user_id}/avatar';
+  // Display avatar
+} else {
+  // Show default avatar placeholder
+}
+```
+
+This approach prevents unnecessary 404 requests when users don't have avatars uploaded.
+
+**Delete Avatar:**
+```bash
+DELETE /users/{user_id}/avatar
+```
+- Access control: Only the user themselves can delete their avatar
+- After deletion, `has_avatar` will be set to `false`
+
+**Storage Service Configuration:**
+- Avatars are stored with normalized `.png` extensions (browser reads `Content-Type` header, not extension)
+- Set `USE_STORAGE_SERVICE=false` to disable avatar features (for testing/development)
+- When disabled, all avatar endpoints return 503 Service Unavailable
+
+#### 🔑 **Password Management**
+
+The Identity Service provides secure password management with admin reset and user self-service capabilities.
+
+**Admin Password Reset (Phase 1):**
+```bash
+POST /users/{user_id}/admin-reset-password
+```
+- Generates a secure 12-character temporary password
+- Marks user as requiring password change on next login
+- Enforces multi-tenant isolation (admin and user must be in same company)
+- Requires Guardian 'update' permission on 'admin_password_reset' resource
+- Temporary password shown only once in response
+
+**Response Example:**
+```json
+{
+  "message": "Password reset successful",
+  "temporary_password": "aB3$xY9#kL2m",
+  "password_reset_required": true,
+  "note": "User must change password on next login. This is the only time the temporary password will be shown."
+}
+```
+
+**User Password Change:**
+```bash
+PATCH /users/me/change-password
+Content-Type: application/json
+
+{
+  "current_password": "OldPassword123",
+  "new_password": "NewSecurePassword456"
+}
+```
+- Requires current password verification
+- New password must be at least 8 characters
+- Clears `password_reset_required` flag automatically
+- Updates `last_password_change` timestamp
+- User can only change their own password
+
+**Password Reset Flow:**
+1. Admin calls `/users/{user_id}/admin-reset-password`
+2. System generates temporary password and sets `password_reset_required = true`
+3. Admin communicates temporary password to user (out of band)
+4. User logs in with temporary password
+5. User calls `/users/me/change-password` to set new password
+6. System clears `password_reset_required` flag
+
+**Security Features:**
+- Temporary passwords use cryptographically secure random generation (`secrets` module)
+- Passwords are hashed using werkzeug's secure password hashing (PBKDF2)
+- Multi-tenant isolation prevents cross-company password resets
+- All password operations are logged for audit trails
+- Timezone-aware timestamps (Python 3.12+ compatible)
+
+**Email-Based Password Reset (Phase 2):**
+
+Self-service password reset with OTP codes sent via email.
+
+**Request Password Reset:**
+```bash
+POST /users/password-reset/request
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Response (Always 200 OK):**
+```json
+{
+  "message": "If an account with this email exists, a password reset code has been sent."
+}
+```
+
+**Security Features:**
+- **Rate Limiting**: 50 requests/hour, 200/day per IP address
+- **Email Enumeration Protection**: Always returns 200 OK, never reveals if email exists
+- **OTP Expiration**: 15 minutes (configurable via `PASSWORD_RESET_OTP_TTL_MINUTES`)
+- **Attempt Limiting**: Maximum 3 verification attempts per OTP
+- **Automatic Invalidation**: Previous OTPs invalidated on new request
+- **IP Logging**: All requests logged with IP address for security monitoring
+
+**Confirm Password Reset:**
+```bash
+POST /users/password-reset/confirm
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "otp_code": "123456",
+  "new_password": "NewSecurePassword456"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "message": "Password reset successful"
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "message": "Invalid or expired OTP code"
+}
+```
+
+**Email Service Configuration:**
+
+To enable email-based password reset, configure these environment variables:
+
+```bash
+# Enable/disable email service
+USE_EMAIL_SERVICE=true
+
+# SMTP Configuration
+MAIL_SERVER=smtp.gmail.com          # Your SMTP server
+MAIL_PORT=587                        # SMTP port (587 for TLS, 465 for SSL)
+MAIL_USE_TLS=true                    # Use TLS encryption
+MAIL_USE_SSL=false                   # Use SSL encryption (mutually exclusive with TLS)
+MAIL_USERNAME=noreply@example.com    # SMTP username
+MAIL_PASSWORD=your-app-password      # SMTP password or app-specific password
+MAIL_DEFAULT_SENDER=noreply@waterfall-identity.com  # Default sender address
+MAIL_MAX_EMAILS=100                  # Max emails per connection (optional)
+
+# Rate Limiting Configuration
+RATELIMIT_STORAGE_URI=memory://      # Storage backend (memory:// or redis://url)
+RATELIMIT_STRATEGY=fixed-window      # Rate limit strategy
+
+# OTP Configuration
+PASSWORD_RESET_OTP_TTL_MINUTES=15    # OTP expiration time (default: 15 minutes)
+PASSWORD_RESET_OTP_MAX_ATTEMPTS=3    # Max verification attempts (default: 3)
+```
+
+**Gmail Example Configuration:**
+```bash
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-specific-password  # Create at https://myaccount.google.com/apppasswords
+```
+
+**Email Template:**
+
+The password reset email includes:
+- Professional HTML formatting with CSS styling
+- Plain text fallback for email clients that don't support HTML
+- User's first name personalization
+- 6-digit OTP code prominently displayed
+- 15-minute expiration notice
+- Security warning about not sharing the code
+
+**Password Reset Flow (Phase 2):**
+1. User requests password reset at `/users/password-reset/request`
+2. System checks if email exists (never revealed in response)
+3. If user exists:
+   - Generate 6-digit OTP code
+   - Hash and store OTP with 15-minute expiration
+   - Send OTP via email to user
+   - Invalidate any previous OTPs
+4. Always return generic success message (prevents email enumeration)
+5. User receives email with OTP code
+6. User submits OTP and new password at `/users/password-reset/confirm`
+7. System validates:
+   - OTP exists and matches hash
+   - OTP not expired (< 15 minutes old)
+   - OTP not already used
+   - Attempts < 3
+   - New password >= 8 characters
+8. If valid:
+   - Update password
+   - Mark OTP as used
+   - Clear `password_reset_required` flag
+   - Update `last_password_change` timestamp
+
+**Database Schema:**
+
+Phase 2 adds the `password_reset_otp` table:
+```sql
+CREATE TABLE password_reset_otp (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) REFERENCES user(id) ON DELETE CASCADE,
+    otp_code VARCHAR(255) NOT NULL,  -- Hashed with werkzeug
+    attempts INTEGER DEFAULT 0,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL,
+    used_at DATETIME NULL
+);
+```
+
+**Testing Without Email Service:**
+
+When `USE_EMAIL_SERVICE=false`:
+- Password reset endpoints still work
+- OTP generation and validation work normally
+- Emails are not sent (logged instead)
+- Useful for development and testing
 
 ### 🎭 **User Roles Management**
 
@@ -463,6 +817,11 @@ For commercial use or support, contact: **bengeek06@gmail.com**
 
 ## Contributing
 
-See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for guidelines.
+We welcome contributions! Please read our contribution guidelines:
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow, coding standards, and pull request process
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community guidelines and expectations
+
+For the overall Waterfall project workflow and branch strategy, see the [main CONTRIBUTING.md](https://github.com/bengeek06/waterfall/blob/main/CONTRIBUTING.md) at the repository root.
 
 ---

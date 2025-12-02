@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 module: position
 
@@ -10,17 +18,133 @@ within a specific organization unit. The resources use Marshmallow schemas for
 validation and serialization, and handle database errors gracefully.
 """
 
-from flask import request
+from flask import g, request
+from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from flask_restful import Resource
+from sqlalchemy.orm import joinedload
 
-from app.models import db
+from app.constants import (
+    LOG_DATABASE_ERROR,
+    LOG_INTEGRITY_ERROR,
+    LOG_VALIDATION_ERROR,
+    MSG_DATABASE_ERROR,
+    MSG_INTEGRITY_ERROR,
+    MSG_POSITION_NOT_FOUND,
+    MSG_VALIDATION_ERROR,
+)
 from app.logger import logger
-from app.models.position import Position
-from app.schemas.position_schema import PositionSchema
+from app.models import db
 from app.models.organization_unit import OrganizationUnit
-from app.utils import require_jwt_auth, check_access_required
+from app.models.position import Position
+from app.schemas.organization_unit_schema import OrganizationUnitNestedSchema
+from app.schemas.position_schema import PositionSchema
+from app.utils import check_access_required, parse_expand, require_jwt_auth
+
+
+# Allowed expansions for position endpoints
+POSITION_ALLOWED_EXPANSIONS = {"organization_unit"}
+
+
+def _empty_paginated_response():
+    """Return an empty paginated response."""
+    return {
+        "data": [],
+        "pagination": {
+            "page": 1,
+            "limit": 50,
+            "total": 0,
+            "pages": 0,
+            "has_next": False,
+            "has_prev": False,
+        },
+    }
+
+
+def _get_pagination_params():
+    """Extract and validate pagination parameters from request."""
+    page = max(1, request.args.get("page", 1, type=int))
+    limit = min(max(1, request.args.get("limit", 50, type=int)), 1000)
+    return page, limit
+
+
+def _apply_sorting(query, model, extra_fields=None):
+    """Apply sorting to query based on request parameters."""
+    allowed_sorts = ["created_at", "updated_at"] + (extra_fields or [])
+    sort_field = request.args.get("sort", "created_at")
+    if sort_field not in allowed_sorts:
+        sort_field = "created_at"
+    sort_order = request.args.get("order", "asc")
+    column = getattr(model, sort_field)
+    return query.order_by(column.desc() if sort_order == "desc" else column.asc())
+
+
+def _build_pagination_meta(paginated, page, limit):
+    """Build pagination metadata dictionary."""
+    return {
+        "page": page,
+        "limit": limit,
+        "total": paginated.total,
+        "pages": paginated.pages,
+        "has_next": paginated.has_next,
+        "has_prev": paginated.has_prev,
+    }
+
+
+def _apply_position_filters(query, id__in, title, search):
+    """Apply filters to position query."""
+    if id__in is not None:
+        ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
+        if ids:
+            query = query.filter(Position.id.in_(ids))
+    if title:
+        query = query.filter_by(title=title)
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Position.title.ilike(search_pattern),
+                Position.description.ilike(search_pattern),
+            )
+        )
+    return query
+
+
+def _apply_position_expansions(data, items, expansions):
+    """Apply expansion data to serialized positions."""
+    if "organization_unit" not in expansions:
+        return
+    org_unit_schema = OrganizationUnitNestedSchema()
+    for i, position in enumerate(items):
+        if position.organization_unit:
+            data[i]["organization_unit"] = org_unit_schema.dump(
+                position.organization_unit
+            )
+        else:
+            data[i]["organization_unit"] = None
+
+
+def validate_organization_unit_ownership(org_unit, org_unit_id):
+    """
+    Validate that an organization unit belongs to the authenticated company.
+
+    Args:
+        org_unit: The OrganizationUnit instance to validate
+        org_unit_id (str): The organization unit ID for logging
+
+    Returns:
+        tuple: (error_dict, status_code) if validation fails, None otherwise
+    """
+    if org_unit.company_id != g.company_id:
+        logger.warning(
+            "Organization unit %s does not belong to company %s",
+            org_unit_id,
+            g.company_id,
+        )
+        return {
+            "message": "Organization unit does not belong to your company"
+        }, 403
+    return None
 
 
 class PositionListResource(Resource):
@@ -36,25 +160,68 @@ class PositionListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self):
         """
-        Retrieve all positions.
+        Retrieve all positions with optional filtering, pagination, and sorting.
+
+        Query Parameters:
+            id__in (str, optional): Comma-separated list of UUIDs to filter by
+            title (str, optional): Filter by exact position title match
+            search (str, optional): Search in title and description
+            page (int, optional): Page number (default: 1, min: 1)
+            limit (int, optional): Items per page (default: 50, max: 1000)
+            sort (str, optional): Field to sort by (created_at, updated_at, title)
+            order (str, optional): Sort order (asc, desc, default: asc)
+            expand (str, optional): Comma-separated list of relations to expand
+                                    (e.g., organization_unit)
 
         Returns:
-            tuple: A tuple containing a list of serialized positions and the
-                   HTTP status code 200.
+            tuple: Paginated response with data and metadata, HTTP 200
         """
         try:
-            positions = Position.query.all()
+            # Parse expand parameter and get filters
+            expansions = parse_expand(
+                request.args.get("expand"), POSITION_ALLOWED_EXPANSIONS
+            )
+            id__in = request.args.get("id__in")
+
+            # Handle empty id__in filter
+            if id__in is not None and id__in.strip() == "":
+                return _empty_paginated_response(), 200
+
+            # Build query with eager loading
+            query = Position.query
+            if "organization_unit" in expansions:
+                query = query.options(joinedload(Position.organization_unit))
+
+            # Apply filters
+            query = _apply_position_filters(
+                query, id__in, request.args.get("title"), request.args.get("search")
+            )
+
+            # Get pagination and sorting params
+            page, limit = _get_pagination_params()
+            query = _apply_sorting(query, Position, ["title"])
+
+            # Execute pagination
+            paginated = query.paginate(page=page, per_page=limit, error_out=False)
+
+            # Serialize and apply expansions
             schema = PositionSchema(many=True)
-            return schema.dump(positions), 200
+            data = schema.dump(paginated.items)
+            _apply_position_expansions(data, paginated.items, expansions)
+
+            return {
+                "data": data,
+                "pagination": _build_pagination_meta(paginated, page, limit),
+            }, 200
         except SQLAlchemyError as e:
             logger.error("Error fetching positions: %s", str(e))
             return {"message": "Error fetching positions"}, 500
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self):
         """
         Create a new position.
@@ -78,29 +245,38 @@ class PositionListResource(Resource):
 
         org_unit = OrganizationUnit.get_by_id(org_unit_id)
         if not org_unit:
-            logger.warning("Organization unit with ID %s not found", org_unit_id)
+            logger.warning(
+                "Organization unit with ID %s not found", org_unit_id
+            )
             return {"message": "Organization unit not found"}, 404
+
+        # Valider que l'organization_unit appartient à la company du JWT
+        validation_error = validate_organization_unit_ownership(
+            org_unit, org_unit_id
+        )
+        if validation_error:
+            return validation_error
 
         position_schema = PositionSchema(session=db.session)
 
         try:
             position = position_schema.load(json_data)
-            # Renseigne company_id sur l'instance après le load
-            position.company_id = org_unit.company_id
+            # Assigner company_id depuis JWT (pattern standard)
+            position.company_id = g.company_id
             db.session.add(position)
             db.session.commit()
             return position_schema.dump(position), 201
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
 
 class PositionResource(Resource):
@@ -122,7 +298,7 @@ class PositionResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, position_id):
         """
         Retrieve a position by ID.
@@ -130,22 +306,47 @@ class PositionResource(Resource):
         Args:
             position_id (str): The ID of the position to retrieve.
 
+        Query Parameters:
+            expand (str, optional): Comma-separated list of relations to expand
+                                    (e.g., organization_unit)
+
         Returns:
             tuple: The serialized position and HTTP status code 200 on success.
                    HTTP status code 404 if the position is not found.
         """
         logger.info("Retrieving position with ID: %s", position_id)
 
-        position = Position.get_by_id(position_id)
+        # Parse expand parameter
+        expand_param = request.args.get("expand")
+        expansions = parse_expand(expand_param, POSITION_ALLOWED_EXPANSIONS)
+
+        # Build query with optional eager loading
+        query = Position.query.filter_by(id=position_id)
+        if "organization_unit" in expansions:
+            query = query.options(joinedload(Position.organization_unit))
+
+        position = query.first()
         if not position:
             logger.warning("Position with ID %s not found", position_id)
-            return {"message": "Position not found"}, 404
+            return {"message": MSG_POSITION_NOT_FOUND}, 404
 
         schema = PositionSchema(session=db.session)
-        return schema.dump(position), 200
+        data = schema.dump(position)
+
+        # Expand organization_unit if requested
+        if "organization_unit" in expansions:
+            org_unit_schema = OrganizationUnitNestedSchema()
+            if position.organization_unit:
+                data["organization_unit"] = org_unit_schema.dump(
+                    position.organization_unit
+                )
+            else:
+                data["organization_unit"] = None
+
+        return data, 200
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def put(self, position_id):
         """
         Update an existing position with the provided data.
@@ -170,25 +371,28 @@ class PositionResource(Resource):
             position = Position.get_by_id(position_id)
             if not position:
                 logger.warning("Position with ID %s not found", position_id)
-                return {"message": "Position not found"}, 404
+                return {"message": MSG_POSITION_NOT_FOUND}, 404
 
             position = position_schema.load(json_data, instance=position)
             db.session.commit()
             return position_schema.dump(position), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            return {
+                "message": MSG_VALIDATION_ERROR,
+                "errors": err.messages,
+            }, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("update")
+    @check_access_required("UPDATE")
     def patch(self, position_id):
         """
         Partially update an existing position with the provided data.
@@ -213,25 +417,28 @@ class PositionResource(Resource):
             position = Position.get_by_id(position_id)
             if not position:
                 logger.warning("Position with ID %s not found", position_id)
-                return {"message": "Position not found"}, 404
+                return {"message": MSG_POSITION_NOT_FOUND}, 404
 
             position = position_schema.load(json_data, instance=position)
             db.session.commit()
             return position_schema.dump(position), 200
         except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            return {
+                "message": MSG_VALIDATION_ERROR,
+                "errors": err.messages,
+            }, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, position_id):
         """
         Delete a position by ID.
@@ -246,7 +453,7 @@ class PositionResource(Resource):
         position = Position.get_by_id(position_id)
         if not position:
             logger.warning("Position with ID %s not found", position_id)
-            return {"message": "Position not found"}, 404
+            return {"message": MSG_POSITION_NOT_FOUND}, 404
 
         try:
             db.session.delete(position)
@@ -254,8 +461,8 @@ class PositionResource(Resource):
             return {"message": "Position deleted"}, 204
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500
 
 
 class OrganizationUnitPositionsResource(Resource):
@@ -271,7 +478,7 @@ class OrganizationUnitPositionsResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self, unit_id):
         """
         List all positions for a given organization unit.
@@ -282,12 +489,14 @@ class OrganizationUnitPositionsResource(Resource):
         Returns:
             tuple: List of serialized positions and HTTP status code 200.
         """
-        positions = Position.get_by_organization_unit_id(organization_unit_id=unit_id)
+        positions = Position.get_by_organization_unit_id(
+            organization_unit_id=unit_id
+        )
         schema = PositionSchema(many=True)
         return schema.dump(positions), 200
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self, unit_id):
         """
         Create a new position for a given organization unit.
@@ -304,7 +513,14 @@ class OrganizationUnitPositionsResource(Resource):
         org_unit = OrganizationUnit.get_by_id(unit_id)
         if not org_unit:
             logger.warning("Organization unit with ID %s not found", unit_id)
-            return {"error": "Organization unit not found"}, 404
+            return {"message": "Organization unit not found"}, 404
+
+        # Valider que l'organization_unit appartient à la company du JWT
+        validation_error = validate_organization_unit_ownership(
+            org_unit, unit_id
+        )
+        if validation_error:
+            return validation_error
 
         json_data = request.get_json()
         # Renseigne automatiquement organization_unit_id
@@ -312,19 +528,19 @@ class OrganizationUnitPositionsResource(Resource):
         position_schema = PositionSchema(session=db.session)
         try:
             position = position_schema.load(json_data)
-            # Renseigne company_id sur l'instance après le load
-            position.company_id = org_unit.company_id
+            # Assigner company_id depuis JWT (pattern standard)
+            position.company_id = g.company_id
             db.session.add(position)
             db.session.commit()
             return position_schema.dump(position), 201
         except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+            logger.error(LOG_VALIDATION_ERROR, e.messages)
+            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error("Integrity error: %s", str(e.orig))
-            return {"message": "Integrity error"}, 400
+            logger.error(LOG_INTEGRITY_ERROR, str(e.orig))
+            return {"message": MSG_INTEGRITY_ERROR}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+            logger.error(LOG_DATABASE_ERROR, str(e))
+            return {"message": MSG_DATABASE_ERROR}, 500

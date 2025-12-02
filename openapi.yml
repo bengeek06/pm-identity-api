@@ -56,9 +56,19 @@ components:
           maxLength: 100
           description: Name of the customer
         company_id:
-          type: integer
-          minimum: 1
-          description: Associated company identifier (integer)
+          type: string
+          format: uuid
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
+        logo_file_id:
+          type: string
+          maxLength: 36
+          readOnly: true
+          description: File ID reference from Storage Service for customer logo
+        has_logo:
+          type: boolean
+          readOnly: true
+          description: Indicates if the customer has a logo uploaded
         email:
           type: string
           format: email
@@ -91,16 +101,11 @@ components:
       type: object
       required:
         - name
-        - company_id
       properties:
         name:
           type: string
           maxLength: 100
           description: Name of the customer
-        company_id:
-          type: integer
-          minimum: 1
-          description: Associated company identifier (integer)
         email:
           type: string
           format: email
@@ -126,10 +131,6 @@ components:
           type: string
           maxLength: 100
           description: Name of the customer
-        company_id:
-          type: integer
-          minimum: 1
-          description: Associated company identifier (integer)
         email:
           type: string
           format: email
@@ -165,10 +166,20 @@ components:
         company_id:
           type: string
           format: uuid
-          description: Associated company identifier
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
+        logo_file_id:
+          type: string
+          maxLength: 36
+          readOnly: true
+          description: File ID reference from Storage Service for subcontractor logo
+        has_logo:
+          type: boolean
+          readOnly: true
+          description: Indicates if the subcontractor has a logo uploaded
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the subcontractor
         contact_person:
           type: string
@@ -185,7 +196,7 @@ components:
           description: Email address of the subcontractor
         address:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Address of the subcontractor
         created_at:
           type: string
@@ -202,19 +213,14 @@ components:
       type: object
       required:
         - name
-        - company_id
       properties:
         name:
           type: string
           maxLength: 100
           description: Name of the subcontractor
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the subcontractor
         contact_person:
           type: string
@@ -231,7 +237,7 @@ components:
           description: Email address of the subcontractor
         address:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Address of the subcontractor
 
     SubcontractorUpdate:
@@ -241,13 +247,9 @@ components:
           type: string
           maxLength: 100
           description: Name of the subcontractor
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the subcontractor
         contact_person:
           type: string
@@ -264,7 +266,7 @@ components:
           description: Email address of the subcontractor
         address:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Address of the subcontractor
     Position:
       type: object
@@ -284,12 +286,13 @@ components:
           description: Title or name of the position
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the position
         company_id:
           type: string
           format: uuid
-          description: Associated company identifier
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
         organization_unit_id:
           type: string
           format: uuid
@@ -321,7 +324,7 @@ components:
           description: Title or name of the position
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the position
         organization_unit_id:
           type: string
@@ -343,7 +346,7 @@ components:
           description: Title or name of the position
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the position
         level:
           type: integer
@@ -359,16 +362,12 @@ components:
           description: Title or name of the position
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the position
         organization_unit_id:
           type: string
           format: uuid
           description: Organization unit identifier the position belongs to
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         level:
           type: integer
           minimum: 0
@@ -391,10 +390,11 @@ components:
         company_id:
           type: string
           format: uuid
-          description: Associated company identifier
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the organization unit
         parent_id:
           type: string
@@ -424,19 +424,14 @@ components:
       type: object
       required:
         - name
-        - company_id
       properties:
         name:
           type: string
           maxLength: 100
           description: Name of the organization unit
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the organization unit
         parent_id:
           type: string
@@ -451,13 +446,9 @@ components:
           type: string
           maxLength: 100
           description: Name of the organization unit
-        company_id:
-          type: string
-          format: uuid
-          description: Associated company identifier
         description:
           type: string
-          maxLength: 200
+          maxLength: 255
           description: Optional description of the organization unit
         parent_id:
           type: string
@@ -480,13 +471,17 @@ components:
           description: Name of the company
         description:
           type: string
-          maxLength: 200
-          description: Optional description of the company
-        logo_url:
-          type: string
-          format: uri
           maxLength: 255
-          description: URL to the company's logo
+          description: Optional description of the company
+        logo_file_id:
+          type: string
+          maxLength: 36
+          readOnly: true
+          description: File ID reference from Storage Service for company logo
+        has_logo:
+          type: boolean
+          readOnly: true
+          description: Indicates if the company has a logo uploaded
         website:
           type: string
           format: uri
@@ -539,13 +534,8 @@ components:
           description: Name of the company
         description:
           type: string
-          maxLength: 200
-          description: Optional description of the company
-        logo_url:
-          type: string
-          format: uri
           maxLength: 255
-          description: URL to the company's logo
+          description: Optional description of the company
         website:
           type: string
           format: uri
@@ -586,13 +576,8 @@ components:
           description: Name of the company
         description:
           type: string
-          maxLength: 200
-          description: Optional description of the company
-        logo_url:
-          type: string
-          format: uri
           maxLength: 255
-          description: URL to the company's logo
+          description: Optional description of the company
         website:
           type: string
           format: uri
@@ -702,7 +687,7 @@ components:
       type: object
       required:
         - email
-        - hashed_password
+        - company_id
       properties:
         id:
           type: string
@@ -731,11 +716,16 @@ components:
           type: string
           maxLength: 50
           description: Phone number
-        avatar_url:
+        avatar_file_id:
           type: string
-          format: uri
-          maxLength: 255
-          description: Avatar URL
+          format: uuid
+          readOnly: true
+          description: Storage Service file_id reference for user avatar
+        has_avatar:
+          type: boolean
+          default: false
+          readOnly: true
+          description: Whether the user has an avatar uploaded
         is_active:
           type: boolean
           default: true
@@ -751,7 +741,8 @@ components:
         company_id:
           type: string
           format: uuid
-          description: Associated company identifier
+          readOnly: true
+          description: Associated company identifier (auto-assigned from JWT)
         position_id:
           type: string
           format: uuid
@@ -770,6 +761,16 @@ components:
           type: string
           enum: [en, fr]
           description: User language (en, fr)
+        password_reset_required:
+          type: boolean
+          default: false
+          readOnly: true
+          description: Indicates if user must change password on next login
+        last_password_change:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp of last password change
 
     UserCreate:
       type: object
@@ -797,11 +798,6 @@ components:
           type: string
           maxLength: 50
           description: Phone number
-        avatar_url:
-          type: string
-          format: uri
-          maxLength: 255
-          description: Avatar URL
         is_active:
           type: boolean
           default: true
@@ -842,11 +838,16 @@ components:
           type: string
           maxLength: 50
           description: Phone number
-        avatar_url:
+        avatar_file_id:
           type: string
-          format: uri
-          maxLength: 255
-          description: Avatar URL
+          format: uuid
+          readOnly: true
+          description: Storage Service file_id reference for user avatar
+        has_avatar:
+          type: boolean
+          readOnly: true
+          default: false
+          description: Whether the user has an avatar uploaded
         is_active:
           type: boolean
           description: Indicates if the user account is active
@@ -862,19 +863,92 @@ components:
           enum: [en, fr]
           description: User language (en, fr)
 
-    UserRole:
+    Role:
       type: object
+      description: Role object enriched with details from Guardian Service
       properties:
         id:
           type: string
-          description: Unique identifier of the user role
+          description: Unique identifier of the role (from Guardian Service)
+        name:
+          type: string
+          description: Name of the role
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the role
+        company_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Company identifier for multi-tenant isolation (null for global roles)
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the role was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the role was last updated
+
+    UserRole:
+      type: object
+      description: |
+        Enriched UserRole object combining junction table metadata with full role details.
+        
+        As of Issue #73, this schema now includes the nested 'role' object with complete
+        role information from Guardian Service, enabling proper display and deletion operations.
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the user role junction (use this for DELETE operations)
+          example: "ur-12345"
         user_id:
           type: string
           format: uuid
           description: User identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
         role_id:
           type: string
-          description: Role identifier (managed by Guardian Service)
+          description: Role identifier (from Guardian Service)
+          example: "role-001"
+        created_at:
+          type: string
+          format: date-time
+          description: When the role was assigned to the user
+          example: "2025-01-15T10:30:00Z"
+        role:
+          type: object
+          description: Full role details from Guardian Service
+          properties:
+            id:
+              type: string
+              description: Role identifier
+              example: "role-001"
+            name:
+              type: string
+              description: Role name
+              example: "Administrator"
+            description:
+              type: string
+              nullable: true
+              description: Role description
+              example: "Full system access"
+            company_id:
+              type: string
+              format: uuid
+              description: Company identifier for multi-tenant isolation
+              example: "987fcdeb-51a2-43d1-9f12-345678901234"
+            created_at:
+              type: string
+              format: date-time
+              description: When the role was created
+              example: "2025-01-10T08:00:00Z"
+            updated_at:
+              type: string
+              format: date-time
+              description: When the role was last updated
+              example: "2025-01-10T08:00:00Z"
 
     UserRoleAssignment:
       type: object
@@ -918,7 +992,7 @@ components:
         - id
         - service
         - resource_name
-        - operations
+        - operation
       properties:
         id:
           type: string
@@ -934,11 +1008,10 @@ components:
           type: string
           nullable: true
           description: Optional description of the permission
-        operations:
-          type: array
-          items:
-            type: string
-          description: List of operations allowed by this permission
+        operation:
+          type: string
+          enum: [LIST, CREATE, READ, UPDATE, DELETE]
+          description: Operation allowed by this permission (SINGULAR UPPERCASE as per Guardian spec)
         company_id:
           type: string
           format: uuid
@@ -967,6 +1040,33 @@ components:
           type: string
           description: Password to verify
 
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          description: Number of items per page
+          example: 50
+        total:
+          type: integer
+          description: Total number of items
+          example: 150
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 3
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        has_prev:
+          type: boolean
+          description: Whether there is a previous page
+          example: false
 
   responses:
     CustomerCreated:
@@ -977,13 +1077,18 @@ components:
             $ref: '#/components/schemas/Customer'
 
     CustomerList:
-      description: List of customers
+      description: Paginated list of customers
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Customer'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     CustomerDetails:
       description: Customer details
@@ -1017,13 +1122,18 @@ components:
             $ref: '#/components/schemas/Position'
 
     PositionList:
-      description: List of positions
+      description: Paginated list of positions
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Position'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     PositionDetails:
       description: Position details
@@ -1057,13 +1167,18 @@ components:
             $ref: '#/components/schemas/OrganizationUnit'
 
     OrganizationUnitList:
-      description: List of organization units
+      description: Paginated list of organization units
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/OrganizationUnit'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationUnit'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     OrganizationUnitDetails:
       description: Organization unit details
@@ -1097,13 +1212,18 @@ components:
             $ref: '#/components/schemas/Company'
 
     CompanyList:
-      description: List of companies
+      description: Paginated list of companies
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Company'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Company'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     CompanyDetails:
       description: Company details
@@ -1191,13 +1311,18 @@ components:
             $ref: '#/components/schemas/Subcontractor'
 
     SubcontractorList:
-      description: List of subcontractors
+      description: Paginated list of subcontractors
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Subcontractor'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subcontractor'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     SubcontractorDetails:
       description: Subcontractor details
@@ -1232,13 +1357,18 @@ components:
             $ref: '#/components/schemas/User'
 
     UserList:
-      description: List of users
+      description: Paginated list of users
       content:
         application/json:
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/User'
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              pagination:
+                $ref: '#/components/schemas/PaginationMetadata'
 
     UserDetails:
       description: User details
@@ -1266,7 +1396,16 @@ components:
                 example: "User deleted successfully"
 
     UserRoles:
-      description: User roles list
+      description: |
+        User roles list with enriched role objects.
+        
+        As of Issue #73, this endpoint returns enriched UserRole objects that include:
+        - Junction metadata (id, user_id, role_id, created_at) for proper DELETE operations
+        - Nested role details (name, description) from Guardian Service for display
+        
+        This structure allows the frontend to:
+        1. Display role names using role.name
+        2. Delete roles correctly using the junction id
       content:
         application/json:
           schema:
@@ -1276,6 +1415,30 @@ components:
                 type: array
                 items:
                   $ref: '#/components/schemas/UserRole'
+          example:
+            roles:
+              - id: "ur-001"
+                user_id: "550e8400-e29b-41d4-a716-446655440000"
+                role_id: "role-001"
+                created_at: "2024-01-15T10:30:00Z"
+                role:
+                  id: "role-001"
+                  name: "companyadmin"
+                  description: "Company administrator with full access to company resources"
+                  company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+              - id: "ur-002"
+                user_id: "550e8400-e29b-41d4-a716-446655440000"
+                role_id: "role-002"
+                created_at: "2024-02-10T14:20:00Z"
+                role:
+                  id: "role-002"
+                  name: "projectmanager"
+                  description: "Project manager with access to project management features"
+                  company_id: "987fcdeb-51a2-43d1-9f12-345678901234"
+                  created_at: "2024-02-10T14:20:00Z"
+                  updated_at: "2024-02-10T14:20:00Z"
 
     UserRoleCreated:
       description: Role assigned to user successfully
@@ -1302,7 +1465,60 @@ paths:
     get:
       tags: [Customers Management]
       summary: List all customers
-      description: Returns the list of all customers
+      description: Returns the list of all customers with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only customers with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact customer name match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in name, email, and contact_person (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, name]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
       responses:
         '200':
           $ref: '#/components/responses/CustomerList'
@@ -1316,7 +1532,9 @@ paths:
     post:
       tags: [Customers Management]
       summary: Create a new customer
-      description: Creates a new customer with the provided data
+      description: |
+        Creates a new customer with the provided data.
+        The company_id is automatically extracted from the JWT token and cannot be provided in the request body.
       requestBody:
         required: true
         content:
@@ -1429,11 +1647,193 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+
+  /customers/{customer_id}/logo:
+    parameters:
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the customer
+
+    post:
+      tags: [Customers Management]
+      summary: Upload customer logo
+      description: Upload a logo image for the customer. The logo is stored in the Storage Service and a file_id reference is saved.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - logo
+              properties:
+                logo:
+                  type: string
+                  format: binary
+                  description: Logo image file (PNG, JPG, JPEG)
+      responses:
+        '201':
+          description: Logo uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logo uploaded successfully
+                  logo_file_id:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  has_logo:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot manage other company's customer logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          description: Service Unavailable - Storage Service disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Customers Management]
+      summary: Get customer logo
+      description: Retrieve the customer logo image from Storage Service
+      responses:
+        '200':
+          description: Logo image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Customer not found or has no logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Customers Management]
+      summary: Delete customer logo
+      description: Remove the customer logo from Storage Service and clear the reference
+      responses:
+        '204':
+          description: Logo deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot delete other company's customer logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Customer not found or has no logo to delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /positions:
     get:
       tags: [Positions]
       summary: List all positions
-      description: Returns the list of all positions
+      description: Returns the list of all positions with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only positions with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+        - name: title
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact position title match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in title and description (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, title]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [organization_unit]
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: organization_unit
+          example: "organization_unit"
       responses:
         '200':
           $ref: '#/components/responses/PositionList'
@@ -1447,7 +1847,9 @@ paths:
     post:
       tags: [Positions]
       summary: Create a new position
-      description: Creates a new position with the provided data; company_id is inferred from the organization unit
+      description: |
+        Creates a new position with the provided data.
+        The company_id is automatically extracted from the JWT token and validated against the organization unit's company.
       requestBody:
         required: true
         content:
@@ -1484,6 +1886,17 @@ paths:
       tags: [Positions]
       summary: Get a position by ID
       description: Returns details of a specific position
+      parameters:
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [organization_unit]
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: organization_unit
+          example: "organization_unit"
       responses:
         '200':
           $ref: '#/components/responses/PositionDetails'
@@ -1593,7 +2006,9 @@ paths:
     post:
       tags: [Positions]
       summary: Create a position for an organization unit
-      description: Creates a new position within the specified organization unit; company_id is inferred from the unit
+      description: |
+        Creates a new position within the specified organization unit.
+        The company_id is automatically extracted from the JWT token and validated against the organization unit's company.
       requestBody:
         required: true
         content:
@@ -1619,7 +2034,69 @@ paths:
     get:
       tags: [Organizations]
       summary: List all organization units
-      description: Returns the list of all organization units
+      description: Returns the list of all organization units with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only organization units with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact organization unit name match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in name and description (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, name, level]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: positions, parent, children
+          example: "positions,parent,children"
       responses:
         '200':
           $ref: '#/components/responses/OrganizationUnitList'
@@ -1633,7 +2110,9 @@ paths:
     post:
       tags: [Organizations]
       summary: Create a new organization unit
-      description: Creates a new organization unit with the provided data
+      description: |
+        Creates a new organization unit with the provided data.
+        The company_id is automatically extracted from the JWT token and cannot be provided in the request body.
       requestBody:
         required: true
         content:
@@ -1668,6 +2147,16 @@ paths:
       tags: [Organizations]
       summary: Get an organization unit by ID
       description: Returns details of a specific organization unit
+      parameters:
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related resources to include in the response.
+            Available expansions: positions, parent, children
+          example: "positions,parent,children"
       responses:
         '200':
           $ref: '#/components/responses/OrganizationUnitDetails'
@@ -1777,7 +2266,60 @@ paths:
     get:
       tags: [Companies]
       summary: List all companies
-      description: Returns the list of all companies
+      description: Returns the list of all companies with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only companies with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact company name match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in name and description (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, name]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
       responses:
         '200':
           $ref: '#/components/responses/CompanyList'
@@ -1905,6 +2447,125 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+
+  /companies/{company_id}/logo:
+    parameters:
+      - name: company_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the company
+
+    post:
+      tags: [Companies]
+      summary: Upload company logo
+      description: Upload a logo image for the company. The logo is stored in the Storage Service and a file_id reference is saved.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - logo
+              properties:
+                logo:
+                  type: string
+                  format: binary
+                  description: Logo image file (PNG, JPG, JPEG)
+      responses:
+        '201':
+          description: Logo uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logo uploaded successfully
+                  logo_file_id:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  has_logo:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot manage other company's logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          description: Service Unavailable - Storage Service disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Companies]
+      summary: Get company logo
+      description: Retrieve the company logo image from Storage Service
+      responses:
+        '200':
+          description: Logo image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Company not found or has no logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Companies]
+      summary: Delete company logo
+      description: Remove the company logo from Storage Service and clear the reference
+      responses:
+        '204':
+          description: Logo deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot delete other company's logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Company not found or has no logo to delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /health:
     get:
       tags: [System]
@@ -1977,22 +2638,138 @@ paths:
 
     post:
       tags: [System]
-      summary: Initialize database with default permissions
-      description: Initialize the database with default permissions if not already done
+      summary: Initialize database with company and admin user
+      description: |
+        Initialize the database with a company, default organization unit, default position, and admin user.
+        
+        This endpoint is intended to be called only once on a fresh database.
+        It creates all entities atomically in a single transaction:
+        1. Company (from request body)
+        2. Default organization unit (auto-created with name "default organization")
+        3. Default position (auto-created with title "Administrator")
+        4. Admin user (from request body, linked to the position)
+        
+        The endpoint will return 403 if the database is already initialized (contains any company or user).
       security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - company
+                - user
+              properties:
+                company:
+                  $ref: '#/components/schemas/CompanyCreate'
+                user:
+                  allOf:
+                    - $ref: '#/components/schemas/UserCreate'
+                    - type: object
+                      required:
+                        - password
+                      properties:
+                        password:
+                          type: string
+                          description: Plain password (will be hashed automatically)
+                          minLength: 8
+            example:
+              company:
+                name: "ACME Corporation"
+                email: "contact@acme.com"
+                phone_number: "1234567890"
+                address: "123 Main Street"
+                city: "New York"
+                postal_code: "10001"
+                country: "USA"
+              user:
+                email: "admin@acme.com"
+                password: "SecurePassword123!"
+                first_name: "John"
+                last_name: "Doe"
+                is_active: true
+                is_verified: true
       responses:
-        '200':
+        '201':
           description: Database initialized successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InitDbResponse'
-        '409':
+                type: object
+                properties:
+                  company:
+                    $ref: '#/components/schemas/Company'
+                  organization_unit:
+                    $ref: '#/components/schemas/OrganizationUnit'
+                  position:
+                    $ref: '#/components/schemas/Position'
+                  user:
+                    $ref: '#/components/schemas/User'
+              example:
+                company:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  name: "ACME Corporation"
+                  email: "contact@acme.com"
+                  phone_number: "1234567890"
+                  address: "123 Main Street"
+                  city: "New York"
+                  postal_code: "10001"
+                  country: "USA"
+                  has_logo: false
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+                organization_unit:
+                  id: "660e8400-e29b-41d4-a716-446655440001"
+                  name: "default organization"
+                  company_id: "550e8400-e29b-41d4-a716-446655440000"
+                  path: "/default organization"
+                  level: 0
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+                position:
+                  id: "770e8400-e29b-41d4-a716-446655440002"
+                  title: "Administrator"
+                  company_id: "550e8400-e29b-41d4-a716-446655440000"
+                  organization_unit_id: "660e8400-e29b-41d4-a716-446655440001"
+                  level: 0
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+                user:
+                  id: "880e8400-e29b-41d4-a716-446655440003"
+                  email: "admin@acme.com"
+                  first_name: "John"
+                  last_name: "Doe"
+                  company_id: "550e8400-e29b-41d4-a716-446655440000"
+                  position_id: "770e8400-e29b-41d4-a716-446655440002"
+                  is_active: true
+                  is_verified: true
+                  has_avatar: false
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+        '400':
+          description: Validation error or invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_fields:
+                  value:
+                    message: "'company' and 'user' data are required."
+                validation_error:
+                  value:
+                    message: "Validation error"
+                    errors:
+                      password: ["Missing data for required field."]
+        '403':
           description: Database already initialized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "Identity already initialized"
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -2000,7 +2777,71 @@ paths:
     get:
       tags: [Users]
       summary: List all users
-      description: Returns the list of all users for the authenticated company
+      description: Returns the list of all users for the authenticated company with optional filtering, search, pagination, sorting, and expansion of related entities
+      parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only users with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+            format: email
+          description: Filter by exact email match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in email, first_name, and last_name (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, email]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related entities to include inline in the response.
+            Supported values: `position`.
+            Unknown values are silently ignored.
+          example: "position"
       responses:
         '200':
           $ref: '#/components/responses/UserList'
@@ -2014,7 +2855,9 @@ paths:
     post:
       tags: [Users]
       summary: Create a new user
-      description: Creates a new user with the provided data
+      description: |
+        Creates a new user with the provided data.
+        The company_id is automatically extracted from the JWT token and cannot be provided in the request body.
       requestBody:
         required: true
         content:
@@ -2048,7 +2891,18 @@ paths:
     get:
       tags: [Users]
       summary: Get a user by ID
-      description: Returns details of a specific user
+      description: Returns details of a specific user with optional expansion of related entities
+      parameters:
+        - name: expand
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of related entities to include inline in the response.
+            Supported values: `position`.
+            Unknown values are silently ignored.
+          example: "position"
       responses:
         '200':
           $ref: '#/components/responses/UserDetails'
@@ -2129,6 +2983,241 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /users/{user_id}/avatar:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user
+
+    get:
+      tags: [Users]
+      summary: Get user avatar image
+      description: |
+        Retrieves the avatar image for a user.
+        
+        This endpoint proxies the request to the Storage Service and streams
+        the image back to the client. The response is the actual image file,
+        not JSON.
+        
+        **Caching:**
+        The response includes `Cache-Control: public, max-age=3600` header
+        for client-side caching (1 hour).
+        
+        **Image Format:**
+        The actual image format (JPEG, PNG, WebP, etc.) is indicated by the
+        `Content-Type` header in the response, regardless of the stored filename.
+      responses:
+        '200':
+          description: Avatar image file
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Type:
+              description: MIME type of the image (e.g., image/jpeg, image/png)
+              schema:
+                type: string
+            Content-Disposition:
+              description: Content disposition header (inline)
+              schema:
+                type: string
+            Cache-Control:
+              description: Caching directive
+              schema:
+                type: string
+                example: "public, max-age=3600"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: User not found or user has no avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                userNotFound:
+                  summary: User not found
+                  value:
+                    message: "User not found"
+                noAvatar:
+                  summary: User has no avatar
+                  value:
+                    message: "User has no avatar"
+        '503':
+          description: Storage Service is disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Avatar storage is disabled in this environment"
+        '504':
+          description: Storage Service timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Storage service timeout"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Users]
+      summary: Upload user avatar
+      description: |
+        Uploads an avatar image for a user.
+        
+        **Authorization:**
+        Users can only upload their own avatar. The JWT user_id must match
+        the user_id in the path.
+        
+        **File Requirements:**
+        - Accepts common image formats (JPEG, PNG, WebP, GIF)
+        - Maximum file size is enforced by the Storage Service
+        - Images are stored with a normalized `.png` extension but retain
+          their original format
+        
+        **Storage:**
+        The avatar is uploaded to the Storage Service and stored in the
+        user's dedicated bucket at `avatars/{user_id}.png`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - avatar
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: The avatar image file to upload
+      responses:
+        '201':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Avatar uploaded successfully"
+                  avatar_file_id:
+                    type: string
+                    format: uuid
+                    description: Storage Service file_id reference
+                  has_avatar:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad request (no file provided or validation error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                noFile:
+                  summary: No avatar file provided
+                  value:
+                    message: "No avatar file provided"
+                validation:
+                  summary: Avatar validation failed
+                  value:
+                    message: "Invalid image format"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied - cannot manage other user's avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Access denied: cannot manage other user's avatar"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: Storage Service is disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Storage Service disabled"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Users]
+      summary: Delete user avatar
+      description: |
+        Deletes the avatar for a user.
+        
+        **Authorization:**
+        Users can only delete their own avatar. The JWT user_id must match
+        the user_id in the path.
+        
+        **Cleanup:**
+        This operation:
+        1. Deletes the avatar file from the Storage Service
+        2. Clears the `avatar_file_id` and sets `has_avatar` to false in the database
+        
+        If the Storage Service deletion fails, the database is still updated
+        to prevent orphaned references.
+      responses:
+        '204':
+          description: Avatar deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Access denied - cannot delete other user's avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Access denied: cannot delete other user's avatar"
+        '404':
+          description: User not found or user has no avatar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                userNotFound:
+                  summary: User not found
+                  value:
+                    message: "User not found"
+                noAvatar:
+                  summary: User has no avatar to delete
+                  value:
+                    message: "User has no avatar to delete"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /users/{user_id}/roles:
     parameters:
       - name: user_id
@@ -2141,8 +3230,21 @@ paths:
 
     get:
       tags: [Users]
-      summary: Get user roles
-      description: Returns the list of roles assigned to a user via the Guardian Service (RBAC)
+      summary: Get user roles (enriched)
+      description: |
+        Returns the list of roles assigned to a user via the Guardian Service (RBAC).
+        
+        **Enrichment (Issue #64):**
+        As of Issue #64, this endpoint returns full Role objects instead of junction table records.
+        Each role includes:
+        - id: Role identifier
+        - name: Role name
+        - description: Role description
+        - company_id: Company identifier for multi-tenant isolation
+        - created_at, updated_at: Timestamps
+        
+        The enrichment is performed by fetching role details from Guardian Service
+        for each role_id in the user-role associations.
       responses:
         '200':
           $ref: '#/components/responses/UserRoles'
@@ -2347,6 +3449,339 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /users/{user_id}/admin-reset-password:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the user whose password to reset
+
+    post:
+      tags: [Users]
+      summary: Admin-initiated password reset
+      description: |
+        Admin-initiated password reset (Issue #12 Phase 1).
+        
+        Generates a secure temporary password for the specified user and marks them
+        as requiring a password change on next login.
+        
+        Security:
+        - Requires JWT authentication
+        - Requires Guardian 'update' permission on 'admin_password_reset' resource
+        - Multi-tenant isolation enforced (admin and user must be in same company)
+        - Temporary password is 12 characters with letters, digits, and special characters
+        - Password is shown only once in the response
+        
+        Process:
+        1. Verify user exists
+        2. Check multi-tenant isolation (same company)
+        3. Generate secure temporary password
+        4. Hash and save password
+        5. Set password_reset_required = true
+        6. Update last_password_change timestamp
+        7. Return temporary password (shown only once)
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset successful
+                  temporary_password:
+                    type: string
+                    example: aB3$xY9#kL2m
+                    description: Temporary password (shown only once)
+                  password_reset_required:
+                    type: boolean
+                    example: true
+                  note:
+                    type: string
+                    example: User must change password on next login. This is the only time the temporary password will be shown.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - either missing Guardian permission or user in different company
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cannot reset password for user in different company
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/me/change-password:
+    patch:
+      tags: [Users]
+      summary: User changes own password
+      description: |
+        User-initiated password change.
+        
+        Allows authenticated users to change their own password.
+        Required after admin-initiated password reset.
+        
+        Security:
+        - Requires JWT authentication
+        - Requires current password verification
+        - New password must be at least 8 characters
+        
+        Process:
+        1. Verify current password matches
+        2. Validate new password length
+        3. Hash and save new password
+        4. Clear password_reset_required flag
+        5. Update last_password_change timestamp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - new_password
+              properties:
+                current_password:
+                  type: string
+                  description: Current password for verification
+                  example: OldPassword123
+                new_password:
+                  type: string
+                  minLength: 8
+                  description: New password (minimum 8 characters)
+                  example: NewSecurePassword456
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password changed successfully
+                  password_reset_required:
+                    type: boolean
+                    example: false
+        '400':
+          description: Bad request - invalid input or password too short
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Current password is incorrect
+                    description: Error message (varies based on validation error)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/password-reset/request:
+    post:
+      tags: [Users]
+      summary: Request password reset (Phase 2)
+      security: []
+      description: |
+        Email-based self-service password reset request (Issue #12 Phase 2).
+        
+        Initiates a password reset by sending a 6-digit OTP code to the user's email.
+        Always returns 200 OK to prevent email enumeration attacks.
+        
+        Security Features:
+        - Rate limiting: 50 requests/hour, 200/day per IP
+        - No authentication required (public endpoint)
+        - Never reveals if email exists (always 200 OK)
+        - OTP expires in 15 minutes (configurable)
+        - Maximum 3 verification attempts per OTP
+        - Previous OTPs invalidated on new request
+        - All requests logged with IP address
+        
+        Email Service:
+        - Requires USE_EMAIL_SERVICE=true in configuration
+        - Sends HTML + plain text email with OTP code
+        - Email includes user's name and 15-minute expiration notice
+        
+        Process:
+        1. Validate email format
+        2. Check if user exists (never revealed in response)
+        3. Invalidate any previous OTPs for user
+        4. Generate 6-digit numeric OTP
+        5. Hash and store OTP with 15-minute expiration
+        6. Send OTP via email
+        7. Return generic success message (always 200)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Email address of the account to reset
+                  example: user@example.com
+      responses:
+        '200':
+          description: Request processed (generic message to prevent email enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: If an account with this email exists, a password reset code has been sent.
+        '400':
+          description: Bad request - invalid email format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid email format
+        '429':
+          description: Too many requests - rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Too many requests. Please try again later.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/password-reset/confirm:
+    post:
+      tags: [Users]
+      summary: Confirm password reset with OTP (Phase 2)
+      security: []
+      description: |
+        Completes password reset using OTP code from email (Issue #12 Phase 2).
+        
+        Verifies the OTP code and sets a new password for the user account.
+        
+        Security Features:
+        - Rate limiting: 50 requests/hour, 200/day per IP
+        - No authentication required (public endpoint)
+        - OTP must be valid, not expired, and not used
+        - Maximum 3 verification attempts per OTP
+        - Failed attempts increment counter
+        - Email case-insensitive matching
+        - New password must be at least 8 characters
+        - All requests logged with IP address
+        
+        Process:
+        1. Validate input (email, OTP, new password)
+        2. Find user by email (case-insensitive)
+        3. Retrieve valid OTP for user
+        4. Check OTP not expired (15 minutes)
+        5. Check attempts < 3
+        6. Verify OTP code matches hash
+        7. Hash and save new password
+        8. Mark OTP as used
+        9. Clear password_reset_required flag
+        10. Update last_password_change timestamp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp_code
+                - new_password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Email address of the account
+                  example: user@example.com
+                otp_code:
+                  type: string
+                  pattern: '^\d{6}$'
+                  description: 6-digit OTP code from email
+                  example: "123456"
+                new_password:
+                  type: string
+                  minLength: 8
+                  description: New password (minimum 8 characters)
+                  example: NewSecurePassword456
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset successful
+        '400':
+          description: Bad request - invalid input or OTP verification failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid or expired OTP code
+                    description: Generic error message (invalid OTP, expired, max attempts, password too short, etc.)
+        '429':
+          description: Too many requests - rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Too many requests. Please try again later.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /positions/{position_id}/users:
     parameters:
       - name: position_id
@@ -2377,7 +3812,60 @@ paths:
     get:
       tags: [Subcontractors Management]
       summary: List all subcontractors
-      description: Returns the list of all subcontractors
+      description: Returns the list of all subcontractors with optional filtering, search, pagination, and sorting
+      parameters:
+        - name: id__in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of UUIDs to filter by. Returns only subcontractors with matching IDs. Empty string returns empty list.
+          example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by exact subcontractor name match
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search in name, email, and contact_person (case-insensitive)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Number of items per page (max 1000)
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created_at, updated_at, name]
+            default: created_at
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (ascending or descending)
       responses:
         '200':
           $ref: '#/components/responses/SubcontractorList'
@@ -2391,7 +3879,9 @@ paths:
     post:
       tags: [Subcontractors Management]
       summary: Create a new subcontractor
-      description: Creates a new subcontractor with the provided data
+      description: |
+        Creates a new subcontractor with the provided data.
+        The company_id is automatically extracted from the JWT token and cannot be provided in the request body.
       requestBody:
         required: true
         content:
@@ -2503,6 +3993,124 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /subcontractors/{subcontractor_id}/logo:
+    parameters:
+      - name: subcontractor_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Unique identifier of the subcontractor
+
+    post:
+      tags: [Subcontractors Management]
+      summary: Upload subcontractor logo
+      description: Upload a logo image for the subcontractor. The logo is stored in the Storage Service and a file_id reference is saved.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - logo
+              properties:
+                logo:
+                  type: string
+                  format: binary
+                  description: Logo image file (PNG, JPG, JPEG)
+      responses:
+        '201':
+          description: Logo uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logo uploaded successfully
+                  logo_file_id:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  has_logo:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot manage other company's subcontractor logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          description: Service Unavailable - Storage Service disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Subcontractors Management]
+      summary: Get subcontractor logo
+      description: Retrieve the subcontractor logo image from Storage Service
+      responses:
+        '200':
+          description: Logo image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Subcontractor not found or has no logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Subcontractors Management]
+      summary: Delete subcontractor logo
+      description: Remove the subcontractor logo from Storage Service and clear the reference
+      responses:
+        '204':
+          description: Logo deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Cannot delete other company's subcontractor logo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subcontractor not found or has no logo to delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           $ref: '#/components/responses/InternalServerError'
 

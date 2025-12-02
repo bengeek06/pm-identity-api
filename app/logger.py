@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 logger.py
 ---------
@@ -15,8 +23,9 @@ Usage:
     logger.info("Your log message", extra_field="value")
 """
 
-import os
 import logging
+import os
+
 import colorlog
 import structlog
 
@@ -41,26 +50,35 @@ handler.setFormatter(
 )
 
 # Set log level from LOG_LEVEL env var, default to INFO
-log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-if log_level not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
-    log_level = "INFO"
-logging.basicConfig(level=getattr(logging, log_level), handlers=[handler])
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+if LOG_LEVEL not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+    LOG_LEVEL = "INFO"
+logging.basicConfig(level=getattr(logging, LOG_LEVEL), handlers=[handler])
 
-# Choose renderer based on environment
+# Choose renderer and processors based on environment
 if env in ("development", "testing"):
+    # ConsoleRenderer with colors handles exceptions itself
     renderer = structlog.dev.ConsoleRenderer(colors=True)
+    processors = [
+        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+        structlog.stdlib.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        renderer,
+    ]
 else:
+    # JSON renderer needs format_exc_info
     renderer = structlog.processors.JSONRenderer()
-
-# Configure structlog
-structlog.configure(
-    processors=[
+    processors = [
         structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
         structlog.stdlib.add_log_level,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         renderer,
-    ],
+    ]
+
+# Configure structlog
+structlog.configure(
+    processors=processors,
     logger_factory=structlog.stdlib.LoggerFactory(),
     wrapper_class=structlog.stdlib.BoundLogger,
     cache_logger_on_first_use=True,

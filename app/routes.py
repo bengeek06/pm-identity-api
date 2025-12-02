@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 routes.py
 ---------
@@ -11,40 +19,47 @@ Functions:
 """
 
 from flask_restful import Api
+
 from app.logger import logger
-from app.resources.version import VersionResource
-from app.resources.config import ConfigResource
+from app.rate_limiter import limiter
 from app.resources.company import CompanyListResource, CompanyResource
+from app.resources.company_logo import CompanyLogoResource
+from app.resources.config import ConfigResource
 from app.resources.customer import CustomerListResource, CustomerResource
+from app.resources.customer_logo import CustomerLogoResource
+from app.resources.health import HealthResource
+from app.resources.init_db import InitDBResource
 from app.resources.organization_unit import (
+    OrganizationUnitChildrenResource,
     OrganizationUnitListResource,
     OrganizationUnitResource,
-    OrganizationUnitChildrenResource,
+)
+from app.resources.password_reset import (
+    PasswordResetConfirmResource,
+    PasswordResetRequestResource,
 )
 from app.resources.position import (
+    OrganizationUnitPositionsResource,
     PositionListResource,
     PositionResource,
-    OrganizationUnitPositionsResource,
 )
 from app.resources.subcontractor import (
     SubcontractorListResource,
     SubcontractorResource,
 )
-from app.resources.user import (
-    UserListResource,
-    UserResource,
-)
-from app.resources.user_avatar import UserAvatarResource
-from app.resources.user_position import UserPositionResource
-from app.resources.user_roles import (
-    UserRolesListResource,
-    UserRolesResource,
-)
-from app.resources.user_policies import UserPoliciesResource
-from app.resources.user_permissions import UserPermissionsResource
+from app.resources.subcontractor_logo import SubcontractorLogoResource
+from app.resources.user import UserListResource, UserResource
 from app.resources.user_auth import VerifyPasswordResource
-from app.resources.init_db import InitDBResource
-from app.resources.health import HealthResource
+from app.resources.user_avatar import UserAvatarResource
+from app.resources.user_password import (
+    AdminPasswordResetResource,
+    UserChangePasswordResource,
+)
+from app.resources.user_permissions import UserPermissionsResource
+from app.resources.user_policies import UserPoliciesResource
+from app.resources.user_position import UserPositionResource
+from app.resources.user_roles import UserRolesListResource, UserRolesResource
+from app.resources.version import VersionResource
 
 
 def register_routes(app):
@@ -68,12 +83,20 @@ def register_routes(app):
 
     api.add_resource(CompanyListResource, "/companies")
     api.add_resource(CompanyResource, "/companies/<string:company_id>")
+    api.add_resource(
+        CompanyLogoResource, "/companies/<string:company_id>/logo"
+    )
 
     api.add_resource(CustomerListResource, "/customers")
     api.add_resource(CustomerResource, "/customers/<string:customer_id>")
+    api.add_resource(
+        CustomerLogoResource, "/customers/<string:customer_id>/logo"
+    )
 
     api.add_resource(OrganizationUnitListResource, "/organization_units")
-    api.add_resource(OrganizationUnitResource, "/organization_units/<string:unit_id>")
+    api.add_resource(
+        OrganizationUnitResource, "/organization_units/<string:unit_id>"
+    )
     api.add_resource(
         OrganizationUnitChildrenResource,
         "/organization_units/<string:unit_id>/children",
@@ -87,20 +110,47 @@ def register_routes(app):
     )
 
     api.add_resource(SubcontractorListResource, "/subcontractors")
-    api.add_resource(SubcontractorResource, "/subcontractors/<string:subcontractor_id>")
+    api.add_resource(
+        SubcontractorResource, "/subcontractors/<string:subcontractor_id>"
+    )
+    api.add_resource(
+        SubcontractorLogoResource,
+        "/subcontractors/<string:subcontractor_id>/logo",
+    )
 
     api.add_resource(UserListResource, "/users")
     api.add_resource(UserResource, "/users/<string:user_id>")
     api.add_resource(UserAvatarResource, "/users/<string:user_id>/avatar")
+    api.add_resource(
+        AdminPasswordResetResource,
+        "/users/<string:user_id>/admin-reset-password",
+    )
+    api.add_resource(UserChangePasswordResource, "/users/me/change-password")
+
+    # Password reset endpoints (Phase 2) - with rate limiting
+    # Note: limiter decorators are applied via method decorators in the resource classes
+    limiter.limit("3 per 15 minutes")(PasswordResetRequestResource)
+    limiter.limit("3 per 15 minutes")(PasswordResetConfirmResource)
+
+    api.add_resource(
+        PasswordResetRequestResource, "/users/password-reset/request"
+    )
+    api.add_resource(
+        PasswordResetConfirmResource, "/users/password-reset/confirm"
+    )
     api.add_resource(UserRolesListResource, "/users/<string:user_id>/roles")
     api.add_resource(
         UserRolesResource,
         "/users/<string:user_id>/roles/<string:user_role_id>",
     )
     api.add_resource(UserPoliciesResource, "/users/<string:user_id>/policies")
-    api.add_resource(UserPermissionsResource, "/users/<string:user_id>/permissions")
+    api.add_resource(
+        UserPermissionsResource, "/users/<string:user_id>/permissions"
+    )
 
-    api.add_resource(UserPositionResource, "/positions/<string:position_id>/users")
+    api.add_resource(
+        UserPositionResource, "/positions/<string:position_id>/users"
+    )
     api.add_resource(VerifyPasswordResource, "/verify_password")
 
     logger.info("Routes registered successfully.")

@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 user_schema.py
 --------------
@@ -10,11 +18,18 @@ model, ensuring data integrity and proper formatting when handling API input
 and output.
 """
 
+from marshmallow import (
+    RAISE,
+    ValidationError,
+    fields,
+    validate,
+    validates,
+    validates_schema,
+)
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import ValidationError, validates, fields, validate
 
-from app.models.user import User, LanguageEnum
 from app.logger import logger
+from app.models.user import LanguageEnum, User
 
 
 class UserSchema(SQLAlchemyAutoSchema):
@@ -33,9 +48,10 @@ class UserSchema(SQLAlchemyAutoSchema):
         last_name (str, optional): Last name of the user.
         language (str): Preferred language of the user (en or fr).
         phone_number (str, optional): Phone number of the user.
-        avatar_url (str, optional): URL to the user's avatar.
+        avatar_file_id (str, optional): Storage Service file_id for avatar (read-only).
+        has_avatar (bool): Whether the user has an avatar uploaded (read-only).
         is_active (bool): Whether the user account is active.
-        is_verifed (bool): Whether the user's email is verified.
+        is_verified (bool): Whether the user's email is verified.
         last_login_at (datetime, optional): Timestamp of the user's last login.
         company_id (str): Foreign key referencing the associated company (UUID).
         position_id (str, optional): Foreign key referencing the user's position (UUID).
@@ -63,15 +79,19 @@ class UserSchema(SQLAlchemyAutoSchema):
         model = User
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at")
-        exclude = (
-            "avatar_url",
-        )  # Internal field, frontend should use /users/{id}/avatar endpoint
+        dump_only = (
+            "id",
+            "created_at",
+            "updated_at",
+            "last_login",
+            "company_id",
+        )
+        unknown = RAISE
 
     id = fields.UUID(dump_only=True)
     email = fields.Email(required=True, validate=validate.Length(max=100))
     hashed_password = fields.String(
-        required=True, validate=validate.Length(max=255), load_only=True
+        required=False, validate=validate.Length(max=255), load_only=True
     )
     first_name = fields.String(validate=validate.Length(max=50))
     last_name = fields.String(validate=validate.Length(max=50))
@@ -81,25 +101,18 @@ class UserSchema(SQLAlchemyAutoSchema):
         load_default=LanguageEnum.EN,
         dump_default=LanguageEnum.EN,
     )
-    phone_number = fields.String(validate=validate.Length(max=50), allow_none=True)
-    # avatar_url is excluded from dump (see Meta.exclude)
-    # Frontend should use /users/{id}/avatar endpoint instead
-    is_active = fields.Boolean(load_default=True, dump_default=True)
-    is_verifed = fields.Boolean(load_default=False, dump_default=False)
-    last_login_at = fields.DateTime(allow_none=True)
-    # Allow nullable company_id for superuser creation
-    company_id = fields.String(
-        required=False,
-        allow_none=True,
-        validate=validate.Regexp(
-            r"^[a-fA-F0-9]{8}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{4}-"
-            r"[a-fA-F0-9]{12}$",
-            error="Company ID must be a valid UUID.",
-        ),
+    phone_number = fields.String(
+        validate=validate.Length(max=50), allow_none=True
     )
+    avatar_file_id = fields.String(dump_only=True, allow_none=True)
+    has_avatar = fields.Boolean(
+        load_default=False, dump_default=False, dump_only=True
+    )
+    # Note: Frontend should use GET /users/{id}/avatar endpoint for avatar image
+    is_active = fields.Boolean(load_default=True, dump_default=True)
+    is_verified = fields.Boolean(load_default=False, dump_default=False)
+    last_login_at = fields.DateTime(allow_none=True)
+
     position_id = fields.String(
         required=False,
         validate=validate.Regexp(
@@ -113,6 +126,38 @@ class UserSchema(SQLAlchemyAutoSchema):
     )
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
+
+    @validates_schema
+    def validate_password_on_creation(self, data, **kwargs):
+        """
+        Validate that hashed_password is provided on user creation.
+        On updates, it's optional (only required if changing password).
+
+        Note: This validator runs AFTER the resource converts 'password' to 'hashed_password',
+        so we check if hashed_password is in the data.
+
+        Args:
+            data (dict): The full data dictionary being loaded.
+
+        Raises:
+            ValidationError: If password is missing on user creation.
+        """
+        _ = kwargs
+
+        # Get current user from context (None for creation, User instance for update)
+        current_user = (
+            self.context.get("user") if hasattr(self, "context") else None
+        )
+
+        # If this is a creation (no current_user) and no hashed_password provided
+        if not current_user and "hashed_password" not in data:
+            logger.error(
+                "Validation error: Password is required for user creation."
+            )
+            raise ValidationError(
+                "Password is required for user creation.",
+                field_name="hashed_password",
+            )
 
     @validates("email")
     def validate_email(self, value, **kwargs):
@@ -131,8 +176,12 @@ class UserSchema(SQLAlchemyAutoSchema):
         _ = kwargs
 
         user = User.get_by_email(value)
-        current_user = self.context.get("user") if hasattr(self, "context") else None
-        if user and (not current_user or user.id != getattr(current_user, "id", None)):
+        current_user = (
+            self.context.get("user") if hasattr(self, "context") else None
+        )
+        if user and (
+            not current_user or user.id != getattr(current_user, "id", None)
+        ):
             logger.error(
                 "Validation error: User with email '%s' already exists.", value
             )
@@ -156,12 +205,17 @@ class UserSchema(SQLAlchemyAutoSchema):
         _ = kwargs
 
         # Get current user from context if this is an update operation
-        current_user = self.context.get("user") if hasattr(self, "context") else None
+        current_user = (
+            self.context.get("user") if hasattr(self, "context") else None
+        )
 
         # If this is an update operation (current_user exists)
         if current_user:
             # Check if company_id is being changed
-            if hasattr(current_user, "company_id") and current_user.company_id != value:
+            if (
+                hasattr(current_user, "company_id")
+                and current_user.company_id != value
+            ):
                 logger.error(
                     "Security violation: Attempt to change company_id for user %s",
                     getattr(current_user, "id", "unknown"),

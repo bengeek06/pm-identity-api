@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 config.py
 ---------
@@ -16,7 +24,25 @@ Each class defines main parameters such as the secret key, database URL,
 debug mode, and SQLAlchemy modification tracking.
 """
 
+import logging
 import os
+
+from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
+
+# Load .env file ONLY if not running in Docker
+# This hook ensures environment variables are loaded for flask commands
+if not os.environ.get("IN_DOCKER_CONTAINER") and not os.environ.get(
+    "APP_MODE"
+):
+    env = os.environ.get("FLASK_ENV", "development")
+    ENV_FILE = f".env.{env}"
+    if os.path.exists(ENV_FILE):
+        load_dotenv(ENV_FILE)
+    # Fallback to generic .env if environment-specific file doesn't exist
+    elif os.path.exists(".env"):
+        load_dotenv(".env")
 
 
 class Config:
@@ -26,11 +52,141 @@ class Config:
     Attributes:
         SQLALCHEMY_TRACK_MODIFICATIONS (bool): Disable SQLAlchemy event system.
         MAX_CONTENT_LENGTH (int): Maximum allowed request size in bytes (16 MB).
+        USE_STORAGE_SERVICE (bool): Enable/disable Storage Service integration.
     """
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Allow uploads up to 16 MB (enough for avatar images)
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
+
+    # Validate critical environment variables
+    JWT_SECRET = os.environ.get("JWT_SECRET")
+    if not JWT_SECRET:
+        raise ValueError("JWT_SECRET environment variable is not set.")
+
+    FLASK_ENV = os.environ.get("FLASK_ENV")
+    if not FLASK_ENV:
+        raise ValueError("FLASK_ENV environment variable is not set.")
+
+    # Storage Service integration toggle
+    use_storage_env = os.environ.get("USE_STORAGE_SERVICE")
+    if use_storage_env is None:
+        USE_STORAGE_SERVICE = False
+    else:
+        USE_STORAGE_SERVICE = use_storage_env.lower() in ("true", "yes", "1")
+
+    if USE_STORAGE_SERVICE:
+        # Storage Service URL (validated at startup if USE_STORAGE_SERVICE=True)
+        STORAGE_SERVICE_URL = os.environ.get("STORAGE_SERVICE_URL")
+        if not STORAGE_SERVICE_URL:
+            error_msg = (
+                "Configuration Error: USE_STORAGE_SERVICE is enabled (true) "
+                "but STORAGE_SERVICE_URL environment variable is not set. "
+                "Either set STORAGE_SERVICE_URL to a valid URL or disable "
+                "Storage Service integration by setting USE_STORAGE_SERVICE=false"
+            )
+            logger.error(error_msg)
+            logger.error(
+                "Current environment variables: "
+                "USE_STORAGE_SERVICE=%s, STORAGE_SERVICE_URL=%s",
+                os.environ.get("USE_STORAGE_SERVICE", "not set"),
+                os.environ.get("STORAGE_SERVICE_URL", "not set"),
+            )
+            raise ValueError(
+                "STORAGE_SERVICE_URL environment variable is not set "
+                "while USE_STORAGE_SERVICE is enabled."
+            )
+        STORAGE_REQUEST_TIMEOUT = int(
+            os.environ.get("STORAGE_REQUEST_TIMEOUT", "30")
+        )
+
+        # Maximum avatar file size in MB
+        MAX_AVATAR_SIZE_MB = int(os.environ.get("MAX_AVATAR_SIZE_MB", "5"))
+
+    # Guardian Service integration toggle
+    use_guardian_env = os.environ.get("USE_GUARDIAN_SERVICE", "true")
+    if use_guardian_env is None:
+        USE_GUARDIAN_SERVICE = False
+    else:
+        USE_GUARDIAN_SERVICE = use_guardian_env.lower() in (
+            "true",
+            "yes",
+            "1",
+        )
+
+    if USE_GUARDIAN_SERVICE:
+        # Guardian Service URL (validated at startup if USE_GUARDIAN_SERVICE=True)
+        GUARDIAN_SERVICE_URL = os.environ.get("GUARDIAN_SERVICE_URL")
+        if not GUARDIAN_SERVICE_URL:
+            error_msg = (
+                "Configuration Error: USE_GUARDIAN_SERVICE is enabled (true) "
+                "but GUARDIAN_SERVICE_URL environment variable is not set. "
+                "Either set GUARDIAN_SERVICE_URL to a valid URL or disable "
+                "Guardian Service integration by setting USE_GUARDIAN_SERVICE=false"
+            )
+            logger.error(error_msg)
+            logger.error(
+                "Current environment variables: "
+                "USE_GUARDIAN_SERVICE=%s, GUARDIAN_SERVICE_URL=%s",
+                os.environ.get("USE_GUARDIAN_SERVICE", "not set"),
+                os.environ.get("GUARDIAN_SERVICE_URL", "not set"),
+            )
+            raise ValueError(
+                "GUARDIAN_SERVICE_URL environment variable is not set "
+                "while USE_GUARDIAN_SERVICE is enabled."
+            )
+
+        GUARDIAN_SERVICE_TIMEOUT = float(
+            os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5")
+        )
+
+    # Flask-Mail configuration
+    use_email_env = os.environ.get("USE_EMAIL_SERVICE", "false")
+    USE_EMAIL_SERVICE = use_email_env.lower() in ("true", "yes", "1")
+
+    if USE_EMAIL_SERVICE:
+        MAIL_SERVER = os.environ.get("MAIL_SERVER")
+        MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
+        MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").lower() in (
+            "true",
+            "yes",
+            "1",
+        )
+        MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "false").lower() in (
+            "true",
+            "yes",
+            "1",
+        )
+        MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+        MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+        MAIL_DEFAULT_SENDER = os.environ.get(
+            "MAIL_DEFAULT_SENDER", MAIL_USERNAME
+        )
+        MAIL_MAX_EMAILS = int(os.environ.get("MAIL_MAX_EMAILS", "100"))
+
+        if not MAIL_SERVER:
+            raise ValueError(
+                "MAIL_SERVER environment variable is not set "
+                "while USE_EMAIL_SERVICE is enabled."
+            )
+
+    # Rate limiting configuration
+    RATELIMIT_STORAGE_URI = os.environ.get(
+        "RATELIMIT_STORAGE_URI", "memory://"
+    )
+    RATELIMIT_STRATEGY = os.environ.get("RATELIMIT_STRATEGY", "fixed-window")
+
+    # Read RATELIMIT_ENABLED from environment (default: True)
+    ratelimit_enabled_env = os.environ.get("RATELIMIT_ENABLED", "true")
+    RATELIMIT_ENABLED = ratelimit_enabled_env.lower() in ("true", "yes", "1")
+
+    # Password reset OTP configuration
+    PASSWORD_RESET_OTP_TTL_MINUTES = int(
+        os.environ.get("PASSWORD_RESET_OTP_TTL_MINUTES", "15")
+    )
+    PASSWORD_RESET_OTP_MAX_ATTEMPTS = int(
+        os.environ.get("PASSWORD_RESET_OTP_MAX_ATTEMPTS", "3")
+    )
 
 
 class DevelopmentConfig(Config):
@@ -44,8 +200,12 @@ class DevelopmentConfig(Config):
 
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError("DATABASE_URL environment variable is not set.")
+
+    @classmethod
+    def validate_config(cls):
+        """Validate development configuration."""
+        if not cls.SQLALCHEMY_DATABASE_URI:
+            raise ValueError("DATABASE_URL environment variable is not set.")
 
 
 class TestingConfig(Config):
@@ -59,8 +219,14 @@ class TestingConfig(Config):
 
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError("DATABASE_URL environment variable is not set.")
+    # Disable rate limiting by default in testing environment
+    RATELIMIT_ENABLED = False
+
+    @classmethod
+    def validate_config(cls):
+        """Validate testing configuration."""
+        if not cls.SQLALCHEMY_DATABASE_URI:
+            raise ValueError("DATABASE_URL environment variable is not set.")
 
 
 class StagingConfig(Config):
@@ -74,8 +240,12 @@ class StagingConfig(Config):
 
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError("DATABASE_URL environment variable is not set.")
+
+    @classmethod
+    def validate_config(cls):
+        """Validate staging configuration."""
+        if not cls.SQLALCHEMY_DATABASE_URI:
+            raise ValueError("DATABASE_URL environment variable is not set.")
 
 
 class ProductionConfig(Config):
@@ -89,5 +259,9 @@ class ProductionConfig(Config):
 
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError("DATABASE_URL environment variable is not set.")
+
+    @classmethod
+    def validate_config(cls):
+        """Validate production configuration."""
+        if not cls.SQLALCHEMY_DATABASE_URI:
+            raise ValueError("DATABASE_URL environment variable is not set.")

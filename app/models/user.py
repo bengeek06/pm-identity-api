@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 Module: user
 
@@ -8,13 +16,14 @@ attributes, relationships, and utility methods for CRUD operations.
 The User model represents an individual user account within a company.
 """
 
-import uuid
 import enum
+import uuid
 
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash
-from app.models import db
+
 from app.logger import logger
+from app.models import db
 
 
 class LanguageEnum(enum.Enum):
@@ -40,9 +49,10 @@ class User(db.Model):
         last_name (str): Optional last name of the user.
         language (LanguageEnum): Preferred language of the user.
         phone_number (str): Optional phone number of the user.
-        avatar_url (str): Optional URL to the user's avatar.
+        avatar_file_id (str): Storage Service file_id reference for avatar.
+        has_avatar (bool): Whether the user has an avatar uploaded.
         is_active (bool): Whether the user account is active.
-        is_verifed (bool): Whether the user's email is verified.
+        is_verified (bool): Whether the user's email is verified.
         last_login_at (datetime): Timestamp of the user's last login.
         company_id (str): Foreign key referencing the associated company.
         position_id (str): Foreign key referencing the user's position.
@@ -52,22 +62,33 @@ class User(db.Model):
 
     __tablename__ = "user"
 
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = db.Column(
+        db.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     email = db.Column(db.String(100), nullable=False, unique=True)
     hashed_password = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
-    language = db.Column(db.Enum(LanguageEnum), default=LanguageEnum.EN, nullable=False)
-    phone_number = db.Column(db.String(50), nullable=True)
-    avatar_url = db.Column(db.String(255), nullable=True)
-    is_active = db.Column(db.Boolean, default=True)
-    is_verifed = db.Column(db.Boolean, default=False)
-    last_login_at = db.Column(db.DateTime, nullable=True)
-    # Allow nullable company_id for superuser creation
-    company_id = db.Column(
-        db.String(36), db.ForeignKey("company.id"), nullable=True, index=True
+    language = db.Column(
+        db.Enum(LanguageEnum), default=LanguageEnum.EN, nullable=False
     )
-    position_id = db.Column(db.String(36), db.ForeignKey("position.id"), nullable=True)
+    phone_number = db.Column(db.String(50), nullable=True)
+    avatar_file_id = db.Column(db.String(36), nullable=True)
+    has_avatar = db.Column(db.Boolean, default=False, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    is_verifed = db.Column("is_verified", db.Boolean, default=False)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    company_id = db.Column(
+        db.String(36), db.ForeignKey("company.id"), nullable=False, index=True
+    )
+    position_id = db.Column(
+        db.String(36), db.ForeignKey("position.id"), nullable=True
+    )
+    # Password reset fields (Issue #12 Phase 1)
+    password_reset_required = db.Column(
+        db.Boolean, default=False, nullable=False
+    )
+    last_password_change = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
@@ -76,6 +97,7 @@ class User(db.Model):
     )
 
     company = db.relationship("Company", back_populates="users", lazy=True)
+    position = db.relationship("Position", lazy="select")
 
     def __repr__(self):
         """
@@ -136,7 +158,9 @@ class User(db.Model):
         try:
             return cls.query.filter_by(email=email).first()
         except SQLAlchemyError as e:
-            logger.error("Error retrieving user by email %s: %s", email, str(e))
+            logger.error(
+                "Error retrieving user by email %s: %s", email, str(e)
+            )
             return None
 
     @classmethod
@@ -158,6 +182,21 @@ class User(db.Model):
                 "Error retrieving users for company %s: %s", company_id, str(e)
             )
             return []
+
+    def set_avatar(self, file_id: str) -> None:
+        """
+        Set user avatar file_id and flag.
+
+        Args:
+            file_id (str): Storage Service file_id for the avatar.
+        """
+        self.avatar_file_id = file_id
+        self.has_avatar = True
+
+    def remove_avatar(self) -> None:
+        """Clear user avatar reference and flag."""
+        self.avatar_file_id = None
+        self.has_avatar = False
 
     @classmethod
     def get_by_position_id(cls, position_id):
@@ -216,27 +255,3 @@ class User(db.Model):
             bool: True if password matches the stored hash, False otherwise.
         """
         return check_password_hash(self.hashed_password, password)
-
-    def is_superuser(self):
-        """
-        Check if the user is a superuser (no company_id).
-
-        Returns:
-            bool: True if user is a superuser, False otherwise.
-        """
-        return self.company_id is None
-
-    @classmethod
-    def get_superusers(cls):
-        """
-        Retrieve all superusers from the database.
-
-        Returns:
-            list[User]: List of superuser User objects, or an empty list if an
-                        error occurs.
-        """
-        try:
-            return cls.query.filter(cls.company_id.is_(None)).all()
-        except SQLAlchemyError as e:
-            logger.error("Error retrieving superusers: %s", str(e))
-            return []

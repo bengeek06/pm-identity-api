@@ -1,12 +1,21 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """Utility functions for the Identity Service API."""
 
 import os
 import re
 import uuid
 from functools import wraps
+
 import jwt
-from flask import request, g
 import requests
+from flask import current_app, g, request
 
 from app.logger import logger
 
@@ -24,6 +33,42 @@ def camel_to_snake(name):
     s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
     snake = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
     return re.sub(r"_+", "_", snake)
+
+
+def parse_expand(expand_param, allowed_expansions=None):
+    """
+    Parse the ?expand= query parameter into a set of expansion names.
+
+    Args:
+        expand_param (str or None): Comma-separated list of expansions
+                                    (e.g., "position,organization").
+        allowed_expansions (set or None): Optional set of allowed expansion names.
+                                          If provided, unknown expansions are silently ignored.
+
+    Returns:
+        set: Set of valid expansion names to apply.
+
+    Examples:
+        >>> parse_expand("position,organization", {"position", "organization"})
+        {'position', 'organization'}
+        >>> parse_expand("position,unknown", {"position"})
+        {'position'}
+        >>> parse_expand(None)
+        set()
+        >>> parse_expand("")
+        set()
+    """
+    if not expand_param:
+        return set()
+
+    # Parse comma-separated values, strip whitespace, filter empty
+    expansions = {e.strip().lower() for e in expand_param.split(",") if e.strip()}
+
+    # Filter to allowed expansions if provided
+    if allowed_expansions:
+        expansions = expansions & allowed_expansions
+
+    return expansions
 
 
 def extract_jwt_data():
@@ -99,7 +144,9 @@ def require_jwt_auth():
                 if user_id:
                     # Create mock JWT data from headers (for testing)
                     jwt_data = {"user_id": user_id, "company_id": company_id}
-                    logger.debug("Using headers for authentication (testing mode)")
+                    logger.debug(
+                        "Using headers for authentication (testing mode)"
+                    )
                 else:
                     return {"message": "Missing or invalid JWT token"}, 401
 
@@ -113,7 +160,9 @@ def require_jwt_auth():
 
             if not company_id:
                 logger.error("company_id missing in JWT token")
-                return {"message": "Invalid JWT token: missing company_id"}, 401
+                return {
+                    "message": "Invalid JWT token: missing company_id"
+                }, 401
 
             # Validate UUID format for company_id
             try:
@@ -152,14 +201,28 @@ def check_access_required(operation):
     Decorator to check if the user has the required access for an operation.
 
     Args:
-        operation (str): The operation to check access for.
+        operation (str): The operation to check access for (LIST, CREATE, READ, UPDATE, DELETE).
+                        Must be in uppercase to match Guardian API requirements.
+
+    Raises:
+        ValueError: If operation is not one of the valid CRUD operations.
     """
+    # Validate operation at decorator definition time
+    valid_operations = {"LIST", "CREATE", "READ", "UPDATE", "DELETE"}
+
+    if operation not in valid_operations:
+        raise ValueError(
+            f"Invalid operation '{operation}'. "
+            f"Must be one of: {', '.join(sorted(valid_operations))}"
+        )
 
     def decorator(view_func):
         @wraps(view_func)
         def wrapped(*args, **kwargs):
             resource_name = kwargs.get("resource_name") or (
-                request.view_args.get("resource_name") if request.view_args else None
+                request.view_args.get("resource_name")
+                if request.view_args
+                else None
             )
             # If not found, deduce from the resource class name
             if not resource_name:
@@ -177,10 +240,14 @@ def check_access_required(operation):
             # Essayer d'utiliser les données JWT déjà décodées si disponibles
             if not user_id and hasattr(g, "jwt_data") and g.jwt_data:
                 user_id = g.jwt_data.get("user_id")
-                logger.debug(f"Using user_id from already decoded JWT: {user_id}")
+                logger.debug(
+                    f"Using user_id from already decoded JWT: {user_id}"
+                )
             # Sinon, extraire user_id du cookie JWT
             elif not user_id:
-                logger.debug("User ID not found in g or headers, checking JWT cookie")
+                logger.debug(
+                    "User ID not found in g or headers, checking JWT cookie"
+                )
                 jwt_data = extract_jwt_data()
                 if jwt_data:
                     user_id = jwt_data.get("user_id")
@@ -188,7 +255,9 @@ def check_access_required(operation):
                 else:
                     logger.warning("JWT token not found or invalid")
             if not user_id or not resource_name:
-                logger.warning("Missing user_id or resource_name for access check.")
+                logger.warning(
+                    "Missing user_id or resource_name for access check."
+                )
                 return {
                     "error": "Missing user_id or resource_name for access check."
                 }, 400
@@ -223,18 +292,29 @@ def check_access(user_id, resource_name, operation):
         f"resource_name: {resource_name}, operation: {operation}"
     )
 
-    flask_env = os.environ.get("FLASK_ENV", "production").lower()
-    if flask_env in ["testing", "development"]:
-        logger.debug("check_access: testing/development environment")
-        return True, "Access granted in testing/development environment.", 200
+    # Check if Guardian Service is enabled
+    use_guardian = current_app.config.get("USE_GUARDIAN_SERVICE")
 
-    guardian_service_url = os.environ.get("GUARDIAN_SERVICE_URL")
+    if not use_guardian:
+        logger.warning(
+            "Guardian Service is DISABLED - bypassing access control check"
+        )
+        return (
+            True,
+            "Access granted - Guardian Service disabled",
+            200,
+        )
+
+    # Guardian Service is enabled - get URL from config
+    guardian_service_url = current_app.config.get("GUARDIAN_SERVICE_URL")
+
     if not guardian_service_url:
-        logger.error("GUARDIAN_SERVICE_URL not set")
-        return False, "Internal server error", 500
+        logger.error("Guardian Service URL not configured")
+        return (False, "Internal server error", 500)
+
+    timeout = current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5)
 
     try:
-        timeout = float(os.environ.get("GUARDIAN_SERVICE_TIMEOUT", "5"))
 
         # Get JWT token from cookies to forward to Guardian service (if in request context)
         headers = {}
@@ -245,7 +325,9 @@ def check_access(user_id, resource_name, operation):
                 logger.debug("Forwarding JWT cookie to Guardian service")
         except RuntimeError:
             # No request context available (e.g., during testing without Flask app context)
-            logger.debug("No request context available, skipping JWT cookie forwarding")
+            logger.debug(
+                "No request context available, skipping JWT cookie forwarding"
+            )
 
         response = requests.post(
             f"{guardian_service_url}/check-access",
@@ -272,7 +354,9 @@ def check_access(user_id, resource_name, operation):
             # Guardian service returned a 400 with detailed error message
             try:
                 response_data = response.json()
-                logger.warning(f"Guardian service returned 400: {response_data}")
+                logger.warning(
+                    f"Guardian service returned 400: {response_data}"
+                )
                 return (
                     response_data.get("access_granted", False),
                     response_data.get("reason", "Bad request"),

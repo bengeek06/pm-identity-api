@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 company_schema.py
 -----------------
@@ -10,8 +18,9 @@ constraints, formats (email, URL, digits), and ensures the uniqueness of the
 company name.
 """
 
+from marshmallow import RAISE, ValidationError, fields, validate, validates
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow import fields, validate, RAISE, validates, ValidationError
+
 from app.models.company import Company
 
 
@@ -26,7 +35,8 @@ class CompanySchema(SQLAlchemyAutoSchema):
     Fields:
         name (str): Required. 1-100 characters.
         description (str): Optional. Max 200 characters.
-        logo_url (str): Optional. Must be a valid URL, max 255 characters.
+        logo_file_id (str): Optional. UUID from Storage Service (dump_only).
+        has_logo (bool): Whether company has logo (dump_only).
         website (str): Optional. Must be a valid URL, max 255 characters.
         phone_number (str): Optional. Digits only, max 20 characters.
         email (str): Optional. Must be a valid email, max 255 characters.
@@ -56,7 +66,13 @@ class CompanySchema(SQLAlchemyAutoSchema):
         model = Company
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at")
+        dump_only = (
+            "id",
+            "created_at",
+            "updated_at",
+            "logo_file_id",
+            "has_logo",
+        )
         unknown = RAISE
 
     name = fields.String(
@@ -65,19 +81,26 @@ class CompanySchema(SQLAlchemyAutoSchema):
             validate.Length(min=1, max=100),
         ],
     )
-    description = fields.String(validate=validate.Length(max=200))
-    logo_url = fields.URL(allow_none=True, validate=validate.Length(max=255))
+    description = fields.String(validate=validate.Length(max=255))
+    logo_file_id = fields.String(dump_only=True, allow_none=True)
+    has_logo = fields.Boolean(
+        load_default=False, dump_default=False, dump_only=True
+    )
     website = fields.URL(allow_none=True, validate=validate.Length(max=255))
     phone_number = fields.String(
         allow_none=True,
         validate=[
             validate.Length(max=20),
-            validate.Regexp(r"^\d*$", error="Phone number must contain only digits."),
+            validate.Regexp(
+                r"^\d*$", error="Phone number must contain only digits."
+            ),
         ],
     )
     email = fields.Email(allow_none=True, validate=validate.Length(max=255))
     address = fields.String(allow_none=True, validate=validate.Length(max=255))
-    postal_code = fields.String(allow_none=True, validate=validate.Length(max=20))
+    postal_code = fields.String(
+        allow_none=True, validate=validate.Length(max=20)
+    )
     city = fields.String(allow_none=True, validate=validate.Length(max=100))
     country = fields.String(allow_none=True, validate=validate.Length(max=100))
 
@@ -98,6 +121,7 @@ class CompanySchema(SQLAlchemyAutoSchema):
             self.context.get("company") if hasattr(self, "context") else None
         )
         if company and (
-            not current_company or company.id != getattr(current_company, "id", None)
+            not current_company
+            or company.id != getattr(current_company, "id", None)
         ):
             raise ValidationError("Company name must be unique.")

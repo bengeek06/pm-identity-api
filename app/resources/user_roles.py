@@ -1,3 +1,11 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 module: app.resources.user_roles
 
@@ -8,18 +16,20 @@ It provides endpoints for listing roles assigned to a user, adding new role
 assignments, retrieving specific role assignments, and removing role assignments.
 """
 
-import os
-
-from flask import request, g
+import requests
+from flask import current_app, g, request
 from flask_restful import Resource
-
 from werkzeug.exceptions import BadRequest
 
-import requests
-
 from app.logger import logger
-from app.utils import require_jwt_auth, check_access_required
 from app.models.user import User
+from app.resources.guardian_helpers import (
+    fetch_role_details,
+    get_guardian_headers,
+    normalize_guardian_response,
+    validate_user_access,
+)
+from app.utils import check_access_required, require_jwt_auth
 
 
 class UserRolesListResource(Resource):
@@ -62,17 +72,7 @@ class UserRolesListResource(Resource):
 
     @staticmethod
     def _extract_role_id(json_data):
-        """
-        Extract and validate role_id from request JSON.
-
-        Args:
-            json_data (dict): The JSON data from the request.
-
-        Returns:
-            tuple: (role_id, error_response)
-                - If valid: (str, None)
-                - If invalid: (None, (dict, int))
-        """
+        """Extract and validate role_id from request JSON."""
         if not json_data:
             logger.error("No JSON data provided")
             return None, ({"message": "JSON data required"}, 400)
@@ -93,6 +93,53 @@ class UserRolesListResource(Resource):
         return role_id.strip(), None
 
     @staticmethod
+    def _fetch_user_roles_from_guardian(user_id, guardian_url, headers, timeout):
+        """Fetch user roles from Guardian Service."""
+        try:
+            response = requests.get(
+                f"{guardian_url}/user-roles",
+                params={"user_id": user_id},
+                headers=headers,
+                timeout=timeout,
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error("Error contacting Guardian service: %s", str(e))
+            return None, ({"message": "Error fetching roles"}, 500)
+
+        if response.status_code != 200:
+            logger.error("Error fetching roles from Guardian: %s", response.text)
+            return None, ({"message": "Error fetching roles"}, 500)
+
+        return response.json(), None
+
+    @staticmethod
+    def _parse_user_role_metadata(user_role):
+        """Parse user role data to extract metadata."""
+        if isinstance(user_role, dict):
+            return (
+                user_role.get("role_id"),
+                user_role.get("id"),
+                user_role.get("created_at"),
+            )
+        if isinstance(user_role, str):
+            return user_role, None, None
+        logger.warning("Unexpected user_role format: %s", user_role)
+        return None, None, None
+
+    @staticmethod
+    def _build_enriched_role(user_id, role_id, user_role_id, created_at, role_details):
+        """Build enriched role response structure."""
+        enriched_role = {
+            "id": user_role_id,
+            "user_id": user_id,
+            "role_id": role_id,
+            "role": role_details,
+        }
+        if created_at:
+            enriched_role["created_at"] = created_at
+        return enriched_role
+
+    @staticmethod
     def _handle_guardian_response(response, role_id, user_id):
         """
         Handle the Guardian service response for role assignment.
@@ -106,8 +153,12 @@ class UserRolesListResource(Resource):
             tuple: (dict, int) - Response data and status code
         """
         if response.status_code == 409:
-            logger.warning("Role ID %s already assigned to user %s", role_id, user_id)
-            return {"message": f"Role '{role_id}' already assigned to user"}, 409
+            logger.warning(
+                "Role ID %s already assigned to user %s", role_id, user_id
+            )
+            return {
+                "message": f"Role '{role_id}' already assigned to user"
+            }, 409
         if response.status_code == 400:
             logger.error("Bad request to Guardian: %s", response.text)
             return {"message": "Invalid role or request data"}, 400
@@ -115,93 +166,75 @@ class UserRolesListResource(Resource):
             logger.error("Error assigning role in Guardian: %s", response.text)
             return {"message": "Error assigning role"}, 500
 
-        logger.info("Successfully assigned role ID %s to user %s", role_id, user_id)
+        logger.info(
+            "Successfully assigned role ID %s to user %s", role_id, user_id
+        )
         return response.json(), 201
 
     @require_jwt_auth()
-    @check_access_required("list")
+    @check_access_required("LIST")
     def get(self, user_id):
-        """
-        Get all roles for a specific user.
-
-        Args:
-            user_id (str): The ID of the user whose roles to retrieve.
-
-        Returns:
-            tuple: List of roles and HTTP status code 200.
-        """
+        """Retrieve all roles for a specific user from Guardian Service."""
         logger.info("Fetching roles for user ID %s", user_id)
 
-        jwt_data = getattr(g, "jwt_data", {})
-        requesting_user_id = jwt_data.get("user_id")
-        company_id = jwt_data.get("company_id")
+        # Validate user access
+        error, status = validate_user_access(user_id)
+        if error:
+            return error, status
 
-        if not requesting_user_id:
-            logger.error("user_id missing in JWT")
-            return {"message": "user_id missing in JWT"}, 400
-
-        # Verify that the requested user belongs to the same company
-        target_user = User.get_by_id(user_id)
-        if not target_user:
-            logger.warning("User with ID %s not found", user_id)
-            return {"message": "User not found"}, 404
-
-        if target_user.company_id != company_id:
-            logger.warning(
-                "User %s attempted to access roles for user %s from different company",
-                requesting_user_id,
-                user_id,
+        # If Guardian Service is disabled, return empty roles
+        if not current_app.config.get("USE_GUARDIAN_SERVICE"):
+            logger.debug(
+                "Guardian Service is disabled - returning empty roles list"
             )
-            return {"message": "Access denied"}, 403
+            return {"roles": []}, 200
 
-        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            logger.error("GUARDIAN_SERVICE_URL not set")
-            return {"message": "Internal server error"}, 500
+        guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
+        headers = get_guardian_headers()
 
-        # Get JWT token from cookies to forward to Guardian service
-        jwt_token = request.cookies.get("access_token")
-        headers = {}
-        if jwt_token:
-            headers["Cookie"] = f"access_token={jwt_token}"
+        # Fetch roles from Guardian
+        response_data, error = self._fetch_user_roles_from_guardian(
+            user_id,
+            guardian_url,
+            headers,
+            current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
+        )
+        if error:
+            return error
 
-        try:
-            # Add a timeout to avoid hanging indefinitely and handle network errors
-            response = requests.get(
-                f"{guardian_url}/user-roles",
-                params={"user_id": user_id},
-                headers=headers,
-                timeout=5,
-            )
-        except requests.exceptions.RequestException as e:
-            logger.error("Error contacting Guardian service: %s", str(e))
-            return {"message": "Error fetching roles"}, 500
-        if response.status_code != 200:
-            logger.error("Error fetching roles from Guardian: %s", response.text)
-            return {"message": "Error fetching roles"}, 500
-
-        response_data = response.json()
         logger.debug("Guardian response data: %s", response_data)
 
-        # Handle both response formats:
-        # - Direct list: [{"id": "role1", ...}, {"id": "role2", ...}]
-        # - Object with roles key: {"roles": [{"id": "role1", ...}, ...]}
-        # - Other formats: Default to empty list with warning
-        if isinstance(response_data, list):
-            roles = response_data
-        elif isinstance(response_data, dict) and "roles" in response_data:
-            roles = response_data.get("roles", [])
-        else:
-            logger.warning(
-                "Unexpected response format from Guardian, defaulting to empty roles: %s",
-                response_data,
-            )
-            roles = []
+        # Normalize the response (handles list or dict with "roles" key)
+        user_roles = normalize_guardian_response(response_data, "roles")
 
-        return {"roles": roles}, 200
+        # Enrich each role by fetching full role details from Guardian
+        enriched_roles = []
+        for user_role in user_roles:
+            # Parse user role metadata
+            role_id, user_role_id, created_at = self._parse_user_role_metadata(user_role)
+
+            if not role_id:
+                logger.warning("user_role missing role_id: %s", user_role)
+                continue
+
+            # Fetch full role details from Guardian
+            role_details = fetch_role_details(role_id, guardian_url, headers)
+
+            # Build enriched response
+            enriched_role = self._build_enriched_role(
+                user_id, role_id, user_role_id, created_at, role_details
+            )
+            enriched_roles.append(enriched_role)
+
+        logger.info(
+            "Successfully fetched %d enriched roles for user %s",
+            len(enriched_roles),
+            user_id,
+        )
+        return {"roles": enriched_roles}, 200
 
     @require_jwt_auth()
-    @check_access_required("create")
+    @check_access_required("CREATE")
     def post(self, user_id):
         """
         Add a role to a specific user.
@@ -218,18 +251,10 @@ class UserRolesListResource(Resource):
         """
         logger.info("Adding role for user ID %s", user_id)
 
-        jwt_data = getattr(g, "jwt_data", {})
-        requesting_user_id = jwt_data.get("user_id")
-        company_id = jwt_data.get("company_id")
-
-        if not requesting_user_id:
-            logger.error("user_id missing in JWT")
-            return {"message": "user_id missing in JWT"}, 400
-
-        # Verify that the requested user belongs to the same company
-        _, error = self._validate_user_access(user_id, company_id)
+        # Validate user access
+        error, status = validate_user_access(user_id)
         if error:
-            return error
+            return error, status
 
         try:
             json_data = request.get_json(force=True)
@@ -241,11 +266,14 @@ class UserRolesListResource(Resource):
         if error:
             return error
 
-        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            logger.error("GUARDIAN_SERVICE_URL not set")
-            return {"message": "Internal server error"}, 500
+        # If Guardian Service is disabled, return success without calling Guardian
+        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+            logger.debug(
+                "Guardian Service is disabled - cannot assign role (operation skipped)"
+            )
+            return {"message": "Guardian Service is disabled"}, 503
 
+        guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
         # Get JWT token from cookies to forward to Guardian service
         jwt_token = request.cookies.get("access_token")
         headers = {}
@@ -258,7 +286,7 @@ class UserRolesListResource(Resource):
                 f"{guardian_url}/user-roles",
                 json={"user_id": user_id, "role_id": role_id},
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))
@@ -279,7 +307,7 @@ class UserRolesResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("read")
+    @check_access_required("READ")
     def get(self, user_id, user_role_id):
         """
         Get a specific role assignment for a user.
@@ -290,11 +318,12 @@ class UserRolesResource(Resource):
         Returns:
             tuple: Role assignment information and HTTP status code 200 on success.
         """
-        logger.info("Retrieving role assignment %s for user %s", user_role_id, user_id)
+        logger.info(
+            "Retrieving role assignment %s for user %s", user_role_id, user_id
+        )
 
         # Get company_id from JWT data stored in g by the decorator
-        jwt_data = getattr(g, "jwt_data", {})
-        company_id = jwt_data.get("company_id")
+        company_id = g.company_id
 
         if not company_id:
             logger.error("company_id missing in JWT")
@@ -310,11 +339,12 @@ class UserRolesResource(Resource):
             )
             return {"message": "User not found or access denied"}, 404
 
-        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            logger.error("GUARDIAN_SERVICE_URL not set")
-            return {"message": "Internal server error"}, 500
+        # If Guardian Service is disabled, return service unavailable
+        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+            logger.debug("Guardian Service is disabled - cannot retrieve role")
+            return {"message": "Guardian Service is disabled"}, 503
 
+        guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
         # Get JWT token from cookies to forward to Guardian service
         jwt_token = request.cookies.get("access_token")
         headers = {}
@@ -326,7 +356,7 @@ class UserRolesResource(Resource):
             response = requests.get(
                 f"{guardian_url}/user-roles/{user_role_id}",
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))
@@ -336,7 +366,9 @@ class UserRolesResource(Resource):
             logger.warning("Role assignment %s not found", user_role_id)
             return {"message": "Role assignment not found"}, 404
         if response.status_code != 200:
-            logger.error("Error retrieving role from Guardian: %s", response.text)
+            logger.error(
+                "Error retrieving role from Guardian: %s", response.text
+            )
             return {"message": "Error retrieving role"}, 500
 
         role_data = response.json()
@@ -358,7 +390,7 @@ class UserRolesResource(Resource):
         return role_data, 200
 
     @require_jwt_auth()
-    @check_access_required("delete")
+    @check_access_required("DELETE")
     def delete(self, user_id, user_role_id):
         """
         Delete a specific role assignment from a user.
@@ -369,11 +401,12 @@ class UserRolesResource(Resource):
         Returns:
             tuple: Empty response and HTTP status code 204 on success.
         """
-        logger.info("Removing role assignment %s from user %s", user_role_id, user_id)
+        logger.info(
+            "Removing role assignment %s from user %s", user_role_id, user_id
+        )
 
         # Get company_id from JWT data stored in g by the decorator
-        jwt_data = getattr(g, "jwt_data", {})
-        company_id = jwt_data.get("company_id")
+        company_id = g.company_id
 
         if not company_id:
             logger.error("company_id missing in JWT")
@@ -389,11 +422,12 @@ class UserRolesResource(Resource):
             )
             return {"message": "User not found or access denied"}, 404
 
-        guardian_url = os.environ.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            logger.error("GUARDIAN_SERVICE_URL not set")
-            return {"message": "Internal server error"}, 500
+        # If Guardian Service is disabled, return service unavailable
+        if not current_app.config.get("USE_GUARDIAN_SERVICE", True):
+            logger.debug("Guardian Service is disabled - cannot delete role")
+            return {"message": "Guardian Service is disabled"}, 503
 
+        guardian_url = current_app.config["GUARDIAN_SERVICE_URL"]
         # Get JWT token from cookies to forward to Guardian service
         jwt_token = request.cookies.get("access_token")
         headers = {}
@@ -405,7 +439,7 @@ class UserRolesResource(Resource):
             get_response = requests.get(
                 f"{guardian_url}/user-roles/{user_role_id}",
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))
@@ -415,7 +449,9 @@ class UserRolesResource(Resource):
             logger.warning("Role assignment %s not found", user_role_id)
             return {"message": "Role assignment not found"}, 404
         if get_response.status_code != 200:
-            logger.error("Error checking role in Guardian: %s", get_response.text)
+            logger.error(
+                "Error checking role in Guardian: %s", get_response.text
+            )
             return {"message": "Error removing role"}, 500
 
         role_data = get_response.json()
@@ -434,17 +470,21 @@ class UserRolesResource(Resource):
             response = requests.delete(
                 f"{guardian_url}/user-roles/{user_role_id}",
                 headers=headers,
-                timeout=5,
+                timeout=current_app.config.get("GUARDIAN_SERVICE_TIMEOUT", 5),
             )
         except requests.exceptions.RequestException as e:
             logger.error("Error contacting Guardian service: %s", str(e))
             return {"message": "Error removing role"}, 500
 
         if response.status_code == 404:
-            logger.warning("Role assignment %s not found for deletion", user_role_id)
+            logger.warning(
+                "Role assignment %s not found for deletion", user_role_id
+            )
             return {"message": "Role assignment not found"}, 404
         if response.status_code not in [204, 200]:
-            logger.error("Error removing role from Guardian: %s", response.text)
+            logger.error(
+                "Error removing role from Guardian: %s", response.text
+            )
             return {"message": "Error removing role"}, 500
 
         logger.info(
