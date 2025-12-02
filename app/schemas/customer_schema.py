@@ -1,11 +1,3 @@
-# Copyright (c) 2025 Waterfall
-#
-# This source code is dual-licensed under:
-# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
-# - Commercial License for proprietary use
-#
-# See LICENSE and LICENSE.md files in the root directory for full license text.
-# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 customer_schema.py
 ------------------
@@ -18,8 +10,8 @@ Customer model, ensuring data integrity and proper formatting when handling API
 input and output.
 """
 
-from marshmallow import RAISE, fields, validate
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
+from marshmallow import fields, validate, RAISE
 
 from app.models.customer import Customer
 
@@ -29,7 +21,7 @@ class CustomerSchema(SQLAlchemyAutoSchema):
     Marshmallow schema for the Customer model.
 
     This schema serializes and validates Customer objects, enforcing field
-    types, length constraints, and format (email, phone). It also ensures
+    types, length constraints, and format (email, digits). It also ensures
     proper deserialization and serialization for API input/output.
 
     Fields:
@@ -37,8 +29,7 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         company_id (str): Required. Must be a valid UUID (36 characters).
         email (str): Optional. Must be a valid email, max 100 characters.
         contact_person (str): Optional. Max 100 characters.
-        phone_number (str): Optional. International format allowed
-            (digits, +, spaces, (), -), max 50 characters.
+        phone_number (str): Optional. Digits only, max 50 characters.
         address (str): Optional. Max 255 characters.
     """
 
@@ -57,34 +48,25 @@ class CustomerSchema(SQLAlchemyAutoSchema):
         model = Customer
         load_instance = True
         include_fk = True
-        dump_only = (
-            "id",
-            "created_at",
-            "updated_at",
-            "company_id",
-            "logo_file_id",
-            "has_logo",
-        )
+        dump_only = ("id", "created_at", "updated_at")
         unknown = RAISE
 
-    name = fields.String(
-        required=True, validate=validate.Length(min=1, max=100)
+    name = fields.String(required=True, validate=validate.Length(min=1, max=100))
+
+    company_id = fields.String(
+        required=True,
+        validate=validate.Length(equal=36),
     )
 
     email = fields.Email(allow_none=True, validate=validate.Length(max=100))
 
-    contact_person = fields.String(
-        allow_none=True, validate=validate.Length(max=100)
-    )
+    contact_person = fields.String(allow_none=True, validate=validate.Length(max=100))
 
     phone_number = fields.String(
         allow_none=True,
         validate=[
             validate.Length(max=50),
-            validate.Regexp(
-                r"^[\d\s+()-]*$",
-                error="Phone number can only contain digits, spaces, +, (), and -",
-            ),
+            validate.Regexp(r"^\d*$", error="Phone number must contain only digits."),
         ],
     )
 

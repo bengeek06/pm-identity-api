@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to the **Identity Service**!
 
-> **Note**: This service is part of the larger [Waterfall](https://github.com/bengeek06/waterfall/blob/main/README.md) project. For the overall development workflow, branch strategy, and contribution guidelines, please refer to the [main CONTRIBUTING.md](https://github.com/bengeek06/waterfall/blob/main/CONTRIBUTING.md) in the root repository.
+> **Note**: This service is part of the larger [Waterfall](../../README.md) project. For the overall development workflow, branch strategy, and contribution guidelines, please refer to the [main CONTRIBUTING.md](../../CONTRIBUTING.md) in the root repository.
 
 ## Table of Contents
 
@@ -30,8 +30,7 @@ The **Identity Service** manages user identities, companies, organizational stru
   - User-role integration with Guardian Service
 
 **Key Dependencies:**
-- Flask 3.1+ for web framework
-- Flask-RESTful for REST API resources
+- Flask 3.1+ for REST API
 - SQLAlchemy for ORM
 - Marshmallow for serialization/validation
 - PostgreSQL for data persistence
@@ -98,7 +97,7 @@ JWT_SECRET=dev-jwt-secret-change-in-production
 createdb identity_dev
 
 # Run migrations
-flask -e .env.development db upgrade
+flask db upgrade
 
 # Or use Docker for PostgreSQL
 docker run -d \
@@ -135,10 +134,10 @@ This service follows **PEP 8** style guidelines with the following tools:
 **Black** - Code formatter:
 ```bash
 # Format all code
-black -l 79 -t py313 app/ tests/
+black app/ tests/
 
 # Check without modifying
-black -l 79 -t py313 --check app/ tests/
+black --check app/ tests/
 ```
 
 **Pylint** - Linter:
@@ -199,147 +198,35 @@ class OrganizationUnit(db.Model):
     pass
 ```
 
-**Resource/Endpoint Structure (Flask-RESTful):**
-
-This service uses **Flask-RESTful** for API implementation. Resources are defined as classes in `app/resources/` and registered centrally in `app/routes.py`.
-
+**Resource/Endpoint Structure:**
 ```python
-# app/resources/company.py
-from flask import request, g
-from flask_restful import Resource
-from marshmallow import ValidationError
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-
-from app.models import db
+# app/resources/users.py
+from flask import Blueprint, request, jsonify
+from app.models import User, db
+from app.schemas import UserSchema
 from app.logger import logger
-from app.models.company import Company
-from app.schemas.company_schema import CompanySchema
-from app.utils import require_jwt_auth, check_access_required
 
+users_bp = Blueprint('users', __name__)
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
 
-class CompanyListResource(Resource):
-    """Resource for managing the collection of companies."""
-    
-    @require_jwt_auth()
-    @check_access_required("list")
-    def get(self):
-        """
-        Retrieve all companies.
+@users_bp.route('/users', methods=['GET'])
+def get_users():
+    """Get list of users with optional filtering."""
+    try:
+        company_id = request.args.get('company_id', type=int)
+        query = User.query
         
-        Returns:
-            tuple: List of serialized companies and HTTP status code 200.
-        """
-        logger.info("Retrieving all companies")
+        if company_id:
+            query = query.filter_by(company_id=company_id)
         
-        try:
-            companies = Company.get_all()
-            company_schema = CompanySchema(session=db.session, many=True)
-            return company_schema.dump(companies), 200
-        except SQLAlchemyError as e:
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
-    
-    @require_jwt_auth()
-    @check_access_required("create")
-    def post(self):
-        """
-        Create a new company.
+        users = query.all()
+        return jsonify(users_schema.dump(users)), 200
         
-        Expects:
-            JSON payload with required fields.
-        
-        Returns:
-            tuple: Serialized created company and HTTP status code 201.
-        """
-        logger.info("Creating a new company")
-        
-        json_data = request.get_json()
-        company_schema = CompanySchema(session=db.session)
-        
-        try:
-            new_company = company_schema.load(json_data)
-            db.session.add(new_company)
-            db.session.commit()
-            return company_schema.dump(new_company), 201
-        except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
-        except IntegrityError as e:
-            db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
-
-
-class CompanyResource(Resource):
-    """Resource for managing a single company."""
-    
-    @require_jwt_auth()
-    @check_access_required("read")
-    def get(self, company_id):
-        """Retrieve a specific company by ID."""
-        logger.info("Retrieving company with ID: %s", company_id)
-        
-        company = Company.get_by_id(company_id)
-        if not company:
-            logger.warning("Company with ID %s not found", company_id)
-            return {"message": "Company not found"}, 404
-        
-        company_schema = CompanySchema(session=db.session)
-        return company_schema.dump(company), 200
-    
-    @require_jwt_auth()
-    @check_access_required("update")
-    def put(self, company_id):
-        """Update a company by ID (full update)."""
-        # Implementation
-        pass
-    
-    @require_jwt_auth()
-    @check_access_required("update")
-    def patch(self, company_id):
-        """Partially update a company by ID."""
-        # Implementation
-        pass
-    
-    @require_jwt_auth()
-    @check_access_required("delete")
-    def delete(self, company_id):
-        """Delete a company by ID."""
-        # Implementation
-        pass
+    except Exception as e:
+        logger.error(f"Error fetching users: {e}", exc_info=True)
+        return jsonify({"error": "Failed to fetch users"}), 500
 ```
-
-**Route Registration** (centralized in `app/routes.py`):
-```python
-# app/routes.py
-from flask_restful import Api
-from app.resources.company import CompanyListResource, CompanyResource
-from app.resources.user import UserListResource, UserResource
-
-def register_routes(app):
-    """Register all REST API routes on the Flask application."""
-    api = Api(app)
-    
-    # Company endpoints
-    api.add_resource(CompanyListResource, "/companies")
-    api.add_resource(CompanyResource, "/companies/<string:company_id>")
-    
-    # User endpoints
-    api.add_resource(UserListResource, "/users")
-    api.add_resource(UserResource, "/users/<string:user_id>")
-    
-    # ... other resources
-    
-    logger.info("Routes registered successfully.")
-```
-
-**Key Patterns:**
-- **One Resource Class per HTTP Method Group**: `ListResource` for collections (GET, POST), `Resource` for single items (GET, PUT, PATCH, DELETE)
-- **Authentication Decorators**: `@require_jwt_auth()` for JWT validation, `@check_access_required()` for RBAC
-- **Marshmallow Schemas**: All validation and serialization via schemas
-- **Error Handling**: Consistent try/except blocks with specific SQLAlchemy exceptions
-- **Logging**: Structured logging with context (user_id, company_id, etc.)
-- **Multi-tenancy**: Company_id injection from JWT token via `g.company_id`
 
 ### Marshmallow Schemas
 
@@ -512,195 +399,29 @@ class MyModelSchema(Schema):
 
 ```python
 # app/resources/my_resource.py
-from flask import request, g
-from flask_restful import Resource
-from marshmallow import ValidationError
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from flask import Blueprint, request, jsonify
+from app.models import MyModel, db
+from app.schemas import MyModelSchema
 
-from app.models import db
-from app.logger import logger
-from app.models.my_model import MyModel
-from app.schemas.my_schema import MyModelSchema
-from app.utils import require_jwt_auth, check_access_required
+my_resource_bp = Blueprint('my_resource', __name__)
+schema = MyModelSchema()
+schemas = MyModelSchema(many=True)
 
-
-class MyModelListResource(Resource):
-    """Resource for managing the collection of MyModel entities."""
+@my_resource_bp.route('/my-resources', methods=['GET', 'POST'])
+def handle_my_resources():
+    if request.method == 'GET':
+        items = MyModel.query.all()
+        return jsonify(schemas.dump(items)), 200
     
-    @require_jwt_auth()
-    @check_access_required("list")
-    def get(self):
-        """
-        Retrieve all MyModel items.
-        
-        Returns:
-            tuple: List of serialized items and HTTP status code 200.
-        """
-        logger.info("Retrieving all MyModel items")
-        
-        try:
-            items = MyModel.get_all()
-            schema = MyModelSchema(session=db.session, many=True)
-            return schema.dump(items), 200
-        except SQLAlchemyError as e:
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
-    
-    @require_jwt_auth()
-    @check_access_required("create")
-    def post(self):
-        """
-        Create a new MyModel item.
-        
-        Expects:
-            JSON payload with required fields.
-        
-        Returns:
-            tuple: Serialized created item and HTTP status code 201.
-        """
-        logger.info("Creating a new MyModel item")
-        
-        json_data = request.get_json()
-        schema = MyModelSchema(session=db.session)
-        
-        # Inject company_id from JWT if required
-        json_data["company_id"] = g.company_id
-        
-        try:
-            new_item = schema.load(json_data)
-            db.session.add(new_item)
-            db.session.commit()
-            return schema.dump(new_item), 201
-        except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
-        except IntegrityError as e:
-            db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
-
-
-class MyModelResource(Resource):
-    """Resource for managing a single MyModel entity."""
-    
-    @require_jwt_auth()
-    @check_access_required("read")
-    def get(self, my_model_id):
-        """Retrieve a specific MyModel item by ID."""
-        logger.info("Retrieving MyModel with ID: %s", my_model_id)
-        
-        item = MyModel.get_by_id(my_model_id)
-        if not item:
-            logger.warning("MyModel with ID %s not found", my_model_id)
-            return {"message": "MyModel not found"}, 404
-        
-        schema = MyModelSchema(session=db.session)
-        return schema.dump(item), 200
-    
-    @require_jwt_auth()
-    @check_access_required("update")
-    def put(self, my_model_id):
-        """Update a MyModel item by ID (full update)."""
-        logger.info("Updating MyModel with ID: %s", my_model_id)
-        
-        json_data = request.get_json()
-        item = MyModel.get_by_id(my_model_id)
-        if not item:
-            logger.warning("MyModel with ID %s not found", my_model_id)
-            return {"message": "MyModel not found"}, 404
-        
-        schema = MyModelSchema(session=db.session)
-        
-        try:
-            updated_item = schema.load(json_data, instance=item)
-            db.session.commit()
-            return schema.dump(updated_item), 200
-        except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
-        except IntegrityError as e:
-            db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
-    
-    @require_jwt_auth()
-    @check_access_required("update")
-    def patch(self, my_model_id):
-        """Partially update a MyModel item by ID."""
-        logger.info("Partially updating MyModel with ID: %s", my_model_id)
-        
-        json_data = request.get_json()
-        item = MyModel.get_by_id(my_model_id)
-        if not item:
-            logger.warning("MyModel with ID %s not found", my_model_id)
-            return {"message": "MyModel not found"}, 404
-        
-        schema = MyModelSchema(session=db.session, partial=True)
-        
-        try:
-            updated_item = schema.load(json_data, instance=item, partial=True)
-            db.session.commit()
-            return schema.dump(updated_item), 200
-        except ValidationError as err:
-            logger.error("Validation error: %s", err.messages)
-            return {"message": "Validation error", "errors": err.messages}, 400
-        except IntegrityError as e:
-            db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
-    
-    @require_jwt_auth()
-    @check_access_required("delete")
-    def delete(self, my_model_id):
-        """Delete a MyModel item by ID."""
-        logger.info("Deleting MyModel with ID: %s", my_model_id)
-        
-        item = MyModel.get_by_id(my_model_id)
-        if not item:
-            logger.warning("MyModel with ID %s not found", my_model_id)
-            return {"message": "MyModel not found"}, 404
-        
-        try:
-            db.session.delete(item)
-            db.session.commit()
-            return {}, 204
-        except IntegrityError as e:
-            db.session.rollback()
-            logger.error("Integrity error: %s", str(e))
-            return {"message": "Integrity error"}, 400
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error("Database error: %s", str(e))
-            return {"message": "Database error"}, 500
+    elif request.method == 'POST':
+        data = schema.load(request.json)
+        item = MyModel(**data)
+        db.session.add(item)
+        db.session.commit()
+        return jsonify(schema.dump(item)), 201
 ```
 
-4. **Register resource** in `app/routes.py`:
-
-```python
-# app/routes.py
-from app.resources.my_resource import MyModelListResource, MyModelResource
-
-def register_routes(app):
-    api = Api(app)
-    
-    # ... existing resources
-    
-    # MyModel endpoints
-    api.add_resource(MyModelListResource, "/my-models")
-    api.add_resource(MyModelResource, "/my-models/<string:my_model_id>")
-```
+4. **Register blueprint** in `app/routes.py`
 
 5. **Create migration** and **add tests**
 
@@ -807,46 +528,32 @@ def assign_role_to_user(user_id: int, role_id: int):
 
 ### Multi-tenancy Considerations
 
-All resources should be scoped by `company_id`. The `@require_jwt_auth()` decorator automatically extracts `company_id` from the JWT token and stores it in `g.company_id`:
+All resources should be scoped by `company_id`:
 
 ```python
-# Example: Filter users by company from JWT context
-class UserListResource(Resource):
-    @require_jwt_auth()
-    @check_access_required("list")
-    def get(self):
-        """Get all users from the authenticated user's company."""
-        # company_id is automatically injected by @require_jwt_auth()
-        company_id = g.company_id
-        users = User.query.filter_by(company_id=company_id).all()
-        schema = UserSchema(many=True)
-        return schema.dump(users), 200
+# Always filter by company in queries
+@users_bp.route('/users', methods=['GET'])
+@require_company_context
+def get_users():
+    company_id = g.company_id  # From auth context
+    users = User.query.filter_by(company_id=company_id).all()
+    return jsonify(users_schema.dump(users)), 200
 ```
 
 ### Data Validation
 
-Use Marshmallow schemas for validation in Flask-RESTful resources:
+Use Marshmallow schemas for validation:
 
 ```python
 from marshmallow import ValidationError
-from flask_restful import Resource
 
-class UserListResource(Resource):
-    @require_jwt_auth()
-    @check_access_required("create")
-    def post(self):
-        """Create a new user with schema validation."""
-        json_data = request.get_json()
-        user_schema = UserSchema(session=db.session)
-        
-        try:
-            new_user = user_schema.load(json_data)
-            db.session.add(new_user)
-            db.session.commit()
-            return user_schema.dump(new_user), 201
-        except ValidationError as e:
-            logger.error("Validation error: %s", e.messages)
-            return {"message": "Validation error", "errors": e.messages}, 400
+@users_bp.route('/users', methods=['POST'])
+def create_user():
+    try:
+        data = user_schema.load(request.json)
+        # Create user
+    except ValidationError as e:
+        return jsonify({"errors": e.messages}), 400
 ```
 
 ### Integration Points
@@ -857,7 +564,7 @@ This service communicates with:
 
 ## Getting Help
 
-- **Main Project**: See [root CONTRIBUTING.md](https://github.com/bengeek06/waterfall/blob/main/CONTRIBUTING.md)
+- **Main Project**: See [root CONTRIBUTING.md](../../CONTRIBUTING.md)
 - **Issues**: Use GitHub issues with `service:identity` label
 - **Code of Conduct**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - **Documentation**: [README.md](README.md)
@@ -872,4 +579,4 @@ This service communicates with:
 
 ---
 
-**Remember**: Always refer to the [main CONTRIBUTING.md](https://github.com/bengeek06/waterfall/blob/main/CONTRIBUTING.md) for branch strategy, commit conventions, and pull request process!
+**Remember**: Always refer to the [main CONTRIBUTING.md](../../CONTRIBUTING.md) for branch strategy, commit conventions, and pull request process!

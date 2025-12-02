@@ -1,11 +1,3 @@
-# Copyright (c) 2025 Waterfall
-#
-# This source code is dual-licensed under:
-# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
-# - Commercial License for proprietary use
-#
-# See LICENSE and LICENSE.md files in the root directory for full license text.
-# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 init_db.py
 ----------
@@ -37,22 +29,16 @@ from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import generate_password_hash
 
-from app.constants import (
-    LOG_DATABASE_ERROR,
-    LOG_INTEGRITY_ERROR,
-    LOG_VALIDATION_ERROR,
-    MSG_DATABASE_ERROR,
-    MSG_INTEGRITY_ERROR,
-    MSG_VALIDATION_ERROR,
-)
-from app.logger import logger
 from app.models import db
-from app.models.company import Company
+from app.logger import logger
+
 from app.models.user import User
+from app.models.company import Company
+
 from app.schemas.company_schema import CompanySchema
+from app.schemas.user_schema import UserSchema
 from app.schemas.organization_unit_schema import OrganizationUnitSchema
 from app.schemas.position_schema import PositionSchema
-from app.schemas.user_schema import UserSchema
 
 
 class InitDBResource(Resource):
@@ -178,13 +164,11 @@ class InitDBResource(Resource):
         """
         default_org_unit_data = {
             "name": "default organization",
+            "company_id": company_id,
         }
-        logger.info(
-            f"default_org_unit_data type: {type(default_org_unit_data)}"
-        )
+        logger.info(f"default_org_unit_data type: {type(default_org_unit_data)}")
         logger.info("Creating default organization unit.")
         new_org_unit = org_unit_schema.load(default_org_unit_data)
-        new_org_unit.company_id = company_id
         db.session.add(new_org_unit)
         db.session.flush()  # get new_org_unit.id
         return new_org_unit
@@ -204,14 +188,12 @@ class InitDBResource(Resource):
         """
         default_position_data = {
             "title": "Administrator",
+            "company_id": company_id,
             "organization_unit_id": org_unit_id,
         }
-        logger.info(
-            f"default_position_data type: {type(default_position_data)}"
-        )
+        logger.info(f"default_position_data type: {type(default_position_data)}")
         logger.info("Creating default position.")
         new_position = position_schema.load(default_position_data)
-        new_position.company_id = company_id
         db.session.add(new_position)
         db.session.flush()  # get new_position.id
         return new_position
@@ -235,18 +217,15 @@ class InitDBResource(Resource):
         """
         logger.info(f"user_data type: {type(user_data)}")
         logger.info("Creating user.")
+        user_data["company_id"] = company_id
         user_data["position_id"] = position_id
 
         if "password" in user_data:
-            user_data["hashed_password"] = generate_password_hash(
-                user_data["password"]
-            )
+            user_data["hashed_password"] = generate_password_hash(user_data["password"])
             del user_data["password"]
         else:
             logger.error("User data missing 'password' field.")
-            raise ValidationError(
-                {"password": ["Missing data for required field."]}
-            )
+            raise ValidationError({"password": ["Missing data for required field."]})
 
         new_user = user_schema.load(user_data)
         new_user.company_id = company_id
@@ -334,9 +313,7 @@ class InitDBResource(Resource):
         try:
             with db.session.begin_nested():
                 # Create all entities in order
-                new_company = self._create_company(
-                    company_data, company_schema
-                )
+                new_company = self._create_company(company_data, company_schema)
                 new_org_unit = self._create_organization_unit(
                     new_company.id, org_unit_schema
                 )
@@ -356,16 +333,13 @@ class InitDBResource(Resource):
             }, 201
         except ValidationError as err:
             db.session.rollback()
-            logger.error(LOG_VALIDATION_ERROR, err.messages)
-            return {
-                "message": MSG_VALIDATION_ERROR,
-                "errors": err.messages,
-            }, 400
+            logger.error("Validation error: %s", err.messages)
+            return {"message": "Validation error", "errors": err.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error(LOG_INTEGRITY_ERROR, str(e))
-            return {"message": MSG_INTEGRITY_ERROR}, 400
+            logger.error("Integrity error: %s", str(e))
+            return {"message": "Integrity error"}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error(LOG_DATABASE_ERROR, str(e))
-            return {"message": MSG_DATABASE_ERROR}, 500
+            logger.error("Database error: %s", str(e))
+            return {"message": "Database error"}, 500

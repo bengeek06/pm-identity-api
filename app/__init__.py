@@ -1,11 +1,3 @@
-# Copyright (c) 2025 Waterfall
-#
-# This source code is dual-licensed under:
-# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
-# - Commercial License for proprietary use
-#
-# See LICENSE and LICENSE.md files in the root directory for full license text.
-# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 app/__init__.py
 ---------------
@@ -26,18 +18,15 @@ Functions:
 """
 
 import os
-
-from flask import Flask, g, request
-from flask_cors import CORS
-from flask_marshmallow import Marshmallow
+from flask import Flask, request, g
 from flask_migrate import Migrate
+from flask_marshmallow import Marshmallow
+from flask_cors import CORS
 
-from app.email_helper import mail
-from app.logger import logger
 from app.models import db
-from app.models.user import User
-from app.rate_limiter import limiter
+from app.logger import logger
 from app.routes import register_routes
+from app.models.user import User
 
 # Initialize Flask extensions
 migrate = Migrate()
@@ -54,8 +43,6 @@ def register_extensions(app):
     db.init_app(app)
     migrate.init_app(app, db)
     ma.init_app(app)
-    mail.init_app(app)
-    limiter.init_app(app)
     logger.info("Extensions registered successfully.")
 
 
@@ -77,7 +64,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Unauthorized access attempt detected.",
-            str(error),
+            error=error,
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -101,7 +88,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Forbidden access attempt detected.",
-            str(error),
+            error=error,
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -125,7 +112,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Resource not found.",
-            str(error),
+            error=error,
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -149,7 +136,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Bad request received.",
-            str(error),
+            error=error,
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -173,7 +160,7 @@ def register_error_handlers(app):
         """
         logger.warning(
             "Unsupported media type.",
-            str(error),
+            error=error,
             path=request.path,
             method=request.method,
             request_id=getattr(g, "request_id", None),
@@ -230,15 +217,12 @@ def create_app(config_class):
     """
 
     app = Flask(__name__)
-
     app.config.from_object(config_class)
 
     env = os.getenv("FLASK_ENV", "development")
     logger.info("Creating app in environment.", environment=env)
     if env in ("development", "staging"):
-        CORS(
-            app, supports_credentials=True, resources={r"/*": {"origins": "*"}}
-        )
+        CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 
     register_extensions(app)
     register_error_handlers(app)

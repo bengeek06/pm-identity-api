@@ -1,11 +1,3 @@
-# Copyright (c) 2025 Waterfall
-#
-# This source code is dual-licensed under:
-# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
-# - Commercial License for proprietary use
-#
-# See LICENSE and LICENSE.md files in the root directory for full license text.
-# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 module: app.resources.user
 
@@ -24,128 +16,40 @@ For related user operations, see:
 - app.resources.user_auth: User authentication operations
 """
 
-from flask import g, request
-from flask_restful import Resource
+import os
+
+from flask import request, g
+
 from marshmallow import ValidationError
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import joinedload
+
 from werkzeug.security import generate_password_hash
 
-from app.constants import (
-    LOG_DATABASE_ERROR,
-    LOG_INTEGRITY_ERROR,
-    LOG_VALIDATION_ERROR,
-    MSG_DATABASE_ERROR,
-    MSG_INTEGRITY_ERROR,
-    MSG_VALIDATION_ERROR,
-)
-from app.logger import logger
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
+from flask_restful import Resource
+
+import jwt
+
 from app.models import db
-from app.models.company import Company
-from app.models.user import User
-from app.schemas.position_schema import PositionNestedSchema
-from app.schemas.user_schema import UserSchema
+from app.logger import logger
+from app.utils import require_jwt_auth, check_access_required
 from app.storage_helper import (
-    AvatarValidationError,
-    StorageServiceError,
+    upload_avatar_via_proxy,
     create_user_directories,
     delete_user_storage,
-    upload_avatar_via_proxy,
+    AvatarValidationError,
+    StorageServiceError,
 )
-from app.utils import check_access_required, parse_expand, require_jwt_auth
-
-# Content type constants
-CONTENT_TYPE_MULTIPART = "multipart/form-data"
-
-# Allowed expansions for user endpoints
-USER_ALLOWED_EXPANSIONS = {"position"}
-
-
-def _empty_paginated_response():
-    """Return an empty paginated response."""
-    return {
-        "data": [],
-        "pagination": {
-            "page": 1,
-            "limit": 50,
-            "total": 0,
-            "pages": 0,
-            "has_next": False,
-            "has_prev": False,
-        },
-    }
-
-
-def _get_pagination_params():
-    """Extract and validate pagination parameters from request."""
-    page = max(1, request.args.get("page", 1, type=int))
-    limit = min(max(1, request.args.get("limit", 50, type=int)), 1000)
-    return page, limit
-
-
-def _apply_sorting(query, model, extra_fields=None):
-    """Apply sorting to query based on request parameters."""
-    allowed_sorts = ["created_at", "updated_at"] + (extra_fields or [])
-    sort_field = request.args.get("sort", "created_at")
-    if sort_field not in allowed_sorts:
-        sort_field = "created_at"
-    sort_order = request.args.get("order", "asc")
-    column = getattr(model, sort_field)
-    return query.order_by(column.desc() if sort_order == "desc" else column.asc())
-
-
-def _build_pagination_meta(paginated, page, limit):
-    """Build pagination metadata dictionary."""
-    return {
-        "page": page,
-        "limit": limit,
-        "total": paginated.total,
-        "pages": paginated.pages,
-        "has_next": paginated.has_next,
-        "has_prev": paginated.has_prev,
-    }
-
-
-def _apply_user_filters(query, id__in, email, search):
-    """Apply filters to user query."""
-    if id__in is not None:
-        ids = [uuid.strip() for uuid in id__in.split(",") if uuid.strip()]
-        if ids:
-            query = query.filter(User.id.in_(ids))
-    if email:
-        query = query.filter_by(email=email)
-    if search:
-        search_pattern = f"%{search}%"
-        query = query.filter(
-            db.or_(
-                User.email.ilike(search_pattern),
-                User.first_name.ilike(search_pattern),
-                User.last_name.ilike(search_pattern),
-            )
-        )
-    return query
-
-
-def _apply_user_expansions(result_data, items, expansions):
-    """Apply expansion data and post-processing to serialized users."""
-    position_schema = PositionNestedSchema()
-    for i, user_data in enumerate(result_data):
-        user_data.pop("hashed_password", None)
-        if "position" in expansions:
-            user_obj = items[i]
-            if user_obj.position:
-                user_data["position"] = position_schema.dump(user_obj.position)
-            else:
-                user_data["position"] = None
+from app.models.user import User
+from app.schemas.user_schema import UserSchema
+from app.models.company import Company
 
 
 # Helper functions for user operations
 def _validate_avatar_url_field(avatar_url_value, context="POST"):
     """Log warning if avatar_url is sent by frontend (this is a bug)."""
     is_base64 = (
-        avatar_url_value.startswith("data:image/")
-        if avatar_url_value
-        else False
+        avatar_url_value.startswith("data:image/") if avatar_url_value else False
     )
     logger.warning(
         f"[{context}] Frontend sent avatar_url - THIS IS A BUG! "
@@ -153,7 +57,7 @@ def _validate_avatar_url_field(avatar_url_value, context="POST"):
         f"Is base64 data URI: {is_base64}, "
         f"Preview: {avatar_url_value[:50]}... "
         f"EXPECTED: Frontend should send file via "
-        f"'avatar' field in {CONTENT_TYPE_MULTIPART}, "
+        f"'avatar' field in multipart/form-data, "
         f"NOT avatar_url. The backend manages avatar_url "
         f"after upload to Storage Service."
     )
@@ -168,9 +72,7 @@ def _parse_request_data(is_multipart, context="POST"):
 
         # Get form data but exclude file fields and avatar_url
         json_data = {
-            k: v
-            for k, v in request.form.items()
-            if k not in ("avatar", "avatar_url")
+            k: v for k, v in request.form.items() if k not in ("avatar", "avatar_url")
         }
     else:
         json_data = request.get_json() or {}
@@ -182,7 +84,7 @@ def _parse_request_data(is_multipart, context="POST"):
     return json_data
 
 
-def _handle_avatar_upload(user):
+def _handle_avatar_upload(user, company_id):
     """Handle avatar upload if present in request."""
     if "avatar" not in request.files:
         return
@@ -193,18 +95,17 @@ def _handle_avatar_upload(user):
         content_type = avatar_file.content_type or "image/jpeg"
         filename = avatar_file.filename or "avatar.jpg"
 
-        upload_result = upload_avatar_via_proxy(
+        object_key = upload_avatar_via_proxy(
             user_id=str(user.id),
+            company_id=company_id,
             file_data=file_data,
             content_type=content_type,
             filename=filename,
         )
 
-        user.set_avatar(upload_result["file_id"])
+        user.avatar_url = object_key
         db.session.commit()
-        logger.info(
-            f"Avatar uploaded for new user {user.id}: file_id={upload_result['file_id']}"
-        )
+        logger.info(f"Avatar uploaded for new user {user.id}")
 
     except AvatarValidationError as e:
         logger.warning(f"Avatar validation failed: {e}")
@@ -215,17 +116,20 @@ def _handle_avatar_upload(user):
         # Don't fail user creation, just log the error
 
 
-def _create_user_storage(user_id):
+def _create_user_storage(user_id, company_id):
     """Create user directory structure in Storage Service."""
     try:
-        create_user_directories(user_id=str(user_id))
+        create_user_directories(
+            user_id=str(user_id),
+            company_id=company_id,
+        )
         logger.info(f"User directories created for {user_id}")
     except StorageServiceError as e:
         logger.warning(f"Failed to create user directories: {e}")
         # Don't fail user creation if directory creation fails
 
 
-def _handle_avatar_upload_for_update(user):
+def _handle_avatar_upload_for_update(user, company_id):
     """Handle avatar upload for PUT/PATCH operations."""
     if "avatar" not in request.files:
         return None
@@ -237,17 +141,16 @@ def _handle_avatar_upload_for_update(user):
         content_type = avatar_file.content_type or "image/jpeg"
         filename = avatar_file.filename or "avatar.jpg"
 
-        upload_result = upload_avatar_via_proxy(
+        uploaded_avatar_url = upload_avatar_via_proxy(
             user_id=str(user.id),
+            company_id=company_id,
             file_data=file_data,
             content_type=content_type,
             filename=filename,
         )
 
-        logger.info(
-            f"Avatar updated for user {user.id}: file_id={upload_result['file_id']}"
-        )
-        return upload_result["file_id"]
+        logger.info(f"Avatar updated for user {user.id}")
+        return uploaded_avatar_url
 
     except AvatarValidationError as e:
         logger.warning(f"Avatar validation failed: {e}")
@@ -261,9 +164,7 @@ def _handle_avatar_upload_for_update(user):
 def _parse_multipart_data_with_debug(context="PATCH"):
     """Parse multipart data with detailed debug logging."""
     logger.debug(f"[{context}] request.form keys: {list(request.form.keys())}")
-    logger.debug(
-        f"[{context}] request.files keys: {list(request.files.keys())}"
-    )
+    logger.debug(f"[{context}] request.files keys: {list(request.files.keys())}")
 
     for key in request.form.keys():
         value = request.form[key]
@@ -278,11 +179,7 @@ def _parse_multipart_data_with_debug(context="PATCH"):
         _validate_avatar_url_field(request.form["avatar_url"], context)
 
     # Get form data but exclude file fields and avatar_url
-    return {
-        k: v
-        for k, v in request.form.items()
-        if k not in ("avatar", "avatar_url")
-    }
+    return {k: v for k, v in request.form.items() if k not in ("avatar", "avatar_url")}
 
 
 def _parse_patch_request_data():
@@ -293,44 +190,26 @@ def _parse_patch_request_data():
         f"[PATCH] Has form: {bool(request.form)}, Has files: {bool(request.files)}"
     )
 
-    # Check if request has multipart data
+    # Handle multipart/form-data or JSON
     has_form_data = len(request.form) > 0 or len(request.files) > 0
     is_multipart_content = (
         request.content_type and "multipart" in request.content_type
     ) or (request.mimetype and "multipart" in request.mimetype)
 
     if has_form_data or is_multipart_content:
-        return _parse_multipart_data_with_debug(context="PATCH")
+        json_data = _parse_multipart_data_with_debug(context="PATCH")
+    else:
+        # Try to parse as JSON
+        json_data = request.get_json(force=True, silent=True) or {}
+        logger.debug(f"[PATCH] Parsed JSON data: {bool(json_data)}")
 
-    # Parse as JSON
-    json_data = request.get_json(force=True, silent=True) or {}
-    logger.debug(f"[PATCH] Parsed JSON data: {bool(json_data)}")
-
-    # Remove avatar_url from JSON data if present
-    if "avatar_url" in json_data:
-        _validate_avatar_url_field(json_data["avatar_url"], "PATCH")
-        json_data.pop("avatar_url", None)
+        # Remove avatar_url from JSON data if present
+        if "avatar_url" in json_data:
+            _validate_avatar_url_field(json_data["avatar_url"], "PATCH")
+            json_data.pop("avatar_url", None)
 
     logger.debug(f"[PATCH] json_data after filtering: {json_data}")
     return json_data
-
-
-def _process_avatar_upload_for_patch(user):
-    """
-    Handle avatar upload for PATCH operation.
-
-    Returns:
-        str or None: File ID if avatar was uploaded, None otherwise.
-
-    Raises:
-        ValidationError: If upload fails.
-    """
-    try:
-        return _handle_avatar_upload_for_update(user)
-    except AvatarValidationError as e:
-        raise ValidationError({"avatar": [str(e)]}) from e
-    except StorageServiceError as exc:
-        raise ValidationError({"avatar": ["Failed to upload avatar"]}) from exc
 
 
 class UserListResource(Resource):
@@ -346,84 +225,41 @@ class UserListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("LIST")
+    @check_access_required("list")
     def get(self):
         """
         Get all users from the authenticated user's company.
 
-        Supports optional filtering, pagination, sorting, and expansion.
-
-        Query Parameters:
-            id__in (str, optional): Comma-separated list of UUIDs to filter by
-            email (str, optional): Filter by exact email match
-            search (str, optional): Search in email, first_name, last_name
-            page (int, optional): Page number (default: 1, min: 1)
-            limit (int, optional): Items per page (default: 50, max: 1000)
-            sort (str, optional): Sort by (created_at, updated_at, email)
-            order (str, optional): Sort order (asc, desc, default: asc)
-            expand (str, optional): Comma-separated relations to expand (position)
-
         Returns:
-            tuple: Paginated response with data and metadata, HTTP 200
+            tuple: List of serialized users and HTTP status code 200.
         """
         logger.info("Fetching all users")
         try:
             # Get company_id from JWT data stored in g by the decorator
-            company_id = g.company_id
+            jwt_data = getattr(g, "jwt_data", {})
+            company_id = jwt_data.get("company_id")
+
             if not company_id:
                 logger.error("company_id missing in JWT")
                 return {"message": "company_id missing in JWT"}, 400
 
-            # Parse expand parameter and get filters
-            expansions = parse_expand(
-                request.args.get("expand"), USER_ALLOWED_EXPANSIONS
-            )
-            id__in = request.args.get("id__in")
-
-            # Handle empty id__in filter
-            if id__in is not None and id__in.strip() == "":
-                return _empty_paginated_response(), 200
-
-            # Build query with eager loading
-            query = User.query.filter_by(company_id=company_id)
-            if "position" in expansions:
-                query = query.options(joinedload(User.position))
-
-            # Apply filters
-            query = _apply_user_filters(
-                query, id__in, request.args.get("email"), request.args.get("search")
-            )
-
-            # Get pagination and sorting params
-            page, limit = _get_pagination_params()
-            query = _apply_sorting(query, User, ["email"])
-
-            # Execute pagination
-            paginated = query.paginate(page=page, per_page=limit, error_out=False)
-
-            # Serialize and apply expansions
+            # Filter users by company_id to only return users from the same company
+            users = User.query.filter_by(company_id=company_id).all()
             schema = UserSchema(many=True)
-            result_data = schema.dump(paginated.items)
-            _apply_user_expansions(result_data, paginated.items, expansions)
-
-            return {
-                "data": result_data,
-                "pagination": _build_pagination_meta(paginated, page, limit),
-            }, 200
+            return schema.dump(users), 200
         except SQLAlchemyError as e:
             logger.error("Error fetching users: %s", str(e))
             return {"message": "Error fetching users"}, 500
 
     @require_jwt_auth()
-    @check_access_required("CREATE")
+    @check_access_required("create")
     def post(self):
         """
         Create a new user.
 
         Expects:
             JSON payload with at least 'email', 'password', 'first_name',
-            'last_name'.
-            company_id is automatically extracted from JWT token.
+            'last_name', and 'company_id'.
             Optional: multipart/form-data with 'avatar' file.
 
         Returns:
@@ -433,55 +269,77 @@ class UserListResource(Resource):
         """
         logger.info("Creating a new user")
 
+        jwt_token = request.cookies.get("access_token")
+        if not jwt_token:
+            logger.error("Missing JWT token")
+            return {"message": "Missing JWT token"}, 401
+
+        logger.debug("Found JWT token in cookies")
+        jwt_secret = os.environ.get("JWT_SECRET")
+        if not jwt_secret:
+            logger.warning("JWT_SECRET not found in environment variables.")
+        try:
+            payload = jwt.decode(jwt_token, jwt_secret, algorithms=["HS256"])
+            company_id = payload.get("company_id")
+            if not company_id:
+                logger.error("company_id missing in JWT")
+                return {"message": "company_id missing in JWT"}, 400
+            logger.debug(f"Extracted company_id {company_id} from JWT")
+        except jwt.ExpiredSignatureError:
+            logger.error("JWT expired")
+            return {"message": "JWT expired"}, 401
+        except jwt.InvalidTokenError as e:
+            logger.error("JWT error: %s", str(e))
+            return {"message": "JWT error"}, 401
+
         # Handle multipart/form-data or JSON
         is_multipart = (
-            request.content_type
-            and CONTENT_TYPE_MULTIPART in request.content_type
-        ) or (request.mimetype and CONTENT_TYPE_MULTIPART in request.mimetype)
+            request.content_type and "multipart/form-data" in request.content_type
+        ) or (request.mimetype and "multipart/form-data" in request.mimetype)
 
         # Parse request data
         json_data = _parse_request_data(is_multipart, context="POST")
+        json_data["company_id"] = company_id
 
         user_schema = UserSchema(session=db.session)
 
         if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(
-                json_data["password"]
-            )
+            json_data["hashed_password"] = generate_password_hash(json_data["password"])
             del json_data["password"]
 
         try:
             user = user_schema.load(json_data)
-            # Assign company_id from JWT after load
-            user.company_id = g.company_id
-
-            company = Company.get_by_id(user.company_id)
-            if not company:
-                logger.warning("Company with ID %s not found", user.company_id)
-                return {"message": "Company not found"}, 404
-            user.company = company
-
+            # Handle nullable company_id for superuser creation
+            if "company_id" in json_data and json_data["company_id"] is not None:
+                company = Company.get_by_id(json_data["company_id"])
+                if not company:
+                    logger.warning(
+                        "Company with ID %s not found", json_data["company_id"]
+                    )
+                    return {"message": "Company not found"}, 404
+                user.company = company
+            # If company_id is None, this is a superuser creation
             db.session.add(user)
             db.session.commit()
 
             # Create user directory structure in Storage Service
-            _create_user_storage(user.id)
+            _create_user_storage(user.id, company_id)
 
             # Handle avatar upload if present
-            _handle_avatar_upload(user)
+            _handle_avatar_upload(user, company_id)
 
             return user_schema.dump(user), 201
         except ValidationError as e:
-            logger.error(LOG_VALIDATION_ERROR, e.messages)
-            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
+            logger.error(f"Validation error: {e.messages}")
+            return {"message": "Validation error", "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error(LOG_INTEGRITY_ERROR, str(e))
-            return {"message": MSG_INTEGRITY_ERROR}, 400
+            logger.error(f"Integrity error: {str(e.orig)}")
+            return {"message": "Integrity error"}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error(LOG_DATABASE_ERROR, str(e))
-            return {"message": MSG_DATABASE_ERROR}, 500
+            logger.error("Database error: %s", str(e))
+            return {"message": "Database error"}, 500
 
 
 class UserResource(Resource):
@@ -503,7 +361,7 @@ class UserResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("READ")
+    @check_access_required("read")
     def get(self, user_id):
         """
         Get a user by ID.
@@ -511,46 +369,21 @@ class UserResource(Resource):
         Args:
             user_id (str): The ID of the user to retrieve.
 
-        Query Parameters:
-            expand (str, optional): Comma-separated relations to expand (position)
-
         Returns:
             tuple: The serialized user and HTTP status code 200 on success.
                    HTTP status code 404 if the user is not found.
         """
         logger.info("Fetching user with ID %s", user_id)
 
-        # Parse expand parameter
-        expand_param = request.args.get("expand")
-        expansions = parse_expand(expand_param, USER_ALLOWED_EXPANSIONS)
-
-        # Build query with eager loading if needed
-        if expansions:
-            query = User.query.filter_by(id=user_id)
-            if "position" in expansions:
-                query = query.options(joinedload(User.position))
-            user = query.first()
-        else:
-            user = User.get_by_id(user_id)
-
+        user = User.get_by_id(user_id)
         if not user:
             return {"message": "User not found"}, 404
 
         schema = UserSchema()
-        result = schema.dump(user)
-
-        # Add expanded relations
-        if "position" in expansions:
-            if user.position:
-                position_schema = PositionNestedSchema()
-                result["position"] = position_schema.dump(user.position)
-            else:
-                result["position"] = None
-
-        return result, 200
+        return schema.dump(user), 200
 
     @require_jwt_auth()
-    @check_access_required("UPDATE")
+    @check_access_required("update")
     def put(self, user_id):
         """
         Update a user by ID.
@@ -572,9 +405,8 @@ class UserResource(Resource):
 
         # Handle multipart/form-data or JSON
         is_multipart = (
-            request.content_type
-            and CONTENT_TYPE_MULTIPART in request.content_type
-        ) or (request.mimetype and CONTENT_TYPE_MULTIPART in request.mimetype)
+            request.content_type and "multipart/form-data" in request.content_type
+        ) or (request.mimetype and "multipart/form-data" in request.mimetype)
 
         # Parse request data
         json_data = _parse_request_data(is_multipart, context="PUT")
@@ -584,19 +416,21 @@ class UserResource(Resource):
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
 
+        # Get company_id from JWT for avatar operations
+        jwt_data = getattr(g, "jwt_data", {})
+        company_id = jwt_data.get("company_id")
+
         user_schema = UserSchema(session=db.session, context={"user": user})
 
         if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(
-                json_data["password"]
-            )
+            json_data["hashed_password"] = generate_password_hash(json_data["password"])
             del json_data["password"]
 
         try:
             # Handle avatar upload if present
-            uploaded_file_id = None
+            uploaded_avatar_url = None
             try:
-                uploaded_file_id = _handle_avatar_upload_for_update(user)
+                uploaded_avatar_url = _handle_avatar_upload_for_update(user, company_id)
             except AvatarValidationError as e:
                 return {"message": str(e)}, 400
             except StorageServiceError:
@@ -604,9 +438,9 @@ class UserResource(Resource):
 
             updated_user = user_schema.load(json_data, instance=user)
 
-            # Update avatar using helper method
-            if uploaded_file_id:
-                updated_user.set_avatar(uploaded_file_id)
+            # Update avatar_url directly on the user object (not via schema)
+            if uploaded_avatar_url:
+                updated_user.avatar_url = uploaded_avatar_url
 
             db.session.commit()
             return user_schema.dump(updated_user), 200
@@ -623,7 +457,7 @@ class UserResource(Resource):
             return {"message": "Database error"}, 500
 
     @require_jwt_auth()
-    @check_access_required("UPDATE")
+    @check_access_required("update")
     def patch(self, user_id):
         """
         Partially update a user by ID.
@@ -651,49 +485,55 @@ class UserResource(Resource):
             logger.warning("User with ID %s not found", user_id)
             return {"message": "User not found"}, 404
 
+        # Get company_id from JWT for avatar operations
+        jwt_data = getattr(g, "jwt_data", {})
+        company_id = jwt_data.get("company_id")
+
         user_schema = UserSchema(
             session=db.session, partial=True, context={"user": user}
         )
 
         if "password" in json_data:
-            json_data["hashed_password"] = generate_password_hash(
-                json_data["password"]
-            )
+            json_data["hashed_password"] = generate_password_hash(json_data["password"])
             del json_data["password"]
 
         try:
             # Handle avatar upload if present
-            uploaded_file_id = _process_avatar_upload_for_patch(user)
+            uploaded_avatar_url = None
+            try:
+                uploaded_avatar_url = _handle_avatar_upload_for_update(user, company_id)
+            except AvatarValidationError as e:
+                return {"message": str(e)}, 400
+            except StorageServiceError:
+                return {"message": "Failed to upload avatar"}, 500
 
             # Company_id modification is prevented by schema validation
             logger.debug(f"[PATCH] json_data before schema.load: {json_data}")
-            updated_user = user_schema.load(
-                json_data, instance=user, partial=True
-            )
+            updated_user = user_schema.load(json_data, instance=user, partial=True)
 
-            # Update avatar using helper method
-            if uploaded_file_id:
-                updated_user.set_avatar(uploaded_file_id)
+            # Update avatar_url directly on the user object (not via schema)
+            if uploaded_avatar_url:
+                updated_user.avatar_url = uploaded_avatar_url
                 logger.debug(
-                    f"[PATCH] Set avatar file_id on user object: {uploaded_file_id}"
+                    f"[PATCH] Set avatar_url on user object: {uploaded_avatar_url}"
                 )
 
             db.session.commit()
             return user_schema.dump(updated_user), 200
         except ValidationError as e:
-            logger.error(LOG_VALIDATION_ERROR, e.messages)
-            return {"message": MSG_VALIDATION_ERROR, "errors": e.messages}, 400
+            logger.error(f"Validation error: {e.messages}")
+            return {"message": "Validation error", "errors": e.messages}, 400
         except IntegrityError as e:
             db.session.rollback()
-            logger.error(LOG_INTEGRITY_ERROR, str(e))
-            return {"message": MSG_INTEGRITY_ERROR}, 400
+            logger.error(f"Integrity error: {str(e.orig)}")
+            return {"message": "Integrity error"}, 400
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error(LOG_DATABASE_ERROR, str(e))
-            return {"message": MSG_DATABASE_ERROR}, 500
+            logger.error("Database error: %s", str(e))
+            return {"message": "Database error"}, 500
 
     @require_jwt_auth()
-    @check_access_required("DELETE")
+    @check_access_required("delete")
     def delete(self, user_id):
         """
         Delete a user by ID.
@@ -715,8 +555,13 @@ class UserResource(Resource):
             return {"message": "User not found"}, 404
 
         # Delete all user storage from Storage Service
+        jwt_data = getattr(g, "jwt_data", {})
+        company_id = jwt_data.get("company_id")
         try:
-            delete_user_storage(user_id=str(user.id))
+            delete_user_storage(
+                user_id=str(user.id),
+                company_id=company_id,
+            )
             logger.info(f"User storage deleted for {user.id}")
         except (StorageServiceError, ValueError) as e:
             # Log but don't fail user deletion if storage deletion fails
@@ -728,5 +573,5 @@ class UserResource(Resource):
             return {"message": "User deleted successfully"}, 204
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error(LOG_DATABASE_ERROR, str(e))
-            return {"message": MSG_DATABASE_ERROR}, 500
+            logger.error("Database error: %s", str(e))
+            return {"message": "Database error"}, 500

@@ -8,8 +8,6 @@ flask-marshmallow
 Flask-Migrate
 flask-restful
 Flask-SQLAlchemy
-Flask-Mail
-Flask-Limiter
 marshmallow-sqlalchemy
 psycopg2-binary
 PyJWT

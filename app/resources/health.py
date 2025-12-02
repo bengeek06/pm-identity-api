@@ -1,11 +1,3 @@
-# Copyright (c) 2025 Waterfall
-#
-# This source code is dual-licensed under:
-# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
-# - Commercial License for proprietary use
-#
-# See LICENSE and LICENSE.md files in the root directory for full license text.
-# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 health.py
 ---------
@@ -15,11 +7,9 @@ This module provides a simple health check endpoint to verify that the service i
 
 import os
 from datetime import datetime, timezone
-
 from flask_restful import Resource
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-
 from app.logger import logger
 from app.models import db
 from app.resources.version import API_VERSION
@@ -52,9 +42,7 @@ class HealthResource(Resource):
         health_data = {
             "status": "healthy",
             "service": "identity_service",
-            "timestamp": datetime.now(timezone.utc)
-            .isoformat()
-            .replace("+00:00", "Z"),
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "version": API_VERSION,
             "environment": os.getenv("FLASK_ENV", "development"),
             "checks": {},
@@ -86,9 +74,7 @@ class HealthResource(Resource):
 
             # Check if result is as expected
             if result.scalar() == 1:
-                response_time_ms = (
-                    end_time - start_time
-                ).total_seconds() * 1000
+                response_time_ms = (end_time - start_time).total_seconds() * 1000
                 return {
                     "healthy": True,
                     "message": "Database connection successful",

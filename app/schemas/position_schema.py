@@ -1,11 +1,3 @@
-# Copyright (c) 2025 Waterfall
-#
-# This source code is dual-licensed under:
-# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
-# - Commercial License for proprietary use
-#
-# See LICENSE and LICENSE.md files in the root directory for full license text.
-# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 position_schema.py
 ------------------
@@ -18,25 +10,10 @@ Position model, ensuring data integrity and proper formatting when handling API
 input and output.
 """
 
-from marshmallow import RAISE, Schema, fields, validate
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
+from marshmallow import fields, validate
 
 from app.models.position import Position
-
-
-class PositionNestedSchema(Schema):
-    """
-    Lightweight schema for nested position data in expand responses.
-
-    Used when expanding position in user responses to avoid circular
-    references and limit data exposure.
-    """
-
-    id = fields.String(dump_only=True)
-    title = fields.String(dump_only=True)
-    description = fields.String(dump_only=True)
-    level = fields.Integer(dump_only=True)
-    organization_unit_id = fields.String(dump_only=True)
 
 
 class PositionSchema(SQLAlchemyAutoSchema):
@@ -70,8 +47,7 @@ class PositionSchema(SQLAlchemyAutoSchema):
         model = Position
         load_instance = True
         include_fk = True
-        dump_only = ("id", "created_at", "updated_at", "company_id")
-        unknown = RAISE
+        dump_only = ("id", "created_at", "updated_at")
 
     title = fields.String(
         required=True,
@@ -80,8 +56,20 @@ class PositionSchema(SQLAlchemyAutoSchema):
 
     description = fields.String(
         validate=validate.Length(
-            max=255, error="Description cannot exceed 255 characters."
+            max=200, error="Description cannot exceed 200 characters."
         )
+    )
+
+    company_id = fields.String(
+        required=True,
+        validate=validate.Regexp(
+            r"^[a-fA-F0-9]{8}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{4}-"
+            r"[a-fA-F0-9]{12}$",
+            error="Company ID must be a valid UUID.",
+        ),
     )
 
     organization_unit_id = fields.String(
@@ -98,7 +86,5 @@ class PositionSchema(SQLAlchemyAutoSchema):
 
     level = fields.Integer(
         required=False,
-        validate=validate.Range(
-            min=0, error="Level must be a positive integer."
-        ),
+        validate=validate.Range(min=0, error="Level must be a positive integer."),
     )

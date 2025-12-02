@@ -1,11 +1,3 @@
-# Copyright (c) 2025 Waterfall
-#
-# This source code is dual-licensed under:
-# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
-# - Commercial License for proprietary use
-#
-# See LICENSE and LICENSE.md files in the root directory for full license text.
-# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 module: app.resources.user_position
 
@@ -16,12 +8,13 @@ It provides endpoints for retrieving users associated with specific positions.
 """
 
 from flask_restful import Resource
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.logger import logger
+from app.utils import require_jwt_auth, check_access_required
 from app.models.user import User
 from app.schemas.user_schema import UserSchema
-from app.utils import check_access_required, require_jwt_auth
 
 
 class UserPositionResource(Resource):
@@ -34,7 +27,7 @@ class UserPositionResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("READ")
+    @check_access_required("read")
     def get(self, position_id):
         """
         Get all users for a specific position.

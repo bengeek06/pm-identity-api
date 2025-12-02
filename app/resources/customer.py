@@ -1,11 +1,3 @@
-# Copyright (c) 2025 Waterfall
-#
-# This source code is dual-licensed under:
-# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
-# - Commercial License for proprietary use
-#
-# See LICENSE and LICENSE.md files in the root directory for full license text.
-# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 Module: customer
 
@@ -17,24 +9,17 @@ updating, and deleting customers. The resources use Marshmallow schemas for
 validation and serialization, and handle database errors gracefully.
 """
 
-from flask import g, request
-from flask_restful import Resource
+from flask import request, g
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from flask_restful import Resource
 
-from app.constants import (
-    LOG_DATABASE_ERROR,
-    LOG_INTEGRITY_ERROR,
-    LOG_VALIDATION_ERROR,
-    MSG_CUSTOMER_NOT_FOUND,
-    MSG_DATABASE_ERROR_OCCURRED,
-    MSG_INTEGRITY_ERROR_DUPLICATE,
-)
-from app.logger import logger
 from app.models import db
+from app.logger import logger
+
 from app.models.customer import Customer
 from app.schemas.customer_schema import CustomerSchema
-from app.utils import check_access_required, require_jwt_auth
+from app.utils import require_jwt_auth, check_access_required
 
 
 class CustomerListResource(Resource):
@@ -50,121 +35,29 @@ class CustomerListResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("LIST")
+    @check_access_required("list")
     def get(self):
         """
-        Retrieve all customers with optional filtering, pagination, and sorting.
-
-        Query Parameters:
-            id__in (str, optional): Comma-separated list of UUIDs to filter by
-            name (str, optional): Filter by exact customer name match
-            search (str, optional): Search in name, email, contact_person
-            page (int, optional): Page number (default: 1, min: 1)
-            limit (int, optional): Items per page (default: 50, max: 1000)
-            sort (str, optional): Field to sort by (created_at, updated_at, name)
-            order (str, optional): Sort order (asc, desc, default: asc)
+        Retrieve all customers.
 
         Returns:
-            tuple: Paginated response with data and metadata, HTTP 200
+            tuple: A tuple containing a list of serialized customers and the
+                   HTTP status code 200.
         """
         logger.info("Retrieving all customers")
 
-        try:
-            # Handle id__in filter - return empty list if empty string
-            id__in = request.args.get("id__in")
-            if id__in is not None and id__in.strip() == "":
-                return {
-                    "data": [],
-                    "pagination": {
-                        "page": 1,
-                        "limit": 50,
-                        "total": 0,
-                        "pages": 0,
-                        "has_next": False,
-                        "has_prev": False,
-                    },
-                }, 200
-
-            query = Customer.query
-
-            # Apply id__in filter if provided
-            if id__in is not None:
-                ids = [
-                    uuid.strip() for uuid in id__in.split(",") if uuid.strip()
-                ]
-                if ids:
-                    query = query.filter(Customer.id.in_(ids))
-
-            # Apply name filter if provided
-            name = request.args.get("name")
-            if name:
-                query = query.filter_by(name=name)
-
-            # Apply search filter if provided (searches in name, email, contact_person)
-            search = request.args.get("search")
-            if search:
-                search_pattern = f"%{search}%"
-                query = query.filter(
-                    db.or_(
-                        Customer.name.ilike(search_pattern),
-                        Customer.email.ilike(search_pattern),
-                        Customer.contact_person.ilike(search_pattern),
-                    )
-                )
-
-            # Pagination parameters
-            page = request.args.get("page", 1, type=int)
-            limit = request.args.get("limit", 50, type=int)
-
-            # Validate and constrain pagination params
-            page = max(1, page)
-            limit = min(max(1, limit), 1000)
-
-            # Sorting parameters
-            sort_field = request.args.get("sort", "created_at")
-            sort_order = request.args.get("order", "asc")
-
-            # Validate sort field
-            allowed_sorts = ["created_at", "updated_at", "name"]
-            if sort_field not in allowed_sorts:
-                sort_field = "created_at"
-
-            # Apply sorting
-            if sort_order == "desc":
-                query = query.order_by(getattr(Customer, sort_field).desc())
-            else:
-                query = query.order_by(getattr(Customer, sort_field).asc())
-
-            # Execute pagination
-            paginated = query.paginate(
-                page=page, per_page=limit, error_out=False
-            )
-
-            customer_schema = CustomerSchema(session=db.session, many=True)
-            return {
-                "data": customer_schema.dump(paginated.items),
-                "pagination": {
-                    "page": page,
-                    "limit": limit,
-                    "total": paginated.total,
-                    "pages": paginated.pages,
-                    "has_next": paginated.has_next,
-                    "has_prev": paginated.has_prev,
-                },
-            }, 200
-        except SQLAlchemyError as e:
-            logger.error(LOG_DATABASE_ERROR, str(e))
-            return {"message": MSG_DATABASE_ERROR_OCCURRED}, 500
+        customers = Customer.get_all()
+        customer_schema = CustomerSchema(session=db.session, many=True)
+        return customer_schema.dump(customers), 200
 
     @require_jwt_auth()
-    @check_access_required("CREATE")
+    @check_access_required("create")
     def post(self):
         """
         Create a new customer.
 
         Expects:
             JSON payload with at least the 'name' field.
-            company_id is automatically extracted from JWT token.
 
         Returns:
             tuple: The serialized created customer and HTTP status code 201
@@ -176,24 +69,25 @@ class CustomerListResource(Resource):
         json_data = request.get_json()
         customer_schema = CustomerSchema(session=db.session)
 
+        # Inject company_id from JWT token (stored in g by require_jwt_auth)
+        json_data["company_id"] = g.company_id
+
         try:
             new_customer = customer_schema.load(json_data)
-            # Assign company_id from JWT after load
-            new_customer.company_id = g.company_id
             db.session.add(new_customer)
             db.session.commit()
             return customer_schema.dump(new_customer), 201
         except ValidationError as err:
-            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            logger.error("Validation error: %s", err.messages)
             return {"error": err.messages}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error(LOG_INTEGRITY_ERROR, str(err))
-            return {"error": MSG_INTEGRITY_ERROR_DUPLICATE}, 400
+            logger.error("Integrity error: %s", str(err))
+            return {"error": "Integrity error, possibly duplicate entry."}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error(LOG_DATABASE_ERROR, str(err))
-            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
+            logger.error("Database error: %s", str(err))
+            return {"error": "Database error occurred."}, 500
 
 
 class CustomerResource(Resource):
@@ -215,7 +109,7 @@ class CustomerResource(Resource):
     """
 
     @require_jwt_auth()
-    @check_access_required("READ")
+    @check_access_required("read")
     def get(self, customer_id):
         """
         Retrieve a customer by ID.
@@ -232,13 +126,13 @@ class CustomerResource(Resource):
         customer = Customer.get_by_id(customer_id)
         if not customer:
             logger.warning("Customer with ID %s not found", customer_id)
-            return {"message": MSG_CUSTOMER_NOT_FOUND}, 404
+            return {"message": "Customer not found"}, 404
 
         customer_schema = CustomerSchema(session=db.session)
         return customer_schema.dump(customer), 200
 
     @require_jwt_auth()
-    @check_access_required("UPDATE")
+    @check_access_required("update")
     def put(self, customer_id):
         """
         Update an existing customer by ID.
@@ -261,27 +155,25 @@ class CustomerResource(Resource):
             customer = Customer.get_by_id(customer_id)
             if not customer:
                 logger.warning("Customer with ID %s not found", customer_id)
-                return {"error": MSG_CUSTOMER_NOT_FOUND}, 404
+                return {"error": "Customer not found"}, 404
 
-            updated_customer = customer_schema.load(
-                json_data, instance=customer
-            )
+            updated_customer = customer_schema.load(json_data, instance=customer)
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:
-            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            logger.error("Validation error: %s", err.messages)
             return {"error": err.messages}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error(LOG_INTEGRITY_ERROR, str(err))
-            return {"error": MSG_INTEGRITY_ERROR_DUPLICATE}, 400
+            logger.error("Integrity error: %s", str(err))
+            return {"error": "Integrity error, possibly duplicate entry."}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error(LOG_DATABASE_ERROR, str(err))
-            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
+            logger.error("Database error: %s", str(err))
+            return {"error": "Database error occurred."}, 500
 
     @require_jwt_auth()
-    @check_access_required("UPDATE")
+    @check_access_required("update")
     def patch(self, customer_id):
         """
         Partially update an existing customer by ID.
@@ -304,7 +196,7 @@ class CustomerResource(Resource):
             customer = Customer.get_by_id(customer_id)
             if not customer:
                 logger.warning("Customer with ID %s not found", customer_id)
-                return {"error": MSG_CUSTOMER_NOT_FOUND}, 404
+                return {"error": "Customer not found"}, 404
 
             updated_customer = customer_schema.load(
                 json_data, instance=customer, partial=True
@@ -312,19 +204,19 @@ class CustomerResource(Resource):
             db.session.commit()
             return customer_schema.dump(updated_customer), 200
         except ValidationError as err:
-            logger.error(LOG_VALIDATION_ERROR, err.messages)
+            logger.error("Validation error: %s", err.messages)
             return {"error": err.messages}, 400
         except IntegrityError as err:
             db.session.rollback()
-            logger.error(LOG_INTEGRITY_ERROR, str(err))
-            return {"error": MSG_INTEGRITY_ERROR_DUPLICATE}, 400
+            logger.error("Integrity error: %s", str(err))
+            return {"error": "Integrity error, possibly duplicate entry."}, 400
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error(LOG_DATABASE_ERROR, str(err))
-            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
+            logger.error("Database error: %s", str(err))
+            return {"error": "Database error occurred."}, 500
 
     @require_jwt_auth()
-    @check_access_required("DELETE")
+    @check_access_required("delete")
     def delete(self, customer_id):
         """
         Delete a customer by ID.
@@ -341,7 +233,7 @@ class CustomerResource(Resource):
         customer = Customer.get_by_id(customer_id)
         if not customer:
             logger.warning("Customer with ID %s not found", customer_id)
-            return {"error": MSG_CUSTOMER_NOT_FOUND}, 404
+            return {"error": "Customer not found"}, 404
 
         try:
             db.session.delete(customer)
@@ -349,12 +241,12 @@ class CustomerResource(Resource):
             return "", 204
         except IntegrityError as err:
             db.session.rollback()
-            logger.error(LOG_INTEGRITY_ERROR, str(err))
+            logger.error("Integrity error: %s", str(err))
             return (
                 {"error": "Integrity error, possibly due to FK constraints."},
                 400,
             )
         except SQLAlchemyError as err:
             db.session.rollback()
-            logger.error(LOG_DATABASE_ERROR, str(err))
-            return {"error": MSG_DATABASE_ERROR_OCCURRED}, 500
+            logger.error("Database error: %s", str(err))
+            return {"error": "Database error occurred."}, 500

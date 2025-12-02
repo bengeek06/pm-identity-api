@@ -1,11 +1,3 @@
-# Copyright (c) 2025 Waterfall
-#
-# This source code is dual-licensed under:
-# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
-# - Commercial License for proprietary use
-#
-# See LICENSE and LICENSE.md files in the root directory for full license text.
-# For commercial licensing inquiries, contact: benjamin@waterfall-project.pro
 """
 module: app.resources.user_auth
 
@@ -17,7 +9,6 @@ related operations.
 """
 
 from datetime import datetime, timezone
-
 from flask import request
 from flask_restful import Resource
 from sqlalchemy.exc import SQLAlchemyError
@@ -75,9 +66,7 @@ class VerifyPasswordResource(Resource):
             db.session.commit()
             logger.info("Updated last_login_at for user %s", email)
         except SQLAlchemyError as e:
-            logger.error(
-                "Error updating last_login_at for user %s: %s", email, str(e)
-            )
+            logger.error("Error updating last_login_at for user %s: %s", email, str(e))
             db.session.rollback()
             # Continue even if update fails - don't block authentication
 
