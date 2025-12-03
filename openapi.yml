@@ -3053,7 +3053,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
               examples:
                 userNotFound:
                   summary: User not found
@@ -3068,7 +3068,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
               example:
                 message: "Avatar storage is disabled in this environment"
         '504':
@@ -3076,7 +3076,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
               example:
                 message: "Storage service timeout"
         '500':
@@ -3137,7 +3137,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
               examples:
                 noFile:
                   summary: No avatar file provided
@@ -3154,7 +3154,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
               example:
                 message: "Access denied: cannot manage other user's avatar"
         '404':
@@ -3164,7 +3164,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
               example:
                 message: "Storage Service disabled"
         '500':
@@ -3197,7 +3197,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
               example:
                 message: "Access denied: cannot delete other user's avatar"
         '404':
@@ -3205,7 +3205,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
               examples:
                 userNotFound:
                   summary: User not found
