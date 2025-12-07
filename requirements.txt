@@ -14,3 +14,4 @@ marshmallow-sqlalchemy
 psycopg2-binary
 PyJWT
 gunicorn
+prometheus-flask-exporter

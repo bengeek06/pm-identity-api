@@ -18,7 +18,9 @@ Functions:
     - register_routes(app): Register all REST API endpoints on the Flask app.
 """
 
+from flask import Response
 from flask_restful import Api
+from prometheus_client import generate_latest, REGISTRY
 
 from app.logger import logger
 from app.rate_limiter import limiter
@@ -152,5 +154,10 @@ def register_routes(app):
         UserPositionResource, "/positions/<string:position_id>/users"
     )
     api.add_resource(VerifyPasswordResource, "/verify_password")
+
+    @app.route('/metrics')
+    def metrics():
+        """Prometheus metrics endpoint"""
+        return Response(generate_latest(REGISTRY), mimetype='text/plain; version=0.0.4')
 
     logger.info("Routes registered successfully.")

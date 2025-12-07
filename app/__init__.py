@@ -31,6 +31,7 @@ from flask import Flask, g, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
+from prometheus_flask_exporter import PrometheusMetrics
 
 from app.email_helper import mail
 from app.logger import logger
@@ -240,9 +241,14 @@ def create_app(config_class):
             app, supports_credentials=True, resources={r"/*": {"origins": "*"}}
         )
 
+    metrics = PrometheusMetrics.for_app_factory()
+
     register_extensions(app)
     register_error_handlers(app)
     register_routes(app)
+
+    metrics.init_app(app)
+
     logger.info("App created successfully.")
 
     return app
